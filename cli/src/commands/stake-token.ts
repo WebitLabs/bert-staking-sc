@@ -13,7 +13,7 @@ export function stakeTokenCommand(program: Command): void {
     .command("stake-token")
     .description("Stake tokens")
     .option(
-      "-a, --authority <pubkey>",
+      "--authority <pubkey>",
       "Authority public key (if different from wallet)"
     )
     .option("-t, --token-mint <pubkey>", "Token mint address")
