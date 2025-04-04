@@ -338,14 +338,154 @@
           "name": "mint"
         },
         {
+          "name": "collection"
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "authority_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         }
       ],
       "args": [
         {
-          "name": "lock_time",
-          "type": "u64"
+          "name": "lock_period",
+          "type": {
+            "defined": {
+              "name": "LockPeriod"
+            }
+          }
         },
         {
           "name": "yield_rate",
@@ -364,6 +504,97 @@
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "initiate_position",
+      "discriminator": [
+        155,
+        183,
+        70,
+        9,
+        176,
+        87,
+        102,
+        8
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "Config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "position",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": []
     },
     {
       "name": "stake_nft",
@@ -685,6 +916,11 @@
                   105,
                   103
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "Config"
               }
             ]
           }
@@ -812,13 +1048,13 @@
           }
         },
         {
-          "name": "program_token_account",
+          "name": "vault",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "account",
-                "path": "program_authority"
+                "path": "config"
               },
               {
                 "kind": "const",
@@ -902,27 +1138,6 @@
           }
         },
         {
-          "name": "program_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
@@ -943,6 +1158,14 @@
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "lock_period",
+          "type": {
+            "defined": {
+              "name": "LockPeriod"
+            }
+          }
         }
       ]
     }
@@ -1005,6 +1228,16 @@
       "code": 6005,
       "name": "ArithmeticOverflow",
       "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidLockPeriod",
+      "msg": "Invalid lock period"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidNftMint",
+      "msg": "Invalid Nft Mint"
     }
   ],
   "types": [
@@ -1022,8 +1255,24 @@
             "type": "pubkey"
           },
           {
-            "name": "lock_time",
-            "type": "u64"
+            "name": "collection",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "lock_period",
+            "type": {
+              "defined": {
+                "name": "LockPeriod"
+              }
+            }
           },
           {
             "name": "yield_rate",
@@ -1048,6 +1297,30 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "authority_vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LockPeriod",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "OneDay"
+          },
+          {
+            "name": "ThreeDays"
+          },
+          {
+            "name": "SevenDays"
+          },
+          {
+            "name": "ThirtyDays"
           }
         ]
       }

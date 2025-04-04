@@ -1,11 +1,14 @@
 import { Program, web3, BN } from "@coral-xyz/anchor";
 import { BertStakingSc } from "../idl";
+import { getLockPeriodFromIdl } from "../utils";
 
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { BertStakingPda } from "../pda";
+import { LockPeriod } from "../types";
 
 export type StakeTokenParams = {
   program: Program<BertStakingSc>;
@@ -14,8 +17,8 @@ export type StakeTokenParams = {
   owner: web3.PublicKey;
   tokenMint: web3.PublicKey;
   amount: number | BN;
+  period: LockPeriod;
   tokenAccount?: web3.PublicKey;
-  programTokenAccount?: web3.PublicKey;
 };
 
 /**
@@ -28,26 +31,14 @@ export async function stakeTokenInstruction({
   owner,
   tokenMint,
   amount,
+  period,
   tokenAccount,
-  programTokenAccount,
 }: StakeTokenParams): Promise<web3.TransactionInstruction> {
   // Convert amount to BN if needed
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
 
-  // Find Config PDA
   const [configPda] = pda.findConfigPda(authority);
-
-  // Find Position PDA
-  const [positionPda] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("position"), owner.toBuffer(), tokenMint.toBuffer()],
-    program.programId
-  );
-
-  // Find Program Authority PDA
-  const [programAuthority] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("authority")],
-    program.programId
-  );
+  const [positionPda] = pda.findPositionPda(authority, tokenMint);
 
   // Derive the token account if not provided
   const userTokenAccount =
@@ -57,28 +48,18 @@ export async function stakeTokenInstruction({
       ASSOCIATED_TOKEN_PROGRAM_ID
     )[0];
 
-  // Derive the program's token account if not provided
-  const programTokenAta =
-    programTokenAccount ||
-    web3.PublicKey.findProgramAddressSync(
-      [
-        programAuthority.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        tokenMint.toBuffer(),
-      ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )[0];
+  const vaultAta = getAssociatedTokenAddressSync(tokenMint, configPda, true);
+  const lockPeriodObject = getLockPeriodFromIdl(period);
 
   return program.methods
-    .stakeToken(amountBN)
+    .stakeToken(amountBN, lockPeriodObject)
     .accountsStrict({
       owner,
       config: configPda,
       position: positionPda,
       tokenMint,
       tokenAccount: userTokenAccount,
-      programTokenAccount: programTokenAta,
-      programAuthority,
+      vault: vaultAta,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       systemProgram: web3.SystemProgram.programId,
@@ -86,4 +67,3 @@ export async function stakeTokenInstruction({
     })
     .instruction();
 }
-

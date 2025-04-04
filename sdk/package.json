@@ -1,5 +1,5 @@
 {
-  "name": "bert-staking-sdk",
+  "name": "@bert-staking/sdk",
   "version": "0.1.0",
   "description": "SDK for interacting with the Bert Staking program",
   "main": "dist/index.js",
@@ -8,7 +8,7 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "lint": "eslint src --ext .ts",
-    "prepare": "npm run build"
+    "prepare": "yarn build"
   },
   "keywords": [
     "solana",

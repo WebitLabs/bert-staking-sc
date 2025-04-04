@@ -56,35 +56,37 @@ pub struct StakeNFT<'info> {
 
 impl<'info> StakeNFT<'info> {
     pub fn stake(&mut self, bumps: &StakeNFTBumps) -> Result<()> {
-        // Check NFT limit per user
-        // TODO: Add check for NFT limit per user
-
-        // Create a position for the staked NFT
-        let position = &mut self.position;
-        position.owner = self.owner.key();
-        position.deposit_time = Clock::get()?.unix_timestamp;
-        position.amount = self.config.nft_value_in_tokens;
-        position.position_type = PositionType::NFT;
-
-        // Calculate unlock time (current time + lock_time in seconds)
-        // lock_time is in days, convert to seconds
-        position.unlock_time =
-            Clock::get()?.unix_timestamp + (self.config.lock_time as i64 * 24 * 60 * 60);
-
-        position.status = PositionStatus::Unclaimed;
-        position.nft_mint = self.nft_mint.key();
-        position.bump = bumps.position;
-
-        // TODO: Transfer NFT from user to program
-
-        // Update config's total staked amount
-        let config = &mut self.config;
-        config.total_staked_amount = config
-            .total_staked_amount
-            .checked_add(position.amount)
-            .ok_or(ProgramError::ArithmeticOverflow)?;
-
         Ok(())
     }
+    // pub fn stake(&mut self, bumps: &StakeNFTBumps) -> Result<()> {
+    //     // Check NFT limit per user
+    //     // TODO: Add check for NFT limit per user
+    //
+    //     // Create a position for the staked NFT
+    //     let position = &mut self.position;
+    //     position.owner = self.owner.key();
+    //     position.deposit_time = Clock::get()?.unix_timestamp;
+    //     position.amount = self.config.nft_value_in_tokens;
+    //     position.position_type = PositionType::NFT;
+    //
+    //     // Calculate unlock time (current time + lock_time in seconds)
+    //     // lock_time is in days, convert to seconds
+    //     position.unlock_time =
+    //         Clock::get()?.unix_timestamp + (self.config.lock_period as i64 * 24 * 60 * 60);
+    //
+    //     position.status = PositionStatus::Unclaimed;
+    //     position.nft_mint = self.nft_mint.key();
+    //     position.bump = bumps.position;
+    //
+    //     // TODO: Transfer NFT from user to program
+    //
+    //     // Update config's total staked amount
+    //     let config = &mut self.config;
+    //     config.total_staked_amount = config
+    //         .total_staked_amount
+    //         .checked_add(position.amount)
+    //         .ok_or(ProgramError::ArithmeticOverflow)?;
+    //
+    //     Ok(())
+    // }
 }
-

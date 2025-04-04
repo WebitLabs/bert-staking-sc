@@ -1,5 +1,10 @@
 import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
-import { PublicKey, Connection, TransactionInstruction } from "@solana/web3.js";
+import {
+  PublicKey,
+  Connection,
+  TransactionInstruction,
+  Transaction,
+} from "@solana/web3.js";
 import { BankrunProvider } from "anchor-bankrun";
 import { BertStakingSc } from "./idl";
 import * as IDL from "./idl.json";
@@ -10,6 +15,7 @@ import { BertStakingPda } from "./pda";
 // Import instruction creators
 import {
   initializeInstruction,
+  initializePositionInstruction,
   stakeNftInstruction,
   stakeTokenInstruction,
   claimPositionInstruction,
@@ -23,6 +29,7 @@ import {
   fetchPositionByAddressRpc,
   fetchPositionsByOwnerRpc,
 } from "./accounts";
+import { LockPeriod } from "./types";
 
 // Export types
 export * from "./types";
@@ -56,7 +63,8 @@ export class BertStakingSDK {
   async initialize({
     authority,
     mint,
-    lockTime,
+    collection,
+    lockPeriod,
     yieldRate,
     maxCap,
     nftValueInTokens,
@@ -64,7 +72,8 @@ export class BertStakingSDK {
   }: {
     authority: PublicKey;
     mint: PublicKey;
-    lockTime: number | BN;
+    collection: PublicKey;
+    lockPeriod: LockPeriod;
     yieldRate: number | BN;
     maxCap: number | BN;
     nftValueInTokens: number | BN;
@@ -75,7 +84,8 @@ export class BertStakingSDK {
       pda: this.pda,
       authority,
       mint,
-      lockTime,
+      collection,
+      lockPeriod,
       yieldRate,
       maxCap,
       nftValueInTokens,
@@ -84,22 +94,130 @@ export class BertStakingSDK {
   }
 
   /**
+   * Creates an call to RPC to initialize the staking program
+   */
+  async initializeRpc({
+    authority,
+    mint,
+    collection,
+    lockPeriod,
+    yieldRate,
+    maxCap,
+    nftValueInTokens,
+    nftsLimitPerUser,
+  }: {
+    authority: PublicKey;
+    mint: PublicKey;
+    collection: PublicKey;
+    lockPeriod: LockPeriod;
+    yieldRate: number | BN;
+    maxCap: number | BN;
+    nftValueInTokens: number | BN;
+    nftsLimitPerUser: number;
+  }): Promise<string> {
+    let ix = await initializeInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      mint,
+      collection,
+      lockPeriod,
+      yieldRate,
+      maxCap,
+      nftValueInTokens,
+      nftsLimitPerUser,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
+   * Creates an instruction to initialize a user position
+   */
+  async initializePosition({
+    authority,
+    owner,
+    tokenMint,
+  }: {
+    authority: PublicKey;
+    owner: PublicKey;
+    tokenMint: PublicKey;
+  }): Promise<TransactionInstruction> {
+    return initializePositionInstruction({
+      program: this.program,
+      pda: this.pda,
+      owner,
+      authority,
+      tokenMint,
+    });
+  }
+
+  /**
+   * Creates an RPC call to initialize a user position
+   */
+  async initializePositionRpc({
+    authority,
+    owner,
+    tokenMint,
+  }: {
+    authority: PublicKey;
+    owner: PublicKey;
+    tokenMint: PublicKey;
+  }): Promise<string> {
+    let ix = await initializePositionInstruction({
+      program: this.program,
+      pda: this.pda,
+      owner,
+      authority,
+      tokenMint,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
    * Creates an instruction to stake an NFT
    */
   async stakeNft({
     owner,
+    authority,
     nftMint,
     nftTokenAccount,
     programNftAccount,
   }: {
     owner: PublicKey;
+    authority: PublicKey;
     nftMint: PublicKey;
     nftTokenAccount?: PublicKey;
     programNftAccount?: PublicKey;
   }): Promise<TransactionInstruction> {
     return stakeNftInstruction({
       program: this.program,
+      pda: this.pda,
       owner,
+      authority,
       nftMint,
       nftTokenAccount,
       programNftAccount,
@@ -107,29 +225,116 @@ export class BertStakingSDK {
   }
 
   /**
+   * Creates an RPC call to stake an NFT
+   */
+  async stakeNftRpc({
+    owner,
+    authority,
+    nftMint,
+    nftTokenAccount,
+    programNftAccount,
+  }: {
+    owner: PublicKey;
+    authority: PublicKey;
+    nftMint: PublicKey;
+    nftTokenAccount?: PublicKey;
+    programNftAccount?: PublicKey;
+  }): Promise<string> {
+    let ix = await stakeNftInstruction({
+      program: this.program,
+      pda: this.pda,
+      owner,
+      authority,
+      nftMint,
+      nftTokenAccount,
+      programNftAccount,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
    * Creates an instruction to stake tokens
    */
   async stakeToken({
+    authority,
     owner,
     tokenMint,
     amount,
+    period,
     tokenAccount,
-    programTokenAccount,
   }: {
     owner: PublicKey;
+    authority: PublicKey;
     tokenMint: PublicKey;
     amount: number | BN;
+    period: LockPeriod;
     tokenAccount?: PublicKey;
-    programTokenAccount?: PublicKey;
   }): Promise<TransactionInstruction> {
-    return stakeTokenInstruction({
+    return await stakeTokenInstruction({
       program: this.program,
+      pda: this.pda,
       owner,
+      authority,
       tokenMint,
       amount,
+      period,
       tokenAccount,
-      programTokenAccount,
     });
+  }
+
+  /**
+   * Creates an instruction to stake tokens
+   */
+  async stakeTokenRpc({
+    authority,
+    owner,
+    tokenMint,
+    amount,
+    period,
+    tokenAccount,
+  }: {
+    owner: PublicKey;
+    authority: PublicKey;
+    tokenMint: PublicKey;
+    amount: number | BN;
+    period: LockPeriod;
+    tokenAccount?: PublicKey;
+  }): Promise<string> {
+    let ix = await stakeTokenInstruction({
+      program: this.program,
+      pda: this.pda,
+      owner,
+      authority,
+      tokenMint,
+      amount,
+      period,
+      tokenAccount,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
   }
 
   /**
@@ -156,6 +361,45 @@ export class BertStakingSDK {
       tokenAccount,
       programTokenAccount,
     });
+  }
+
+  /**
+   * Creates an instruction to claim a staking position
+   */
+  async claimPositionRpc({
+    owner,
+    positionPda,
+    tokenMint,
+    tokenAccount,
+    programTokenAccount,
+  }: {
+    owner: PublicKey;
+    positionPda: PublicKey;
+    tokenMint: PublicKey;
+    tokenAccount?: PublicKey;
+    programTokenAccount?: PublicKey;
+  }): Promise<string> {
+    let ix = await claimPositionInstruction({
+      program: this.program,
+      owner,
+      positionPda,
+      tokenMint,
+      tokenAccount,
+      programTokenAccount,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
   }
 
   /**
@@ -213,4 +457,3 @@ export class BertStakingSDK {
     return new BertStakingSDK(provider, programId);
   }
 }
-

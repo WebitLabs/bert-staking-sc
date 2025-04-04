@@ -6,6 +6,7 @@ import {
   ACCOUNT_SIZE,
   AccountLayout,
   getAssociatedTokenAddressSync,
+  MintLayout,
 } from "@solana/spl-token";
 import { createAndProcessTransaction } from "./bankrun";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
@@ -98,4 +99,15 @@ export async function getTokenBalance(
 
   const tokenAccount = AccountLayout.decode(accountInfo.data);
   return parseInt(tokenAccount.amount.toString());
+}
+
+export async function getMintDecimals(client: BanksClient, mint: PublicKey) {
+  const accountInfo = await client.getAccount(mint);
+
+  if (accountInfo === null) {
+    return 0;
+  }
+
+  const tokenAccount = MintLayout.decode(accountInfo.data);
+  return parseInt(tokenAccount.decimals.toString());
 }

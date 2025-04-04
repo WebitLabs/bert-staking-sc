@@ -1,4 +1,5 @@
-import { BN } from "@coral-xyz/anchor";
+import { BN, IdlAccounts, IdlTypes } from "@coral-xyz/anchor";
+import { BertStakingSc } from "./idl";
 import { PublicKey } from "@solana/web3.js";
 
 /**
@@ -27,7 +28,23 @@ export enum StakingError {
   NftLimitReached = 6003,
   InvalidAmount = 6004,
   ArithmeticOverflow = 6005,
+  InvalidLockPeriod = 6006,
 }
+
+/**
+ * Lock period enum for staking
+ */
+export enum LockPeriod {
+  OneDay = 1,
+  ThreeDays = 3,
+  SevenDays = 7,
+  ThirtyDays = 30,
+}
+
+// export type CurveType = IdlTypes<Amm>["CurveType"]
+export type LockPeriodIdl = IdlTypes<BertStakingSc>["lockPeriod"];
+export type ConfigIdl = IdlAccounts<BertStakingSc>["config"];
+export type PositionIdl = IdlAccounts<BertStakingSc>["position"];
 
 /**
  * Config account data structure
@@ -35,13 +52,17 @@ export enum StakingError {
 export interface Config {
   authority: PublicKey;
   mint: PublicKey;
-  lockTime: BN;
+  collection: PublicKey;
+  vault: PublicKey;
+  authorityVault: PublicKey;
+  lockPeriod: LockPeriod;
   yieldRate: BN;
   maxCap: BN;
   nftValueInTokens: BN;
   nftsLimitPerUser: number;
   totalStakedAmount: BN;
   bump: number;
+  authorityVaultBump: number;
 }
 
 /**
@@ -57,4 +78,3 @@ export interface Position {
   nftMint: PublicKey;
   bump: number;
 }
-

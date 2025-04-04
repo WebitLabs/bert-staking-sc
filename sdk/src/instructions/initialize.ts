@@ -1,13 +1,23 @@
 import { Program, web3, BN } from "@coral-xyz/anchor";
 import { BertStakingSc } from "../idl";
 import { BertStakingPda } from "../pda";
+import { LockPeriod } from "../types";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import { getLockPeriodFromIdl } from "../utils";
 
 export type InitializeParams = {
   program: Program<BertStakingSc>;
   pda: BertStakingPda;
   authority: web3.PublicKey;
   mint: web3.PublicKey;
-  lockTime: number | BN;
+  collection: web3.PublicKey;
+  vault?: web3.PublicKey;
+  authorityVault?: web3.PublicKey;
+  lockPeriod: LockPeriod;
   yieldRate: number | BN;
   maxCap: number | BN;
   nftValueInTokens: number | BN;
@@ -22,14 +32,16 @@ export function initializeInstruction({
   pda,
   authority,
   mint,
-  lockTime,
+  collection,
+  vault,
+  authorityVault,
+  lockPeriod,
   yieldRate,
   maxCap,
   nftValueInTokens,
   nftsLimitPerUser,
 }: InitializeParams): Promise<web3.TransactionInstruction> {
   // Convert numbers to BN if needed
-  const lockTimeBN = typeof lockTime === "number" ? new BN(lockTime) : lockTime;
   const yieldRateBN =
     typeof yieldRate === "number" ? new BN(yieldRate) : yieldRate;
   const maxCapBN = typeof maxCap === "number" ? new BN(maxCap) : maxCap;
@@ -41,9 +53,14 @@ export function initializeInstruction({
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority);
 
+  const lockPeriodObject = getLockPeriodFromIdl(lockPeriod);
+  const vaultTA = vault || getAssociatedTokenAddressSync(mint, configPda, true);
+  const authorityVaultTa =
+    authorityVault || pda.findAuthorityVaultPda(mint, configPda)[0];
+
   return program.methods
     .initialize(
-      lockTimeBN,
+      lockPeriodObject,
       yieldRateBN,
       maxCapBN,
       nftValueInTokensBN,
@@ -52,9 +69,13 @@ export function initializeInstruction({
     .accountsStrict({
       authority,
       mint,
+      collection,
+      vault: vaultTA,
+      authorityVault: authorityVaultTa,
       config: configPda,
       systemProgram: web3.SystemProgram.programId,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
     })
     .instruction();
 }
-

@@ -11,17 +11,15 @@ pub struct StakeToken<'info> {
     pub owner: Signer<'info>,
 
     #[account(
-        seeds = [b"config"],
+        seeds = [b"config", config.authority.key().as_ref()],
         bump = config.bump,
     )]
     pub config: Account<'info, Config>,
 
     #[account(
-        init,
-        payer = owner,
-        space = Position::INIT_SPACE,
+        mut,
         seeds = [b"position", owner.key().as_ref(), token_mint.key().as_ref()],
-        bump,
+        bump = position.bump,
     )]
     pub position: Account<'info, Position>,
 
@@ -37,16 +35,9 @@ pub struct StakeToken<'info> {
     #[account(
         mut,
         associated_token::mint = token_mint,
-        associated_token::authority = program_authority,
+        associated_token::authority = config,
     )]
-    pub program_token_account: Account<'info, TokenAccount>,
-
-    /// CHECK: This is the PDA that will own the tokens while staked
-    #[account(
-        seeds = [b"authority"],
-        bump,
-    )]
-    pub program_authority: UncheckedAccount<'info>,
+    pub vault: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -55,10 +46,15 @@ pub struct StakeToken<'info> {
 }
 
 impl<'info> StakeToken<'info> {
-    pub fn process(&mut self, amount: u64, bumps: &StakeTokenBumps) -> Result<()> {
+    pub fn process(&mut self, amount: u64, period: LockPeriod) -> Result<()> {
         // Check if amount is valid
         if amount == 0 {
             return Err(StakingError::InvalidAmount.into());
+        }
+
+        // Check if period is valid
+        if period != self.config.lock_period {
+            return Err(StakingError::InvalidLockPeriod.into());
         }
 
         // Check if staking would exceed the max cap
@@ -74,19 +70,19 @@ impl<'info> StakeToken<'info> {
 
         // Create a position for the staked tokens
         let position = &mut self.position;
-        position.owner = self.owner.key();
         position.deposit_time = Clock::get()?.unix_timestamp;
-        position.amount = amount;
+        position.amount = position.amount.checked_add(amount).unwrap();
         position.position_type = PositionType::Token;
 
         // Calculate unlock time (current time + lock_time in seconds)
         // lock_time is in days, convert to seconds
-        position.unlock_time =
-            Clock::get()?.unix_timestamp + (self.config.lock_time as i64 * 24 * 60 * 60);
-
-        position.status = PositionStatus::Unclaimed;
-        position.nft_mint = Pubkey::default(); // Not applicable for token positions
-        position.bump = bumps.position;
+        let lock_days = match self.config.lock_period {
+            LockPeriod::OneDay => 1,
+            LockPeriod::ThreeDays => 3,
+            LockPeriod::SevenDays => 7,
+            LockPeriod::ThirtyDays => 30,
+        };
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days * 24 * 60 * 60);
 
         // Transfer tokens from user to program
         anchor_spl::token::transfer(
@@ -94,7 +90,7 @@ impl<'info> StakeToken<'info> {
                 self.token_program.to_account_info(),
                 anchor_spl::token::Transfer {
                     from: self.token_account.to_account_info(),
-                    to: self.program_token_account.to_account_info(),
+                    to: self.vault.to_account_info(),
                     authority: self.owner.to_account_info(),
                 },
             ),
@@ -108,4 +104,3 @@ impl<'info> StakeToken<'info> {
         Ok(())
     }
 }
-

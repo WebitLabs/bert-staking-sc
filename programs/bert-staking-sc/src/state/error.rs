@@ -19,5 +19,10 @@ pub enum StakingError {
 
     #[msg("Arithmetic overflow")]
     ArithmeticOverflow,
-}
 
+    #[msg("Invalid lock period")]
+    InvalidLockPeriod,
+
+    #[msg("Invalid Nft Mint")]
+    InvalidNftMint,
+}

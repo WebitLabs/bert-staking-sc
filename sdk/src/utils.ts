@@ -1,3 +1,5 @@
+import { LockPeriod, PositionType } from "./types";
+
 /**
  * Calculate the yield amount for a staked amount
  * @param amount The staked amount
@@ -35,5 +37,30 @@ export function calculateUnlockTime(
   currentTimestamp = Math.floor(Date.now() / 1000)
 ): number {
   return currentTimestamp + daysToSeconds(lockDays);
+}
+
+export function getLockPeriodFromIdl(p: LockPeriod) {
+  if (p == 1) {
+    return { oneDay: {} };
+  } else if (p == 3) {
+    return { threeDays: {} };
+  } else if (p == 7) {
+    return { sevenDays: {} };
+  } else if (p == 30) {
+    return { sevenDays: {} };
+  } else {
+    throw Error("Invalid lock period");
+  }
+}
+
+export function getPositionTypeIdl(p: PositionType) {
+  if (p == PositionType.Token) {
+    return { token: {} };
+  } else if (PositionType.NFT) {
+    return { nft: {} };
+  }
+  // else {
+  //   throw Error("Invalid lock period");
+  // }
 }
 

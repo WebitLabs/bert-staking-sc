@@ -1,9 +1,23 @@
 {
+  "private": true,
+  "name": "bert-staking",
   "license": "ISC",
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
+    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
+    "check-deps": "yarn workspaces run dependency-check . --no-dev --ignore-module '@types/*' --ignore-module 'typescript'",
+    "build:all": "yarn workspaces run build",
+    "clean:sdk": "rm -rf sdk/node_modules && rm -rf sdk/dist",
+    "clean:cli": "rm -rf cli/node_modules && rm -rf cli/dist",
+    "clean": "rm -rf node_modules && yarn clean:sdk && yarn clean:cli",
+    "install:all": "yarn install",
+    "cli": "yarn workspace @bert-staking/cli",
+    "sdk": "yarn workspace @bert-staking/sdk"
   },
+  "workspaces": [
+    "cli",
+    "sdk"
+  ],
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
     "@kinobi-so/nodes-from-anchor": "^0.22.0",
@@ -12,6 +26,7 @@
     "@metaplex-foundation/mpl-token-metadata": "3.1.1",
     "@metaplex-foundation/mpl-toolbox": "^0.9.4",
     "@metaplex-foundation/umi": "^0.9.2",
+    "@metaplex-foundation/mpl-core": "^0.2.0",
     "@metaplex-foundation/umi-bundle-defaults": "^0.9.2",
     "@metaplex-foundation/umi-web3js-adapters": "^0.9.2",
     "@solana-developers/helpers": "^2.5.6",

@@ -6,6 +6,11 @@
     "module": "commonjs",
     "target": "es6",
     "esModuleInterop": true,
-    "resolveJsonModule": true
-  }
+    "resolveJsonModule": true,
+    "composite": true
+  },
+  "references": [
+    { "path": "./sdk" },
+    { "path": "./cli" }
+  ]
 }

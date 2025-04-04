@@ -5,10 +5,13 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
+import { BertStakingPda } from "../pda";
 
 export type StakeNftParams = {
   program: Program<BertStakingSc>;
+  pda: BertStakingPda;
   owner: web3.PublicKey;
+  authority: web3.PublicKey;
   nftMint: web3.PublicKey;
   nftTokenAccount?: web3.PublicKey;
   programNftAccount?: web3.PublicKey;
@@ -16,25 +19,21 @@ export type StakeNftParams = {
 
 /**
  * Create an instruction to stake an NFT
+ *
+  // TODO: Not yet implemented
  */
 export async function stakeNftInstruction({
   program,
+  pda,
   owner,
+  authority,
   nftMint,
   nftTokenAccount,
   programNftAccount,
 }: StakeNftParams): Promise<web3.TransactionInstruction> {
   // Find Config PDA
-  const [configPda] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("config")],
-    program.programId
-  );
-
-  // Find Position PDA
-  const [positionPda] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("position"), owner.toBuffer(), nftMint.toBuffer()],
-    program.programId
-  );
+  const [configPda] = pda.findConfigPda(authority);
+  const [positionPda] = pda.findPositionPda(owner, nftMint);
 
   // Find Program Authority PDA
   const [programAuthority] = web3.PublicKey.findProgramAddressSync(

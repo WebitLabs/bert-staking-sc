@@ -22,9 +22,12 @@ export class BertStakingPda {
    * Find the Program Authority PDA
    * @returns The Program Authority PDA and bump
    */
-  findProgramAuthorityPda(): [PublicKey, number] {
+  findAuthorityVaultPda(
+    mint: PublicKey,
+    owner: PublicKey
+  ): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
-      [Buffer.from("authority")],
+      [Buffer.from("authority_vault"), owner.toBuffer(), mint.toBuffer()],
       this.programId
     );
   }
@@ -42,4 +45,3 @@ export class BertStakingPda {
     );
   }
 }
-

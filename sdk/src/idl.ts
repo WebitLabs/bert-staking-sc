@@ -344,14 +344,154 @@ export type BertStakingSc = {
           "name": "mint"
         },
         {
+          "name": "collection"
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "authorityVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         }
       ],
       "args": [
         {
-          "name": "lockTime",
-          "type": "u64"
+          "name": "lockPeriod",
+          "type": {
+            "defined": {
+              "name": "lockPeriod"
+            }
+          }
         },
         {
           "name": "yieldRate",
@@ -370,6 +510,97 @@ export type BertStakingSc = {
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "initiatePosition",
+      "discriminator": [
+        155,
+        183,
+        70,
+        9,
+        176,
+        87,
+        102,
+        8
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "position",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "tokenMint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenMint"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": []
     },
     {
       "name": "stakeNft",
@@ -691,6 +922,11 @@ export type BertStakingSc = {
                   105,
                   103
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "config"
               }
             ]
           }
@@ -818,13 +1054,13 @@ export type BertStakingSc = {
           }
         },
         {
-          "name": "programTokenAccount",
+          "name": "vault",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "account",
-                "path": "programAuthority"
+                "path": "config"
               },
               {
                 "kind": "const",
@@ -908,27 +1144,6 @@ export type BertStakingSc = {
           }
         },
         {
-          "name": "programAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
           "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
@@ -949,6 +1164,14 @@ export type BertStakingSc = {
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "lockPeriod",
+          "type": {
+            "defined": {
+              "name": "lockPeriod"
+            }
+          }
         }
       ]
     }
@@ -1011,6 +1234,16 @@ export type BertStakingSc = {
       "code": 6005,
       "name": "arithmeticOverflow",
       "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6006,
+      "name": "invalidLockPeriod",
+      "msg": "Invalid lock period"
+    },
+    {
+      "code": 6007,
+      "name": "invalidNftMint",
+      "msg": "Invalid Nft Mint"
     }
   ],
   "types": [
@@ -1028,8 +1261,24 @@ export type BertStakingSc = {
             "type": "pubkey"
           },
           {
-            "name": "lockTime",
-            "type": "u64"
+            "name": "collection",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "authorityVault",
+            "type": "pubkey"
+          },
+          {
+            "name": "lockPeriod",
+            "type": {
+              "defined": {
+                "name": "lockPeriod"
+              }
+            }
           },
           {
             "name": "yieldRate",
@@ -1054,6 +1303,30 @@ export type BertStakingSc = {
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "authorityVaultBump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "lockPeriod",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "oneDay"
+          },
+          {
+            "name": "threeDays"
+          },
+          {
+            "name": "sevenDays"
+          },
+          {
+            "name": "thirtyDays"
           }
         ]
       }
