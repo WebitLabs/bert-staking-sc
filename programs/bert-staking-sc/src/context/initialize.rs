@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::Mint;
 
 use crate::state::*;
 
@@ -15,6 +16,8 @@ pub struct Initialize<'info> {
         bump
     )]
     pub config: Account<'info, Config>,
+
+    pub mint: InterfaceAccount<'info, Mint>,
 
     pub system_program: Program<'info, System>,
 }
@@ -33,6 +36,7 @@ impl<'info> Initialize<'info> {
 
         config.set_inner(Config {
             authority: self.authority.key(),
+            mint: self.mint.key(),
             lock_time,
             yield_rate,
             max_cap,
@@ -45,4 +49,3 @@ impl<'info> Initialize<'info> {
         Ok(())
     }
 }
-

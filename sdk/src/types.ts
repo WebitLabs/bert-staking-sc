@@ -6,7 +6,7 @@ import { PublicKey } from "@solana/web3.js";
  */
 export enum PositionType {
   NFT = 0,
-  Token = 1
+  Token = 1,
 }
 
 /**
@@ -14,7 +14,7 @@ export enum PositionType {
  */
 export enum PositionStatus {
   Unclaimed = 0,
-  Claimed = 1
+  Claimed = 1,
 }
 
 /**
@@ -26,7 +26,7 @@ export enum StakingError {
   MaxCapReached = 6002,
   NftLimitReached = 6003,
   InvalidAmount = 6004,
-  ArithmeticOverflow = 6005
+  ArithmeticOverflow = 6005,
 }
 
 /**
@@ -34,6 +34,7 @@ export enum StakingError {
  */
 export interface Config {
   authority: PublicKey;
+  mint: PublicKey;
   lockTime: BN;
   yieldRate: BN;
   maxCap: BN;
@@ -56,3 +57,4 @@ export interface Position {
   nftMint: PublicKey;
   bump: number;
 }
+

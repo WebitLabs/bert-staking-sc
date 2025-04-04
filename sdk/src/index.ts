@@ -55,6 +55,7 @@ export class BertStakingSDK {
    */
   async initialize({
     authority,
+    mint,
     lockTime,
     yieldRate,
     maxCap,
@@ -62,6 +63,7 @@ export class BertStakingSDK {
     nftsLimitPerUser,
   }: {
     authority: PublicKey;
+    mint: PublicKey;
     lockTime: number | BN;
     yieldRate: number | BN;
     maxCap: number | BN;
@@ -70,7 +72,9 @@ export class BertStakingSDK {
   }): Promise<TransactionInstruction> {
     return initializeInstruction({
       program: this.program,
+      pda: this.pda,
       authority,
+      mint,
       lockTime,
       yieldRate,
       maxCap,

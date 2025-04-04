@@ -1,4 +1,12 @@
-import { Keypair, TransactionInstruction, Transaction } from "@solana/web3.js";
+import { publicKey } from "@coral-xyz/anchor/dist/cjs/utils";
+import {
+  Keypair,
+  TransactionInstruction,
+  Transaction,
+  PublicKey,
+  Connection,
+  clusterApiUrl,
+} from "@solana/web3.js";
 import { BanksClient, BanksTransactionResultWithMeta } from "solana-bankrun";
 
 export async function createAndProcessTransaction(
@@ -17,4 +25,10 @@ export async function createAndProcessTransaction(
   tx.sign(payer, ...additionalSigners);
 
   return await client.tryProcessTransaction(tx);
+}
+
+export async function getAddedAccountInfo(pubkey: PublicKey) {
+  const connection = new Connection(clusterApiUrl("mainnet-beta"));
+  const accountInfo = await connection.getAccountInfo(pubkey);
+  return { address: pubkey, info: accountInfo };
 }

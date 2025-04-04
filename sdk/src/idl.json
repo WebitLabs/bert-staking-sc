@@ -335,6 +335,9 @@
           }
         },
         {
+          "name": "mint"
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -1012,6 +1015,10 @@
         "fields": [
           {
             "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
             "type": "pubkey"
           },
           {

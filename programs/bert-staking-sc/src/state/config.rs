@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 #[derive(InitSpace)]
 pub struct Config {
     pub authority: Pubkey,        // Authority that can update config settings
+    pub mint: Pubkey,             // Token Mint
     pub lock_time: u64,           // Lock period in days
     pub yield_rate: u64,          // Yield rate in basis points (e.g., 500 = 5%)
     pub max_cap: u64,             // Maximum tokens that can be staked

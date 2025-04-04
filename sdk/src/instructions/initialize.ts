@@ -1,9 +1,12 @@
 import { Program, web3, BN } from "@coral-xyz/anchor";
 import { BertStakingSc } from "../idl";
+import { BertStakingPda } from "../pda";
 
 export type InitializeParams = {
   program: Program<BertStakingSc>;
+  pda: BertStakingPda;
   authority: web3.PublicKey;
+  mint: web3.PublicKey;
   lockTime: number | BN;
   yieldRate: number | BN;
   maxCap: number | BN;
@@ -16,7 +19,9 @@ export type InitializeParams = {
  */
 export function initializeInstruction({
   program,
+  pda,
   authority,
+  mint,
   lockTime,
   yieldRate,
   maxCap,
@@ -34,10 +39,7 @@ export function initializeInstruction({
       : nftValueInTokens;
 
   // Find Config PDA
-  const [configPda] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("config"), authority.toBuffer()],
-    program.programId
-  );
+  const [configPda] = pda.findConfigPda(authority);
 
   return program.methods
     .initialize(
@@ -49,6 +51,7 @@ export function initializeInstruction({
     )
     .accountsStrict({
       authority,
+      mint,
       config: configPda,
       systemProgram: web3.SystemProgram.programId,
     })

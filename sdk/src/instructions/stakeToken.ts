@@ -5,9 +5,12 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
+import { BertStakingPda } from "../pda";
 
 export type StakeTokenParams = {
   program: Program<BertStakingSc>;
+  pda: BertStakingPda;
+  authority: web3.PublicKey;
   owner: web3.PublicKey;
   tokenMint: web3.PublicKey;
   amount: number | BN;
@@ -20,6 +23,8 @@ export type StakeTokenParams = {
  */
 export async function stakeTokenInstruction({
   program,
+  pda,
+  authority,
   owner,
   tokenMint,
   amount,
@@ -30,10 +35,7 @@ export async function stakeTokenInstruction({
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
 
   // Find Config PDA
-  const [configPda] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("config")],
-    program.programId
-  );
+  const [configPda] = pda.findConfigPda(authority);
 
   // Find Position PDA
   const [positionPda] = web3.PublicKey.findProgramAddressSync(
