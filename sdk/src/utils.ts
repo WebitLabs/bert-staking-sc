@@ -1,4 +1,6 @@
+import { IdlTypes } from "@coral-xyz/anchor";
 import { LockPeriod, PositionType } from "./types";
+import { BertStakingSc } from "./idl";
 
 /**
  * Calculate the yield amount for a staked amount
@@ -8,7 +10,7 @@ import { LockPeriod, PositionType } from "./types";
  */
 export function calculateYield(
   amount: number | bigint,
-  yieldRate: number | bigint
+  yieldRate: number | bigint,
 ): bigint {
   const amountBigInt = BigInt(amount);
   const yieldRateBigInt = BigInt(yieldRate);
@@ -34,33 +36,58 @@ export function daysToSeconds(days: number): number {
  */
 export function calculateUnlockTime(
   lockDays: number,
-  currentTimestamp = Math.floor(Date.now() / 1000)
+  currentTimestamp = Math.floor(Date.now() / 1000),
 ): number {
   return currentTimestamp + daysToSeconds(lockDays);
 }
 
-export function getLockPeriodFromIdl(p: LockPeriod) {
-  if (p == 1) {
-    return { oneDay: {} };
-  } else if (p == 3) {
-    return { threeDays: {} };
-  } else if (p == 7) {
-    return { sevenDays: {} };
-  } else if (p == 30) {
-    return { sevenDays: {} };
-  } else {
-    throw Error("Invalid lock period");
+type LockPeriodIdlType = IdlTypes<BertStakingSc>["lockPeriod"];
+type PositionTypeIdlType = IdlTypes<BertStakingSc>["positionType"];
+
+/**
+ * Converts a LockPeriod enum value to its IDL representation
+ */
+export function getLockPeriodFromIdl(p: LockPeriod): LockPeriodIdlType {
+  switch (p) {
+    case LockPeriod.OneDay:
+      return { oneDay: {} };
+    case LockPeriod.ThreeDays:
+      return { threeDays: {} };
+    case LockPeriod.SevenDays:
+      return { sevenDays: {} };
+    case LockPeriod.ThirtyDays:
+      return { thirtyDays: {} };
+    default:
+      throw new Error(`Invalid lock period: ${p}`);
   }
 }
 
-export function getPositionTypeIdl(p: PositionType) {
+/**
+ * Convert an array of lock periods to their IDL representation
+ */
+export function getLockPeriodsArrayFromIdl(periods: LockPeriod[]) {
+  return periods.map((period) => getLockPeriodFromIdl(period));
+}
+
+/**
+ * Create a default array of all lock periods
+ * @returns Array of all available lock periods
+ */
+export function getAllLockPeriods(): LockPeriod[] {
+  return [
+    LockPeriod.OneDay,
+    LockPeriod.ThreeDays,
+    LockPeriod.SevenDays,
+    LockPeriod.ThirtyDays,
+  ];
+}
+
+export function getPositionTypeIdl(p: PositionType): PositionTypeIdlType {
   if (p == PositionType.Token) {
     return { token: {} };
   } else if (PositionType.NFT) {
     return { nft: {} };
+  } else {
+    throw Error("Invalid lock period");
   }
-  // else {
-  //   throw Error("Invalid lock period");
-  // }
 }
-

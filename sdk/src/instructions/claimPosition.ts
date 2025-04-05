@@ -29,13 +29,13 @@ export async function claimPositionInstruction({
   // Find Config PDA
   const [configPda] = web3.PublicKey.findProgramAddressSync(
     [Buffer.from("config")],
-    program.programId
+    program.programId,
   );
 
   // Find Program Authority PDA
   const [programAuthority] = web3.PublicKey.findProgramAddressSync(
     [Buffer.from("authority")],
-    program.programId
+    program.programId,
   );
 
   // Derive the token account if not provided
@@ -43,7 +43,7 @@ export async function claimPositionInstruction({
     tokenAccount ||
     web3.PublicKey.findProgramAddressSync(
       [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), tokenMint.toBuffer()],
-      ASSOCIATED_TOKEN_PROGRAM_ID
+      ASSOCIATED_TOKEN_PROGRAM_ID,
     )[0];
 
   // Derive the program's token account if not provided
@@ -55,7 +55,7 @@ export async function claimPositionInstruction({
         TOKEN_PROGRAM_ID.toBuffer(),
         tokenMint.toBuffer(),
       ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
+      ASSOCIATED_TOKEN_PROGRAM_ID,
     )[0];
 
   return program.methods
@@ -64,7 +64,7 @@ export async function claimPositionInstruction({
       owner,
       config: configPda,
       position: positionPda,
-      tokenMint,
+      mint: tokenMint,
       tokenAccount: userTokenAccount,
       programTokenAccount: programTokenAta,
       programAuthority,
@@ -74,4 +74,3 @@ export async function claimPositionInstruction({
     })
     .instruction();
 }
-

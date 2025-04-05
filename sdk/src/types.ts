@@ -29,6 +29,8 @@ export enum StakingError {
   InvalidAmount = 6004,
   ArithmeticOverflow = 6005,
   InvalidLockPeriod = 6006,
+  InvalidPositionType = 6007,
+  InvalidNftMint = 6008,
 }
 
 /**
@@ -54,8 +56,9 @@ export interface Config {
   mint: PublicKey;
   collection: PublicKey;
   vault: PublicKey;
+  nftsVault: PublicKey;
   authorityVault: PublicKey;
-  lockPeriod: LockPeriod;
+  lockPeriod: LockPeriod[];
   yieldRate: BN;
   maxCap: BN;
   nftValueInTokens: BN;
@@ -75,6 +78,7 @@ export interface Position {
   positionType: PositionType;
   unlockTime: BN;
   status: PositionStatus;
-  nftMint: PublicKey;
+  nftMints: PublicKey[]; // Array of NFT mints (up to 5)
+  nftIndex: number;      // Number of NFTs staked
   bump: number;
 }

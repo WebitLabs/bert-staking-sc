@@ -5,10 +5,10 @@ import {
   createAndProcessTransaction,
   getAddedAccountInfo,
 } from "./helpers/bankrun";
-import { BertStakingSDK, Config, LockPeriod } from "../sdk/src";
+import { BertStakingSDK, Config, LockPeriod, PositionType } from "../sdk/src";
 import { BanksClient, ProgramTestContext } from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
-import { getAssociatedTokenAddressSync, getMint } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { USDC_MINT_ADDRESS } from "./helpers/constants";
 import {
   createAtaForMint,
@@ -34,10 +34,11 @@ describe("bert-staking-sc", () => {
 
   // Token staking parameters
   let userTokenAccount: PublicKey;
-  let programTokenAccount: PublicKey;
 
   let collection = PublicKey.default;
   let decimals: number;
+
+  let tokensInVault;
 
   before("before", async () => {
     const usdcMint = await getAddedAccountInfo(tokenMint);
@@ -71,7 +72,6 @@ describe("bert-staking-sc", () => {
       authority: authority.publicKey,
       mint: tokenMint,
       collection,
-      lockPeriod: LockPeriod.ThreeDays,
       yieldRate,
       maxCap,
       nftValueInTokens,
@@ -90,27 +90,32 @@ describe("bert-staking-sc", () => {
       expect.fail("Failed to process initialize tx");
     }
 
+    const lockPeriods = BertStakingSDK.getSupportedLockPeriods();
+    const convertedLockPeriod = lockPeriods.map((p) =>
+      BertStakingSDK.getLockPeriodFromIdl(p),
+    );
+
     // Assert that all config values are set correctly
     expect(configAccount.authority).to.deep.equal(authority.publicKey);
     expect(configAccount.mint).to.deep.equal(tokenMint);
-    expect(configAccount.lockPeriod).to.deep.equal({ threeDays: {} });
+    expect(configAccount.lockPeriod).to.deep.equal(convertedLockPeriod);
     expect(configAccount.yieldRate.toString()).to.equal(yieldRate.toString());
     expect(configAccount.maxCap.toString()).to.equal(maxCap.toString());
     expect(configAccount.nftValueInTokens.toString()).to.equal(
-      nftValueInTokens.toString()
+      nftValueInTokens.toString(),
     );
     expect(configAccount.nftsLimitPerUser).to.equal(nftsLimitPerUser);
     expect(configAccount.totalStakedAmount.toString()).to.equal("0");
 
     console.log(
-      "Config initialized successfully with the following parameters:"
+      "Config initialized successfully with the following parameters:",
     );
     console.log("Lock Time (days):", configAccount.lockPeriod.toString());
     console.log("Yield Rate (bps):", configAccount.yieldRate.toString());
     console.log("Max Cap:", configAccount.maxCap.toString());
     console.log(
       "NFT Value in Tokens:",
-      configAccount.nftValueInTokens.toString()
+      configAccount.nftValueInTokens.toString(),
     );
     console.log("NFTs Limit Per User:", configAccount.nftsLimitPerUser);
   });
@@ -120,13 +125,18 @@ describe("bert-staking-sc", () => {
       const owner = payer.publicKey;
       const mint = tokenMint;
 
+      const [configPda] = sdk.pda.findConfigPda(payer.publicKey);
+
+      // Create the ATAs with some tokens for the user and the vault
       const mintAmount = 1_000 * 10 ** decimals;
+      tokensInVault = mintAmount;
       createAtaForMint(provider, owner, mint, BigInt(mintAmount));
+      createAtaForMint(provider, configPda, mint, BigInt(mintAmount));
 
       userTokenAccount = getAssociatedTokenAddressSync(mint, owner, true);
 
       console.log(
-        `User has ${await getTokenBalance(client, userTokenAccount)} USDC`
+        `User has ${await getTokenBalance(client, userTokenAccount)} USDC`,
       );
     } catch (err) {
       console.error("Failed to set up token mint and accounts:", err);
@@ -145,7 +155,6 @@ describe("bert-staking-sc", () => {
     try {
       // Create position PDA
       const [positionPda] = sdk.pda.findPositionPda(payer.publicKey, tokenMint);
-      const period = LockPeriod.ThreeDays;
       console.log("Position PDA:", positionPda.toString());
 
       // Step 1: Initialize position first
@@ -154,26 +163,32 @@ describe("bert-staking-sc", () => {
         authority: payer.publicKey,
         owner: payer.publicKey,
         tokenMint,
+        lockPeriod: LockPeriod.SevenDays,
+        positionType: PositionType.Token,
       });
 
       // Process the initialize position transaction
       await createAndProcessTransaction(client, payer, initPositionIx);
       console.log("Position initialized successfully");
+    } catch (err) {
+      console.error("Failed to initialize position or stake tokens:", err);
+      expect.fail("Position initialization or token staking failed");
+    }
 
-      // Verify the position was created with correct initial values
-      let position = await sdk.fetchPosition(payer.publicKey, tokenMint);
-      expect(position).to.not.be.null;
-      expect(position.owner.toString()).to.equal(payer.publicKey.toString());
-      expect(position.status).to.deep.equal({ unclaimed: {} }); // Unclaimed
-      console.log("Initial position created with status:", position.status);
+    // Verify the position was created with correct initial values
+    let position = await sdk.fetchPosition(payer.publicKey, tokenMint);
+    expect(position).to.not.be.null;
+    expect(position.owner.toString()).to.equal(payer.publicKey.toString());
+    expect(position.status).to.deep.equal({ unclaimed: {} }); // Unclaimed
+    console.log("Initial position created with status:", position.status);
 
+    try {
       // Step 2: Now stake tokens to the initialized position
       console.log("Staking tokens to the initialized position...");
       const stakeTokenIx = await sdk.stakeToken({
         authority: payer.publicKey,
         owner: payer.publicKey,
         tokenMint,
-        period,
         amount: stakeAmount,
         tokenAccount: userTokenAccount,
       });
@@ -182,8 +197,8 @@ describe("bert-staking-sc", () => {
       await createAndProcessTransaction(client, payer, stakeTokenIx);
       console.log("Tokens staked successfully");
     } catch (err) {
-      console.error("Failed to initialize position or stake tokens:", err);
-      expect.fail("Position initialization or token staking failed");
+      console.error("Failed to stake tokens:", err);
+      expect.fail("Staking failed");
     }
 
     // Verify staking results
@@ -191,7 +206,7 @@ describe("bert-staking-sc", () => {
     // 1. Check user's token balance decreased
     const userTokenAccountBalance = await getTokenBalance(
       client,
-      userTokenAccount
+      userTokenAccount,
     );
 
     const expectedRemainingBalance = mintAmount - stakeAmount;
@@ -203,11 +218,11 @@ describe("bert-staking-sc", () => {
     // 2. Check program's token balance increased
     const vaultBalance = await getTokenBalance(client, vaultAta);
 
-    expect(vaultBalance).to.equal(stakeAmount);
+    expect(vaultBalance).to.equal(stakeAmount + tokensInVault);
     console.log("Program token balance after staking:", vaultBalance);
 
     // 3. Check position account was updated correctly after staking
-    const position = await sdk.fetchPosition(payer.publicKey, tokenMint);
+    position = await sdk.fetchPosition(payer.publicKey, tokenMint);
     expect(position).to.not.be.null;
     expect(position.owner.toString()).to.equal(payer.publicKey.toString());
     expect(position.amount.toNumber()).to.equal(stakeAmount);
@@ -219,20 +234,21 @@ describe("bert-staking-sc", () => {
     console.log("- Amount:", position.amount.toString());
     console.log(
       "- Deposit time:",
-      new Date(position.depositTime.toNumber() * 1000).toISOString()
+      new Date(position.depositTime.toNumber() * 1000).toISOString(),
     );
     console.log(
       "- Unlock time:",
-      new Date(position.unlockTime.toNumber() * 1000).toISOString()
+      new Date(position.unlockTime.toNumber() * 1000).toISOString(),
     );
 
     // 4. Check config total staked amount increased
     const configAccount = await sdk.fetchConfigByAddress(configPda);
 
+    // TODO: Staked amount should be totalStakedAmount ... FIX IT!
     // expect(configAccount.totalStakedAmount.toNumber()).to.equal(stakeAmount);
     console.log(
       "Total staked amount:",
-      configAccount.totalStakedAmount.toString()
+      configAccount.totalStakedAmount.toString(),
     );
   });
 
@@ -241,72 +257,72 @@ describe("bert-staking-sc", () => {
   //     // Warp to the future when the position is unlocked
   //     // 7 days in seconds + some buffer
   //     const secondsToWarp = 7 * 24 * 60 * 60 + 60;
-  //     await client.warpToSlot(
-  //       (await client.getCurrentSlot()) + secondsToWarp * 2
-  //     ); // Solana averages 2 slots per second
+  //     // const currentSlot = await client.getSlot();
+  //     // provider.context.warpToSlot(
+  //     //   currentSlot  /* + BigInt(secondsToWarp) * BigInt(2) */,
+  //     // );
+  //
+  //     // Get the Config PDA to get vault information
+  //     const [configPda] = sdk.pda.findConfigPda(payer.publicKey);
+  //     const configAccount = await sdk.fetchConfigByAddress(configPda);
   //
   //     // Create position PDA
   //     const [positionPda] = sdk.pda.findPositionPda(payer.publicKey, tokenMint);
   //
-  //     // Create claim position instruction
-  //     const claimPositionIx = await sdk.claimPosition({
-  //       owner: payer.publicKey,
-  //       positionPda,
+  //     // Get the vault address from the config account
+  //     const vaultAta = getAssociatedTokenAddressSync(
   //       tokenMint,
-  //       tokenAccount: userTokenAccount,
-  //       programTokenAccount: programTokenAccount,
-  //     });
+  //       configPda,
+  //       true,
+  //     );
   //
-  //     // Process transaction
-  //     await createAndProcessTransaction(client, payer, claimPositionIx);
+  //     try {
+  //       // Create claim position instruction
+  //       const claimPositionIx = await sdk.claimPosition({
+  //         owner: payer.publicKey,
+  //         positionPda,
+  //         tokenMint,
+  //         tokenAccount: userTokenAccount,
+  //         programTokenAccount: vaultAta,
+  //       });
+  //
+  //       // Process transaction
+  //       await createAndProcessTransaction(client, payer, claimPositionIx);
+  //     } catch (err) {
+  //       console.log("Claiming position failed with err:", err);
+  //       expect.fail("Claiming position failed");
+  //     }
   //
   //     // Verify claiming results
   //
   //     // 1. Check user's token balance increased with yield
-  //     const userTokenAccountInfo = await getAccount(
-  //       provider.connection,
-  //       userTokenAccount,
-  //       "confirmed",
-  //       TOKEN_PROGRAM_ID
-  //     );
+  //     const userTokenBalance = await getTokenBalance(client, userTokenAccount);
   //
   //     // Expected yield = amount * yield_rate / 10000
+  //     const stakeAmount = 500 * 10 ** decimals; // 500 tokens
+  //     const mintAmount = 1_000 * 10 ** decimals; // 1_000 previously minted tokens
   //     const expectedYield = Math.floor(stakeAmount * (yieldRate / 10000));
   //     const expectedBalance =
   //       mintAmount - stakeAmount + stakeAmount + expectedYield;
   //
-  //     expect(Number(userTokenAccountInfo.amount)).to.be.approximately(
-  //       expectedBalance,
-  //       1
-  //     ); // Allow for rounding
-  //     console.log(
-  //       "User token balance after claiming:",
-  //       userTokenAccountInfo.amount.toString()
-  //     );
+  //     expect(userTokenBalance).to.be.approximately(expectedBalance, 1); // Allow for rounding
+  //     console.log("User token balance after claiming:", userTokenBalance);
   //     console.log("Expected yield:", expectedYield);
   //
   //     // 2. Check program's token balance decreased to 0
-  //     const programTokenAccountInfo = await getAccount(
-  //       provider.connection,
-  //       programTokenAccount,
-  //       "confirmed",
-  //       TOKEN_PROGRAM_ID
-  //     );
-  //
-  //     expect(Number(programTokenAccountInfo.amount)).to.equal(0);
+  //     const vaultBalance = await getTokenBalance(client, vaultAta);
+  //     expect(vaultBalance).to.equal(0);
   //
   //     // 3. Check position account was updated
   //     const position = await sdk.fetchPosition(payer.publicKey, tokenMint);
-  //     expect(position.status).to.equal(1); // Claimed = 1
+  //     expect(position.status).to.deep.equal({ claimed: {} }); // Using the enum structure
   //
   //     // 4. Check config total staked amount decreased
-  //     const [configPda] = sdk.pda.findConfigPda(payer.publicKey);
-  //     const configAccount = await sdk.fetchConfigByAddress(configPda);
-  //
-  //     expect(configAccount.totalStakedAmount.toNumber()).to.equal(0);
+  //     const updatedConfig = await sdk.fetchConfigByAddress(configPda);
+  //     expect(updatedConfig.totalStakedAmount.toNumber()).to.equal(0);
   //     console.log(
   //       "Total staked amount after claiming:",
-  //       configAccount.totalStakedAmount.toString()
+  //       updatedConfig.totalStakedAmount.toString(),
   //     );
   //   } catch (err) {
   //     console.error("Failed to claim tokens:", err);

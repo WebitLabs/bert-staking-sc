@@ -23,6 +23,7 @@
     "@kinobi-so/nodes-from-anchor": "^0.22.0",
     "@kinobi-so/renderers": "^0.22.0",
     "@kinobi-so/visitors-core": "^0.22.0",
+    "@metaplex-foundation/umi-uploader-irys": "^0.9.1",
     "@metaplex-foundation/mpl-core": "^0.2.0",
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
     "@metaplex-foundation/mpl-toolbox": "^0.9.4",

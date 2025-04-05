@@ -12,53 +12,45 @@ export type StakeNftParams = {
   pda: BertStakingPda;
   owner: web3.PublicKey;
   authority: web3.PublicKey;
+  mint: web3.PublicKey;
+  collection: web3.PublicKey;
   nftMint: web3.PublicKey;
   nftTokenAccount?: web3.PublicKey;
-  programNftAccount?: web3.PublicKey;
+  nftsVault?: web3.PublicKey;
 };
 
 /**
  * Create an instruction to stake an NFT
- *
-  // TODO: Not yet implemented
  */
 export async function stakeNftInstruction({
   program,
   pda,
   owner,
   authority,
+  mint,
+  collection,
   nftMint,
   nftTokenAccount,
-  programNftAccount,
+  nftsVault,
 }: StakeNftParams): Promise<web3.TransactionInstruction> {
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority);
   const [positionPda] = pda.findPositionPda(owner, nftMint);
-
-  // Find Program Authority PDA
-  const [programAuthority] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("authority")],
-    program.programId
-  );
 
   // Derive the NFT token account if not provided
   const userNftTokenAccount =
     nftTokenAccount ||
     web3.PublicKey.findProgramAddressSync(
       [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), nftMint.toBuffer()],
-      ASSOCIATED_TOKEN_PROGRAM_ID
+      ASSOCIATED_TOKEN_PROGRAM_ID,
     )[0];
 
-  // Derive the program's NFT token account if not provided
-  const programNftAta =
-    programNftAccount ||
+  // Get the NFTs vault address
+  const nftsVaultAddress =
+    nftsVault ||
     web3.PublicKey.findProgramAddressSync(
-      [
-        programAuthority.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        nftMint.toBuffer(),
-      ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
+      [Buffer.from("nfts_vault"), configPda.toBuffer()],
+      program.programId,
     )[0];
 
   return program.methods
@@ -67,10 +59,11 @@ export async function stakeNftInstruction({
       owner,
       config: configPda,
       position: positionPda,
+      mint,
+      collection,
       nftMint,
       nftTokenAccount: userNftTokenAccount,
-      programNftAccount: programNftAta,
-      programAuthority,
+      nftsVault: nftsVaultAddress, // Updated to nftsVault
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       systemProgram: web3.SystemProgram.programId,
@@ -78,4 +71,3 @@ export async function stakeNftInstruction({
     })
     .instruction();
 }
-

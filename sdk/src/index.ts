@@ -29,7 +29,8 @@ import {
   fetchPositionByAddressRpc,
   fetchPositionsByOwnerRpc,
 } from "./accounts";
-import { LockPeriod } from "./types";
+import { LockPeriod, PositionType } from "./types";
+import { getAllLockPeriods, getLockPeriodFromIdl } from "./utils";
 
 // Export types
 export * from "./types";
@@ -51,7 +52,7 @@ export class BertStakingSDK {
    */
   constructor(
     public provider: AnchorProvider | BankrunProvider,
-    public programId: PublicKey = new PublicKey(IDL.address)
+    public programId: PublicKey = new PublicKey(IDL.address),
   ) {
     this.program = new Program(IDL as any, provider);
     this.pda = new BertStakingPda(programId);
@@ -64,7 +65,8 @@ export class BertStakingSDK {
     authority,
     mint,
     collection,
-    lockPeriod,
+    lockPeriods,
+    nftsVault,
     yieldRate,
     maxCap,
     nftValueInTokens,
@@ -73,7 +75,8 @@ export class BertStakingSDK {
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
-    lockPeriod: LockPeriod;
+    lockPeriods?: LockPeriod[];
+    nftsVault?: PublicKey;
     yieldRate: number | BN;
     maxCap: number | BN;
     nftValueInTokens: number | BN;
@@ -85,7 +88,8 @@ export class BertStakingSDK {
       authority,
       mint,
       collection,
-      lockPeriod,
+      nftsVault, // Added nftsVault
+      lockPeriods, // Changed from lockPeriod to lockPeriods
       yieldRate,
       maxCap,
       nftValueInTokens,
@@ -100,7 +104,8 @@ export class BertStakingSDK {
     authority,
     mint,
     collection,
-    lockPeriod,
+    lockPeriods,
+    nftsVault,
     yieldRate,
     maxCap,
     nftValueInTokens,
@@ -109,7 +114,8 @@ export class BertStakingSDK {
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
-    lockPeriod: LockPeriod;
+    lockPeriods?: LockPeriod[]; // Changed from single lockPeriod to array
+    nftsVault?: PublicKey; // Added optional nftsVault
     yieldRate: number | BN;
     maxCap: number | BN;
     nftValueInTokens: number | BN;
@@ -121,7 +127,8 @@ export class BertStakingSDK {
       authority,
       mint,
       collection,
-      lockPeriod,
+      nftsVault, // Added nftsVault
+      lockPeriods, // Changed from lockPeriod to lockPeriods
       yieldRate,
       maxCap,
       nftValueInTokens,
@@ -149,10 +156,14 @@ export class BertStakingSDK {
     authority,
     owner,
     tokenMint,
+    lockPeriod,
+    positionType,
   }: {
     authority: PublicKey;
     owner: PublicKey;
     tokenMint: PublicKey;
+    lockPeriod: LockPeriod;
+    positionType: PositionType;
   }): Promise<TransactionInstruction> {
     return initializePositionInstruction({
       program: this.program,
@@ -160,6 +171,8 @@ export class BertStakingSDK {
       owner,
       authority,
       tokenMint,
+      lockPeriod,
+      positionType,
     });
   }
 
@@ -170,10 +183,14 @@ export class BertStakingSDK {
     authority,
     owner,
     tokenMint,
+    lockPeriod,
+    positionType,
   }: {
     authority: PublicKey;
     owner: PublicKey;
     tokenMint: PublicKey;
+    lockPeriod: LockPeriod;
+    positionType: PositionType;
   }): Promise<string> {
     let ix = await initializePositionInstruction({
       program: this.program,
@@ -181,6 +198,8 @@ export class BertStakingSDK {
       owner,
       authority,
       tokenMint,
+      lockPeriod,
+      positionType,
     });
 
     const tx = new Transaction();
@@ -203,24 +222,30 @@ export class BertStakingSDK {
   async stakeNft({
     owner,
     authority,
+    mint,
+    collection,
     nftMint,
     nftTokenAccount,
-    programNftAccount,
+    nftsVault,
   }: {
     owner: PublicKey;
     authority: PublicKey;
+    mint: PublicKey;
+    collection: PublicKey;
     nftMint: PublicKey;
     nftTokenAccount?: PublicKey;
-    programNftAccount?: PublicKey;
+    nftsVault?: PublicKey;
   }): Promise<TransactionInstruction> {
     return stakeNftInstruction({
       program: this.program,
       pda: this.pda,
       owner,
       authority,
+      mint,
+      collection,
       nftMint,
       nftTokenAccount,
-      programNftAccount,
+      nftsVault,
     });
   }
 
@@ -230,24 +255,30 @@ export class BertStakingSDK {
   async stakeNftRpc({
     owner,
     authority,
+    mint,
+    collection,
     nftMint,
     nftTokenAccount,
-    programNftAccount,
+    nftsVault,
   }: {
     owner: PublicKey;
     authority: PublicKey;
+    mint: PublicKey;
+    collection: PublicKey;
     nftMint: PublicKey;
     nftTokenAccount?: PublicKey;
-    programNftAccount?: PublicKey;
+    nftsVault?: PublicKey;
   }): Promise<string> {
     let ix = await stakeNftInstruction({
       program: this.program,
       pda: this.pda,
       owner,
       authority,
+      mint,
+      collection,
       nftMint,
       nftTokenAccount,
-      programNftAccount,
+      nftsVault,
     });
 
     const tx = new Transaction();
@@ -272,15 +303,15 @@ export class BertStakingSDK {
     owner,
     tokenMint,
     amount,
-    period,
     tokenAccount,
+    vault,
   }: {
     owner: PublicKey;
     authority: PublicKey;
     tokenMint: PublicKey;
     amount: number | BN;
-    period: LockPeriod;
     tokenAccount?: PublicKey;
+    vault?: PublicKey;
   }): Promise<TransactionInstruction> {
     return await stakeTokenInstruction({
       program: this.program,
@@ -289,8 +320,8 @@ export class BertStakingSDK {
       authority,
       tokenMint,
       amount,
-      period,
       tokenAccount,
+      vault,
     });
   }
 
@@ -302,15 +333,15 @@ export class BertStakingSDK {
     owner,
     tokenMint,
     amount,
-    period,
     tokenAccount,
+    vault,
   }: {
     owner: PublicKey;
     authority: PublicKey;
     tokenMint: PublicKey;
     amount: number | BN;
-    period: LockPeriod;
     tokenAccount?: PublicKey;
+    vault?: PublicKey;
   }): Promise<string> {
     let ix = await stakeTokenInstruction({
       program: this.program,
@@ -319,8 +350,8 @@ export class BertStakingSDK {
       authority,
       tokenMint,
       amount,
-      period,
       tokenAccount,
+      vault,
     });
 
     const tx = new Transaction();
@@ -447,13 +478,21 @@ export class BertStakingSDK {
       signTransaction: any;
       signAllTransactions: any;
     },
-    programId?: PublicKey
+    programId?: PublicKey,
   ): BertStakingSDK {
     const provider = new AnchorProvider(
       connection,
       wallet,
-      AnchorProvider.defaultOptions()
+      AnchorProvider.defaultOptions(),
     );
     return new BertStakingSDK(provider, programId);
+  }
+
+  static getSupportedLockPeriods() {
+    return getAllLockPeriods();
+  }
+
+  static getLockPeriodFromIdl(p: LockPeriod) {
+    return getLockPeriodFromIdl(p);
   }
 }

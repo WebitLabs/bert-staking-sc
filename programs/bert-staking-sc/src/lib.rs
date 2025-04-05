@@ -15,7 +15,7 @@ pub mod bert_staking_sc {
 
     pub fn initialize(
         ctx: Context<Initialize>,
-        lock_period: LockPeriod,
+        lock_period: [LockPeriod; 4],
         yield_rate: u64,
         max_cap: u64,
         nft_value_in_tokens: u64,
@@ -31,20 +31,21 @@ pub mod bert_staking_sc {
         )
     }
 
-    pub fn initiate_position(ctx: Context<InitializePosition>) -> Result<()> {
-        ctx.accounts.process(&ctx.bumps)
+    pub fn initiate_position(
+        ctx: Context<InitializePosition>,
+        lock_period: LockPeriod,
+        position_type: PositionType,
+    ) -> Result<()> {
+        ctx.accounts
+            .initialize_position(lock_period, position_type, &ctx.bumps)
     }
 
     pub fn stake_nft(ctx: Context<StakeNFT>) -> Result<()> {
-        ctx.accounts.stake(&ctx.bumps)
+        ctx.accounts.stake_nft()
     }
 
-    pub fn stake_token(
-        ctx: Context<StakeToken>,
-        amount: u64,
-        lock_period: LockPeriod,
-    ) -> Result<()> {
-        ctx.accounts.process(amount, lock_period)
+    pub fn stake_token(ctx: Context<StakeToken>, amount: u64) -> Result<()> {
+        ctx.accounts.stake_token(amount)
     }
 
     pub fn claim_position(ctx: Context<ClaimPosition>) -> Result<()> {

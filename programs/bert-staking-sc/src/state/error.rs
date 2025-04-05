@@ -23,6 +23,9 @@ pub enum StakingError {
     #[msg("Invalid lock period")]
     InvalidLockPeriod,
 
+    #[msg("Invalid position type")]
+    InvalidPositionType,
+
     #[msg("Invalid Nft Mint")]
     InvalidNftMint,
 }

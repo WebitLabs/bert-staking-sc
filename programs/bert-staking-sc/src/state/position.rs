@@ -21,6 +21,7 @@ pub struct Position {
     pub position_type: PositionType, // Type of position: NFT or Token
     pub unlock_time: i64,            // Time when the position can be unlocked
     pub status: PositionStatus,      // Status of position: Unclaimed or Claimed
-    pub nft_mint: Pubkey,            // NFT mint address (only used for NFT positions)
+    pub nft_mints: [Pubkey; 5],      // NFT mint addresses (only used for NFT positions)
+    pub nft_index: u8,               // Number of NFTs staked (acts alos as index in nft_mints)
     pub bump: u8,                    // PDA bump
 }

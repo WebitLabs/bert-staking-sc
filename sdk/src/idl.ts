@@ -74,14 +74,16 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "position.nft_mint",
-                "account": "position"
+                "path": "mint"
               }
             ]
           }
         },
         {
-          "name": "tokenMint"
+          "name": "mint",
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "tokenAccount",
@@ -131,7 +133,7 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "tokenMint"
+                "path": "mint"
               }
             ],
             "program": {
@@ -221,7 +223,7 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "tokenMint"
+                "path": "mint"
               }
             ],
             "program": {
@@ -473,6 +475,9 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "nftsVault"
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         },
@@ -488,9 +493,14 @@ export type BertStakingSc = {
         {
           "name": "lockPeriod",
           "type": {
-            "defined": {
-              "name": "lockPeriod"
-            }
+            "array": [
+              {
+                "defined": {
+                  "name": "lockPeriod"
+                }
+              },
+              4
+            ]
           }
         },
         {
@@ -576,13 +586,16 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "tokenMint"
+                "path": "mint"
               }
             ]
           }
         },
         {
-          "name": "tokenMint"
+          "name": "mint",
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "systemProgram",
@@ -600,7 +613,24 @@ export type BertStakingSc = {
           "address": "SysvarRent111111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "lockPeriod",
+          "type": {
+            "defined": {
+              "name": "lockPeriod"
+            }
+          }
+        },
+        {
+          "name": "positionType",
+          "type": {
+            "defined": {
+              "name": "positionType"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "stakeNft",
@@ -634,6 +664,11 @@ export type BertStakingSc = {
                   105,
                   103
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "config"
               }
             ]
           }
@@ -668,208 +703,33 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "collection",
+          "docs": [
+            "supposed to be in config also"
+          ],
+          "relations": [
+            "config"
+          ]
+        },
+        {
           "name": "nftMint"
         },
         {
           "name": "nftTokenAccount",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "owner"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nftMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
+          "writable": true
         },
         {
-          "name": "programNftAccount",
+          "name": "nftsVault",
           "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "programAuthority"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nftMint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "programAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "tokenProgram",
@@ -1141,7 +1001,10 @@ export type BertStakingSc = {
                 89
               ]
             }
-          }
+          },
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "tokenProgram",
@@ -1164,14 +1027,6 @@ export type BertStakingSc = {
         {
           "name": "amount",
           "type": "u64"
-        },
-        {
-          "name": "lockPeriod",
-          "type": {
-            "defined": {
-              "name": "lockPeriod"
-            }
-          }
         }
       ]
     }
@@ -1242,6 +1097,11 @@ export type BertStakingSc = {
     },
     {
       "code": 6007,
+      "name": "invalidPositionType",
+      "msg": "Invalid position type"
+    },
+    {
+      "code": 6008,
       "name": "invalidNftMint",
       "msg": "Invalid Nft Mint"
     }
@@ -1269,15 +1129,24 @@ export type BertStakingSc = {
             "type": "pubkey"
           },
           {
+            "name": "nftsVault",
+            "type": "pubkey"
+          },
+          {
             "name": "authorityVault",
             "type": "pubkey"
           },
           {
             "name": "lockPeriod",
             "type": {
-              "defined": {
-                "name": "lockPeriod"
-              }
+              "array": [
+                {
+                  "defined": {
+                    "name": "lockPeriod"
+                  }
+                },
+                4
+              ]
             }
           },
           {
@@ -1369,8 +1238,17 @@ export type BertStakingSc = {
             }
           },
           {
-            "name": "nftMint",
-            "type": "pubkey"
+            "name": "nftMints",
+            "type": {
+              "array": [
+                "pubkey",
+                5
+              ]
+            }
+          },
+          {
+            "name": "nftIndex",
+            "type": "u8"
           },
           {
             "name": "bump",

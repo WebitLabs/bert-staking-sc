@@ -11,6 +11,7 @@ pub struct StakeToken<'info> {
     pub owner: Signer<'info>,
 
     #[account(
+        has_one = vault,
         seeds = [b"config", config.authority.key().as_ref()],
         bump = config.bump,
     )]
@@ -46,15 +47,10 @@ pub struct StakeToken<'info> {
 }
 
 impl<'info> StakeToken<'info> {
-    pub fn process(&mut self, amount: u64, period: LockPeriod) -> Result<()> {
+    pub fn stake_token(&mut self, amount: u64) -> Result<()> {
         // Check if amount is valid
         if amount == 0 {
             return Err(StakingError::InvalidAmount.into());
-        }
-
-        // Check if period is valid
-        if period != self.config.lock_period {
-            return Err(StakingError::InvalidLockPeriod.into());
         }
 
         // Check if staking would exceed the max cap
@@ -73,16 +69,6 @@ impl<'info> StakeToken<'info> {
         position.deposit_time = Clock::get()?.unix_timestamp;
         position.amount = position.amount.checked_add(amount).unwrap();
         position.position_type = PositionType::Token;
-
-        // Calculate unlock time (current time + lock_time in seconds)
-        // lock_time is in days, convert to seconds
-        let lock_days = match self.config.lock_period {
-            LockPeriod::OneDay => 1,
-            LockPeriod::ThreeDays => 3,
-            LockPeriod::SevenDays => 7,
-            LockPeriod::ThirtyDays => 30,
-        };
-        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days * 24 * 60 * 60);
 
         // Transfer tokens from user to program
         anchor_spl::token::transfer(

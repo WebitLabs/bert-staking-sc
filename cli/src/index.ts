@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { Command } from "commander";
 import figlet from "figlet";
 import chalk from "chalk";
@@ -9,6 +8,7 @@ import { setupConnection } from "./utils/connection";
 import { initializePositionCommand } from "./commands/initialize-position";
 import { stakeTokenCommand } from "./commands/stake-token";
 import { createTokenCommand } from "./commands/create-token";
+import { createCoreNftCommand } from "./commands/create-nft";
 
 // Create CLI program
 const program = new Command();
@@ -16,8 +16,8 @@ const program = new Command();
 // Display banner
 console.log(
   chalk.yellow(
-    figlet.textSync("BERT Staking CLI", { horizontalLayout: "full" })
-  )
+    figlet.textSync("BERT Staking CLI", { horizontalLayout: "full" }),
+  ),
 );
 
 // Program metadata
@@ -31,7 +31,8 @@ program
   });
 
 // Register commands
-createTokenCommand(program);  // Add this first as it's needed before other commands
+createTokenCommand(program);
+createCoreNftCommand(program);
 initializeCommand(program);
 initializePositionCommand(program);
 stakeTokenCommand(program);
@@ -45,4 +46,3 @@ program.parse(process.argv);
 if (!process.argv.slice(2).length) {
   program.outputHelp();
 }
-

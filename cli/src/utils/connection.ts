@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Wallet } from "@coral-xyz/anchor";
 import { BertStakingSDK } from "@bert-staking/sdk";
@@ -6,10 +7,12 @@ import os from "os";
 import path from "path";
 import { Command } from "commander";
 
+const DEVNET_RPC = process.env.ENDPOINT || "https://api.devnet.solana.com";
+
 // Default RPC endpoints
 const ENDPOINTS = {
   mainnet: "https://api.mainnet-beta.solana.com",
-  devnet: "https://api.devnet.solana.com",
+  devnet: DEVNET_RPC,
   testnet: "https://api.testnet.solana.com",
   localhost: "http://localhost:8899",
 };
@@ -42,7 +45,7 @@ export function setupConnection(command: Command): void {
   const options = command.opts();
 
   // Get network from options or default to localhost
-  const network = options.network || "localhost";
+  const network = options.network || "devnet";
   const url =
     options.url ||
     ENDPOINTS[network as keyof typeof ENDPOINTS] ||
@@ -61,7 +64,7 @@ export function setupConnection(command: Command): void {
     const provider = new AnchorProvider(
       connection,
       wallet,
-      AnchorProvider.defaultOptions()
+      AnchorProvider.defaultOptions(),
     );
 
     // Create SDK instance

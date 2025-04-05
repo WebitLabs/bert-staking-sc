@@ -11,6 +11,7 @@ pub struct InitializePosition<'info> {
     pub owner: Signer<'info>,
 
     #[account(
+        has_one = mint,
         seeds = [b"config", config.authority.key().as_ref()],
         bump = config.bump,
     )]
@@ -20,12 +21,12 @@ pub struct InitializePosition<'info> {
         init,
         payer = owner,
         space = 8 + Position::INIT_SPACE,
-        seeds = [b"position", owner.key().as_ref(), token_mint.key().as_ref()],
+        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref()],
         bump
     )]
     pub position: Account<'info, Position>,
 
-    pub token_mint: InterfaceAccount<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -34,7 +35,22 @@ pub struct InitializePosition<'info> {
 }
 
 impl<'info> InitializePosition<'info> {
-    pub fn process(&mut self, bumps: &InitializePositionBumps) -> Result<()> {
+    pub fn initialize_position(
+        &mut self,
+        period: LockPeriod,
+        position_type: PositionType,
+        bumps: &InitializePositionBumps,
+    ) -> Result<()> {
+        // Check if position is valid
+        if position_type != PositionType::Token && position_type != PositionType::NFT {
+            return Err(StakingError::InvalidPositionType.into());
+        }
+
+        // Check if period is valid
+        if !self.config.lock_period.contains(&period) {
+            return Err(StakingError::InvalidLockPeriod.into());
+        }
+
         // Create a position
         let position = &mut self.position;
         position.owner = self.owner.key();
@@ -42,7 +58,7 @@ impl<'info> InitializePosition<'info> {
 
         // Calculate unlock time (current time + lock_time in seconds)
         // lock_time is in days, convert to seconds
-        let lock_days = match self.config.lock_period {
+        let lock_days = match period {
             LockPeriod::OneDay => 1,
             LockPeriod::ThreeDays => 3,
             LockPeriod::SevenDays => 7,
@@ -51,11 +67,10 @@ impl<'info> InitializePosition<'info> {
         position.unlock_time = Clock::get()?.unix_timestamp + (lock_days * 24 * 60 * 60);
 
         position.status = PositionStatus::Unclaimed;
-        position.nft_mint = Pubkey::default(); // Not applicable for token positions
+        position.nft_mints = [Pubkey::default(); 5];
 
         position.bump = bumps.position;
 
         Ok(())
     }
 }
-

@@ -4,6 +4,8 @@ import { getSDK, getWallet } from "../utils/connection";
 import { LockPeriod } from "@bert-staking/sdk";
 
 import ora from "ora";
+import { publicKey } from "@coral-xyz/anchor/dist/cjs/utils";
+import { COLLECTION, MINT } from "../constants";
 
 /**
  * Initialize the staking program
@@ -17,17 +19,17 @@ export function initializeCommand(program: Command): void {
     .option(
       "-l, --lock-period <period>",
       "Lock period (1, 3, 7, or 30 days)",
-      "7"
+      "7",
     )
     .option(
       "-y, --yield-rate <bps>",
       "Yield rate in basis points (100 = 1%)",
-      "500"
+      "500",
     )
     .option(
       "-cap, --max-cap <amount>",
       "Maximum staking capacity in tokens",
-      "1000000000"
+      "1000000000",
     )
     .option("-nv, --nft-value <amount>", "NFT value in tokens", "100000")
     .option("-nl, --nft-limit <number>", "NFT limit per user", "5")
@@ -58,15 +60,19 @@ export function initializeCommand(program: Command): void {
             return;
         }
 
+        let mint = PublicKey.default;
+        let collection = PublicKey.default;
+
         // Validate mint address
         if (!options.mint) {
           spinner.fail("Token mint address is required");
-          return;
+          mint = new PublicKey(MINT);
         }
 
         // Validate collection address
         if (!options.collection) {
           spinner.fail("NFT collection address is required");
+          collection = new PublicKey(COLLECTION);
           return;
         }
 
@@ -103,7 +109,7 @@ export function initializeCommand(program: Command): void {
         console.log(`- Yield Rate: ${config.yieldRate.toString()} bps`);
         console.log(`- Max Cap: ${config.maxCap.toString()} tokens`);
         console.log(
-          `- NFT Value: ${config.nftValueInTokens.toString()} tokens`
+          `- NFT Value: ${config.nftValueInTokens.toString()} tokens`,
         );
         console.log(`- NFT Limit Per User: ${config.nftsLimitPerUser}`);
       } catch (error) {

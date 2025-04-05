@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Command } from "commander";
 import { getConnection, getWallet } from "../utils/connection";
 import ora from "ora";
@@ -9,9 +10,9 @@ import {
   signerIdentity,
 } from "@metaplex-foundation/umi";
 import { mplTokenMetadata } from "@metaplex-foundation/mpl-token-metadata";
+import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
 
-const RPC =
-  "https://devnet.helius-rpc.com/?api-key=702ddf04-244d-42d9-b282-aec1d8783deb";
+const RPC = process.env.ENDPOINT || "https://api.devnet.solana.com";
 
 /**
  * Create a new token mint with metadata
@@ -28,7 +29,7 @@ export function createTokenCommand(program: Command): void {
     .option(
       "-a, --amount <number>",
       "Initial token amount to mint",
-      "1000000000000"
+      "1000000000000",
     )
     .action(async (options) => {
       try {
@@ -43,12 +44,13 @@ export function createTokenCommand(program: Command): void {
         const umi = createUmi(RPC);
 
         const userWallet = umi.eddsa.createKeypairFromSecretKey(
-          new Uint8Array(payer.secretKey)
+          new Uint8Array(payer.secretKey),
         );
         const userWalletSigner = createSignerFromKeypair(umi, userWallet);
 
         umi.use(signerIdentity(userWalletSigner));
         umi.use(mplTokenMetadata());
+        umi.use(irysUploader());
 
         // Generate a new keypair for the mint
         const mint = generateSigner(umi);
@@ -69,7 +71,7 @@ export function createTokenCommand(program: Command): void {
             options.image,
             options.owner,
             decimals,
-            amount
+            amount,
           );
 
           spinner.succeed(`Token mint created: ${mint.publicKey.toString()}`);

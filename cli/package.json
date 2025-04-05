@@ -13,14 +13,15 @@
     "prepare": "yarn build"
   },
   "dependencies": {
+    "@bert-staking/sdk": "*",
     "@coral-xyz/anchor": "^0.31.0",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.90.1",
-    "commander": "^12.1.0",
-    "figlet": "^1.7.0",
     "chalk": "^4.1.2",
-    "ora": "^5.4.1",
-    "@bert-staking/sdk": "*"
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
+    "figlet": "^1.7.0",
+    "ora": "^5.4.1"
   },
   "devDependencies": {
     "@types/figlet": "^1.5.8",

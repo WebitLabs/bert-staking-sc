@@ -14,7 +14,7 @@ export class BertStakingPda {
   findConfigPda(authority: PublicKey): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("config"), authority.toBuffer()],
-      this.programId
+      this.programId,
     );
   }
 
@@ -24,11 +24,11 @@ export class BertStakingPda {
    */
   findAuthorityVaultPda(
     mint: PublicKey,
-    owner: PublicKey
+    owner: PublicKey,
   ): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("authority_vault"), owner.toBuffer(), mint.toBuffer()],
-      this.programId
+      this.programId,
     );
   }
 
@@ -41,7 +41,7 @@ export class BertStakingPda {
   findPositionPda(owner: PublicKey, mint: PublicKey): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("position"), owner.toBuffer(), mint.toBuffer()],
-      this.programId
+      this.programId,
     );
   }
 }

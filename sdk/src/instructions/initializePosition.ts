@@ -1,6 +1,8 @@
 import { Program, web3 } from "@coral-xyz/anchor";
 import { BertStakingSc } from "../idl";
 import { BertStakingPda } from "../pda";
+import { LockPeriod, PositionType } from "../types";
+import { getLockPeriodFromIdl, getPositionTypeIdl } from "../utils";
 
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -13,6 +15,8 @@ export type InitializePositionParams = {
   owner: web3.PublicKey;
   authority: web3.PublicKey;
   tokenMint: web3.PublicKey;
+  lockPeriod: LockPeriod;
+  positionType: PositionType;
 };
 
 /**
@@ -24,6 +28,8 @@ export async function initializePositionInstruction({
   owner,
   authority,
   tokenMint,
+  lockPeriod,
+  positionType,
 }: InitializePositionParams): Promise<web3.TransactionInstruction> {
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority);
@@ -31,13 +37,17 @@ export async function initializePositionInstruction({
   // Find Position PDA
   const [positionPda] = pda.findPositionPda(owner, tokenMint);
 
+  // Get lock period in IDL format
+  const lockPeriodObj = getLockPeriodFromIdl(lockPeriod);
+  const positionTypeObj = getPositionTypeIdl(positionType);
+
   return program.methods
-    .initiatePosition()
+    .initiatePosition(lockPeriodObj, positionTypeObj)
     .accountsStrict({
       owner,
       config: configPda,
       position: positionPda,
-      tokenMint,
+      mint: tokenMint, // Changed to match Rust code
       systemProgram: web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -45,4 +55,3 @@ export async function initializePositionInstruction({
     })
     .instruction();
 }
-

@@ -1,6 +1,5 @@
 import { Program, web3, BN } from "@coral-xyz/anchor";
 import { BertStakingSc } from "../idl";
-import { getLockPeriodFromIdl } from "../utils";
 
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -8,7 +7,6 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { BertStakingPda } from "../pda";
-import { LockPeriod } from "../types";
 
 export type StakeTokenParams = {
   program: Program<BertStakingSc>;
@@ -17,8 +15,8 @@ export type StakeTokenParams = {
   owner: web3.PublicKey;
   tokenMint: web3.PublicKey;
   amount: number | BN;
-  period: LockPeriod;
   tokenAccount?: web3.PublicKey;
+  vault?: web3.PublicKey;
 };
 
 /**
@@ -31,28 +29,29 @@ export async function stakeTokenInstruction({
   owner,
   tokenMint,
   amount,
-  period,
   tokenAccount,
+  vault,
 }: StakeTokenParams): Promise<web3.TransactionInstruction> {
   // Convert amount to BN if needed
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
 
   const [configPda] = pda.findConfigPda(authority);
-  const [positionPda] = pda.findPositionPda(authority, tokenMint);
+  const [positionPda] = pda.findPositionPda(owner, tokenMint);
 
   // Derive the token account if not provided
   const userTokenAccount =
     tokenAccount ||
     web3.PublicKey.findProgramAddressSync(
       [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), tokenMint.toBuffer()],
-      ASSOCIATED_TOKEN_PROGRAM_ID
+      ASSOCIATED_TOKEN_PROGRAM_ID,
     )[0];
 
-  const vaultAta = getAssociatedTokenAddressSync(tokenMint, configPda, true);
-  const lockPeriodObject = getLockPeriodFromIdl(period);
+  // Get vault address
+  const vaultAta =
+    vault || getAssociatedTokenAddressSync(tokenMint, configPda, true);
 
   return program.methods
-    .stakeToken(amountBN, lockPeriodObject)
+    .stakeToken(amountBN)
     .accountsStrict({
       owner,
       config: configPda,

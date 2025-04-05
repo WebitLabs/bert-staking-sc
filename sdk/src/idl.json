@@ -68,14 +68,16 @@
               },
               {
                 "kind": "account",
-                "path": "position.nft_mint",
-                "account": "Position"
+                "path": "mint"
               }
             ]
           }
         },
         {
-          "name": "token_mint"
+          "name": "mint",
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "token_account",
@@ -125,7 +127,7 @@
               },
               {
                 "kind": "account",
-                "path": "token_mint"
+                "path": "mint"
               }
             ],
             "program": {
@@ -215,7 +217,7 @@
               },
               {
                 "kind": "account",
-                "path": "token_mint"
+                "path": "mint"
               }
             ],
             "program": {
@@ -467,6 +469,9 @@
           }
         },
         {
+          "name": "nfts_vault"
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         },
@@ -482,9 +487,14 @@
         {
           "name": "lock_period",
           "type": {
-            "defined": {
-              "name": "LockPeriod"
-            }
+            "array": [
+              {
+                "defined": {
+                  "name": "LockPeriod"
+                }
+              },
+              4
+            ]
           }
         },
         {
@@ -570,13 +580,16 @@
               },
               {
                 "kind": "account",
-                "path": "token_mint"
+                "path": "mint"
               }
             ]
           }
         },
         {
-          "name": "token_mint"
+          "name": "mint",
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "system_program",
@@ -594,7 +607,24 @@
           "address": "SysvarRent111111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "lock_period",
+          "type": {
+            "defined": {
+              "name": "LockPeriod"
+            }
+          }
+        },
+        {
+          "name": "position_type",
+          "type": {
+            "defined": {
+              "name": "PositionType"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "stake_nft",
@@ -628,6 +658,11 @@
                   105,
                   103
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "Config"
               }
             ]
           }
@@ -662,208 +697,33 @@
           }
         },
         {
+          "name": "mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "collection",
+          "docs": [
+            "supposed to be in config also"
+          ],
+          "relations": [
+            "config"
+          ]
+        },
+        {
           "name": "nft_mint"
         },
         {
           "name": "nft_token_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "owner"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nft_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
+          "writable": true
         },
         {
-          "name": "program_nft_account",
+          "name": "nfts_vault",
           "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "program_authority"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "nft_mint"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
-        },
-        {
-          "name": "program_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "token_program",
@@ -1135,7 +995,10 @@
                 89
               ]
             }
-          }
+          },
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "token_program",
@@ -1158,14 +1021,6 @@
         {
           "name": "amount",
           "type": "u64"
-        },
-        {
-          "name": "lock_period",
-          "type": {
-            "defined": {
-              "name": "LockPeriod"
-            }
-          }
         }
       ]
     }
@@ -1236,6 +1091,11 @@
     },
     {
       "code": 6007,
+      "name": "InvalidPositionType",
+      "msg": "Invalid position type"
+    },
+    {
+      "code": 6008,
       "name": "InvalidNftMint",
       "msg": "Invalid Nft Mint"
     }
@@ -1263,15 +1123,24 @@
             "type": "pubkey"
           },
           {
+            "name": "nfts_vault",
+            "type": "pubkey"
+          },
+          {
             "name": "authority_vault",
             "type": "pubkey"
           },
           {
             "name": "lock_period",
             "type": {
-              "defined": {
-                "name": "LockPeriod"
-              }
+              "array": [
+                {
+                  "defined": {
+                    "name": "LockPeriod"
+                  }
+                },
+                4
+              ]
             }
           },
           {
@@ -1363,8 +1232,17 @@
             }
           },
           {
-            "name": "nft_mint",
-            "type": "pubkey"
+            "name": "nft_mints",
+            "type": {
+              "array": [
+                "pubkey",
+                5
+              ]
+            }
+          },
+          {
+            "name": "nft_index",
+            "type": "u8"
           },
           {
             "name": "bump",

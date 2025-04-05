@@ -44,6 +44,9 @@ pub struct Initialize<'info> {
     )]
     pub authority_vault: InterfaceAccount<'info, TokenAccount>,
 
+    /// CHECK: TODO: will add type later!
+    pub nfts_vault: UncheckedAccount<'info>,
+
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -52,7 +55,7 @@ pub struct Initialize<'info> {
 impl<'info> Initialize<'info> {
     pub fn initialize(
         &mut self,
-        lock_period: LockPeriod,
+        lock_period: [LockPeriod; 4],
         yield_rate: u64,
         max_cap: u64,
         nft_value_in_tokens: u64,
@@ -66,6 +69,7 @@ impl<'info> Initialize<'info> {
             mint: self.mint.key(),
             collection: self.collection.key(),
             vault: self.vault.key(),
+            nfts_vault: self.nfts_vault.key(),
             authority_vault: self.authority_vault.key(),
             lock_period,
             yield_rate,

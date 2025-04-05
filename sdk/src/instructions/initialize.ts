@@ -7,7 +7,7 @@ import {
   getAssociatedTokenAddressSync,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { getLockPeriodFromIdl } from "../utils";
+import { getLockPeriodFromIdl, getLockPeriodsArrayFromIdl } from "../utils";
 
 export type InitializeParams = {
   program: Program<BertStakingSc>;
@@ -16,8 +16,9 @@ export type InitializeParams = {
   mint: web3.PublicKey;
   collection: web3.PublicKey;
   vault?: web3.PublicKey;
+  nftsVault?: web3.PublicKey;
   authorityVault?: web3.PublicKey;
-  lockPeriod: LockPeriod;
+  lockPeriods?: LockPeriod[];
   yieldRate: number | BN;
   maxCap: number | BN;
   nftValueInTokens: number | BN;
@@ -34,8 +35,9 @@ export function initializeInstruction({
   mint,
   collection,
   vault,
+  nftsVault,
   authorityVault,
-  lockPeriod,
+  lockPeriods,
   yieldRate,
   maxCap,
   nftValueInTokens,
@@ -53,25 +55,42 @@ export function initializeInstruction({
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority);
 
-  const lockPeriodObject = getLockPeriodFromIdl(lockPeriod);
+  // Use provided lock periods or default to all periods
+  const actualLockPeriods = lockPeriods
+    ? getLockPeriodsArrayFromIdl(lockPeriods)
+    : getLockPeriodsArrayFromIdl([
+        LockPeriod.OneDay,
+        LockPeriod.ThreeDays,
+        LockPeriod.SevenDays,
+        LockPeriod.ThirtyDays,
+      ]);
+
+  // Get token accounts
   const vaultTA = vault || getAssociatedTokenAddressSync(mint, configPda, true);
-  const authorityVaultTa =
+  const nftsVaultTA =
+    nftsVault ||
+    web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("nfts_vault"), configPda.toBuffer()],
+      program.programId,
+    )[0];
+  const authorityVaultTA =
     authorityVault || pda.findAuthorityVaultPda(mint, configPda)[0];
 
   return program.methods
     .initialize(
-      lockPeriodObject,
+      actualLockPeriods,
       yieldRateBN,
       maxCapBN,
       nftValueInTokensBN,
-      nftsLimitPerUser
+      nftsLimitPerUser,
     )
     .accountsStrict({
       authority,
       mint,
       collection,
       vault: vaultTA,
-      authorityVault: authorityVaultTa,
+      nftsVault: nftsVaultTA, // Added NFTs vault
+      authorityVault: authorityVaultTA,
       config: configPda,
       systemProgram: web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,
