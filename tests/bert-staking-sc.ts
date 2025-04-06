@@ -13,15 +13,19 @@ import {
   Position,
   PositionType,
 } from "../sdk/src";
-import { BanksClient, ProgramTestContext } from "solana-bankrun";
+import { AddedProgram, BanksClient, ProgramTestContext } from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { USDC_MINT_ADDRESS } from "./helpers/constants";
+import { MPL_CORE_ADDRESS, USDC_MINT_ADDRESS } from "./helpers/constants";
 import {
   createAtaForMint,
   getMintDecimals,
   getTokenBalance,
 } from "./helpers/token";
+
+const addedPrograms: AddedProgram[] = [
+  { name: "mpl_core", programId: new PublicKey(MPL_CORE_ADDRESS) },
+];
 
 describe("bert-staking-sc", () => {
   let context: ProgramTestContext;
@@ -54,7 +58,7 @@ describe("bert-staking-sc", () => {
       payer: _payer,
       client: _client,
       provider: _provider,
-    } = await prelude(undefined, [usdcMint]);
+    } = await prelude(addedPrograms, [usdcMint]);
 
     context = _context;
     payer = _payer;
