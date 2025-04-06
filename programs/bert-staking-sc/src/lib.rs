@@ -49,6 +49,6 @@ pub mod bert_staking_sc {
     }
 
     pub fn claim_position(ctx: Context<ClaimPosition>) -> Result<()> {
-        ctx.accounts.claim_position(&ctx.bumps)
+        ctx.accounts.claim_position()
     }
 }

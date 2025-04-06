@@ -2,10 +2,17 @@ import { expect } from "chai";
 import { prelude } from "./helpers/prelude";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import {
+  advanceUnixTimeStamp,
   createAndProcessTransaction,
   getAddedAccountInfo,
 } from "./helpers/bankrun";
-import { BertStakingSDK, Config, LockPeriod, PositionType } from "../sdk/src";
+import {
+  BertStakingSDK,
+  Config,
+  LockPeriod,
+  Position,
+  PositionType,
+} from "../sdk/src";
 import { BanksClient, ProgramTestContext } from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
@@ -26,7 +33,6 @@ describe("bert-staking-sc", () => {
   const tokenMint = new PublicKey(USDC_MINT_ADDRESS);
 
   // Test parameters for initialization
-  const lockTime = 7; // 7 days lock period
   const yieldRate = 500; // 5% in basis points
   const maxCap = 1_000_000_000; // 1 billion tokens
   const nftValueInTokens = 100_000; // 100k tokens per NFT
@@ -244,89 +250,130 @@ describe("bert-staking-sc", () => {
     // 4. Check config total staked amount increased
     const configAccount = await sdk.fetchConfigByAddress(configPda);
 
-    // TODO: Staked amount should be totalStakedAmount ... FIX IT!
-    // expect(configAccount.totalStakedAmount.toNumber()).to.equal(stakeAmount);
+    expect(configAccount.totalStakedAmount.toNumber()).to.equal(stakeAmount);
     console.log(
       "Total staked amount:",
       configAccount.totalStakedAmount.toString(),
     );
   });
 
-  // it("Claims tokens after lock period", async () => {
-  //   try {
-  //     // Warp to the future when the position is unlocked
-  //     // 7 days in seconds + some buffer
-  //     const secondsToWarp = 7 * 24 * 60 * 60 + 60;
-  //     // const currentSlot = await client.getSlot();
-  //     // provider.context.warpToSlot(
-  //     //   currentSlot  /* + BigInt(secondsToWarp) * BigInt(2) */,
-  //     // );
-  //
-  //     // Get the Config PDA to get vault information
-  //     const [configPda] = sdk.pda.findConfigPda(payer.publicKey);
-  //     const configAccount = await sdk.fetchConfigByAddress(configPda);
-  //
-  //     // Create position PDA
-  //     const [positionPda] = sdk.pda.findPositionPda(payer.publicKey, tokenMint);
-  //
-  //     // Get the vault address from the config account
-  //     const vaultAta = getAssociatedTokenAddressSync(
-  //       tokenMint,
-  //       configPda,
-  //       true,
-  //     );
-  //
-  //     try {
-  //       // Create claim position instruction
-  //       const claimPositionIx = await sdk.claimPosition({
-  //         owner: payer.publicKey,
-  //         positionPda,
-  //         tokenMint,
-  //         tokenAccount: userTokenAccount,
-  //         programTokenAccount: vaultAta,
-  //       });
-  //
-  //       // Process transaction
-  //       await createAndProcessTransaction(client, payer, claimPositionIx);
-  //     } catch (err) {
-  //       console.log("Claiming position failed with err:", err);
-  //       expect.fail("Claiming position failed");
-  //     }
-  //
-  //     // Verify claiming results
-  //
-  //     // 1. Check user's token balance increased with yield
-  //     const userTokenBalance = await getTokenBalance(client, userTokenAccount);
-  //
-  //     // Expected yield = amount * yield_rate / 10000
-  //     const stakeAmount = 500 * 10 ** decimals; // 500 tokens
-  //     const mintAmount = 1_000 * 10 ** decimals; // 1_000 previously minted tokens
-  //     const expectedYield = Math.floor(stakeAmount * (yieldRate / 10000));
-  //     const expectedBalance =
-  //       mintAmount - stakeAmount + stakeAmount + expectedYield;
-  //
-  //     expect(userTokenBalance).to.be.approximately(expectedBalance, 1); // Allow for rounding
-  //     console.log("User token balance after claiming:", userTokenBalance);
-  //     console.log("Expected yield:", expectedYield);
-  //
-  //     // 2. Check program's token balance decreased to 0
-  //     const vaultBalance = await getTokenBalance(client, vaultAta);
-  //     expect(vaultBalance).to.equal(0);
-  //
-  //     // 3. Check position account was updated
-  //     const position = await sdk.fetchPosition(payer.publicKey, tokenMint);
-  //     expect(position.status).to.deep.equal({ claimed: {} }); // Using the enum structure
-  //
-  //     // 4. Check config total staked amount decreased
-  //     const updatedConfig = await sdk.fetchConfigByAddress(configPda);
-  //     expect(updatedConfig.totalStakedAmount.toNumber()).to.equal(0);
-  //     console.log(
-  //       "Total staked amount after claiming:",
-  //       updatedConfig.totalStakedAmount.toString(),
-  //     );
-  //   } catch (err) {
-  //     console.error("Failed to claim tokens:", err);
-  //     expect.fail("Token claiming failed");
-  //   }
-  // });
+  it("Claims tokens after lock period", async () => {
+    let configPda: PublicKey;
+    let configAccount: Config;
+    let positionPda: PublicKey;
+    let position: Position;
+    let userBalanceBefore: number;
+    let vaultBalanceBefore: number;
+    let vaultAta: PublicKey;
+
+    try {
+      // First, let's fetch the position to confirm it exists and has correct data
+      [positionPda] = sdk.pda.findPositionPda(payer.publicKey, tokenMint);
+      position = await sdk.fetchPosition(payer.publicKey, tokenMint);
+
+      console.log("Position before claiming:", {
+        owner: position.owner.toString(),
+        amount: position.amount.toString(),
+        positionType: position.positionType,
+        status: position.status,
+        depositTime: new Date(
+          position.depositTime.toNumber() * 1000,
+        ).toISOString(),
+        unlockTime: new Date(
+          position.unlockTime.toNumber() * 1000,
+        ).toISOString(),
+      });
+
+      // Warp to the future when the position is unlocked
+      // 7 days in seconds + some buffer for SevenDays lock period
+      const unlockTime = position.unlockTime.toNumber();
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      // Calculate how many seconds we need to warp
+      const secondsToWarp = unlockTime - currentTime + 60; // Add a buffer
+
+      // Warp using the bankrun context
+      advanceUnixTimeStamp(provider, BigInt(secondsToWarp));
+
+      console.log(`Warped ${secondsToWarp} seconds into the future`);
+
+      // Get config for vault and collection information
+      [configPda] = sdk.pda.findConfigPda(payer.publicKey);
+      configAccount = await sdk.fetchConfigByAddress(configPda);
+      console.log("Config found:", configPda.toString());
+
+      // Get the vault token account
+      vaultAta = getAssociatedTokenAddressSync(tokenMint, configPda, true);
+      console.log("Vault ATA:", vaultAta.toString());
+
+      // Record balances before claiming
+      vaultBalanceBefore = await getTokenBalance(client, vaultAta);
+      userBalanceBefore = await getTokenBalance(client, userTokenAccount);
+      console.log("Vault balance before:", vaultBalanceBefore);
+      console.log("User balance before:", userBalanceBefore);
+
+      const dummyNftMint = PublicKey.default;
+      const dummyNftTokenAccount = PublicKey.default;
+
+      // Create and send the claim position instruction
+      const claimPositionIx = await sdk.claimPosition({
+        authority: payer.publicKey, // The authority who initialized the config
+        owner: payer.publicKey, // The owner of the position
+        positionPda, // The position PDA to claim
+        tokenMint, // The token mint (USDC in this case)
+        nftMint: dummyNftMint, // Dummy NFT mint (not used for token position)
+        tokenAccount: userTokenAccount, // User's token account to receive tokens
+        nftTokenAccount: dummyNftTokenAccount, // Dummy NFT token account
+        vault: vaultAta, // Program vault for tokens
+        collection: configAccount.collection, // NFT collection (required by instruction)
+        nftsVault: configAccount.nftsVault, // NFT vault (required by instruction)
+      });
+
+      console.log("Claim position instruction created, sending transaction...");
+      await createAndProcessTransaction(client, payer, claimPositionIx);
+      console.log("Transaction processed successfully");
+    } catch (err) {
+      console.error("Failed to claim tokens:", err);
+      expect.fail(`Token claiming failed: ${err}`);
+    }
+
+    // Verify the results of claiming
+
+    // 1. Check user's token balance increased with yield
+    const userTokenBalance = await getTokenBalance(client, userTokenAccount);
+
+    // Expected yield = staked amount * yield_rate / 10000
+    const stakeAmount = position.amount.toNumber();
+    const yieldAmount = Math.floor(stakeAmount * (yieldRate / 10000));
+    const expectedFinalAmount = stakeAmount + yieldAmount;
+    const expectedBalance = userBalanceBefore + expectedFinalAmount;
+
+    console.log("User balance after:", userTokenBalance);
+    console.log("Expected final amount:", expectedFinalAmount);
+    console.log("Expected balance after:", expectedBalance);
+
+    expect(userTokenBalance).to.be.approximately(expectedBalance, 2); // Allow small rounding differences
+
+    // 2. Check program's token vault balance decreased
+    const vaultBalance = await getTokenBalance(client, vaultAta);
+    expect(vaultBalance).to.equal(vaultBalanceBefore - expectedFinalAmount);
+    console.log("Vault balance after:", vaultBalance);
+
+    // 3. Check position account was updated to claimed status
+    const positionAfter = await sdk.fetchPosition(payer.publicKey, tokenMint);
+    expect(positionAfter.status).to.deep.equal({ claimed: {} });
+    console.log("Position status after claiming:", positionAfter.status);
+
+    // 4. Check config's total staked amount was decreased
+    const configAfter = await sdk.fetchConfigByAddress(configPda);
+    expect(configAfter.totalStakedAmount.toNumber()).to.equal(
+      configAccount.totalStakedAmount.toNumber() - stakeAmount,
+    );
+    console.log(
+      "Total staked amount after claiming:",
+      configAfter.totalStakedAmount.toString(),
+    );
+
+    console.log("Claim position test completed successfully");
+  });
 });

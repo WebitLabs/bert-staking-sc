@@ -7,13 +7,18 @@ import {
   Connection,
   clusterApiUrl,
 } from "@solana/web3.js";
-import { BanksClient, BanksTransactionResultWithMeta } from "solana-bankrun";
+import { BankrunProvider } from "anchor-bankrun";
+import {
+  BanksClient,
+  BanksTransactionResultWithMeta,
+  Clock,
+} from "solana-bankrun";
 
 export async function createAndProcessTransaction(
   client: BanksClient,
   payer: Keypair,
   instruction: TransactionInstruction,
-  additionalSigners: Keypair[] = []
+  additionalSigners: Keypair[] = [],
 ): Promise<BanksTransactionResultWithMeta> {
   const tx = new Transaction();
 
@@ -31,4 +36,21 @@ export async function getAddedAccountInfo(pubkey: PublicKey) {
   const connection = new Connection(clusterApiUrl("mainnet-beta"));
   const accountInfo = await connection.getAccountInfo(pubkey);
   return { address: pubkey, info: accountInfo };
+}
+
+export async function advanceUnixTimeStamp(
+  provider: BankrunProvider,
+  seconds: bigint,
+) {
+  const curClock = await provider.context.banksClient.getClock();
+  provider.context.setClock(
+    new Clock(
+      curClock.slot,
+      curClock.epochStartTimestamp,
+      curClock.epoch,
+      curClock.leaderScheduleEpoch,
+      curClock.unixTimestamp + seconds,
+    ),
+  );
+  await provider.context.banksClient.getClock();
 }

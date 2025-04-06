@@ -46,6 +46,11 @@ export type BertStakingSc = {
                   105,
                   103
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "config"
               }
             ]
           }
@@ -80,7 +85,22 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "collection",
+          "docs": [
+            "supposed to be in config also"
+          ],
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "nftMint"
+        },
+        {
           "name": "mint",
+          "docs": [
+            "Token mint."
+          ],
           "relations": [
             "config"
           ]
@@ -176,13 +196,23 @@ export type BertStakingSc = {
           }
         },
         {
-          "name": "programTokenAccount",
+          "name": "nftTokenAccount"
+        },
+        {
+          "name": "nftsVault",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "vault",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "account",
-                "path": "programAuthority"
+                "path": "config"
               },
               {
                 "kind": "const",
@@ -263,27 +293,6 @@ export type BertStakingSc = {
                 89
               ]
             }
-          }
-        },
-        {
-          "name": "programAuthority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
           }
         },
         {
@@ -652,6 +661,7 @@ export type BertStakingSc = {
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -770,6 +780,7 @@ export type BertStakingSc = {
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {

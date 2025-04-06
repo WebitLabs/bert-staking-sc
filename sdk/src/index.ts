@@ -372,51 +372,83 @@ export class BertStakingSDK {
    * Creates an instruction to claim a staking position
    */
   async claimPosition({
+    authority = this.provider.publicKey,
     owner,
     positionPda,
     tokenMint,
+    nftMint,
     tokenAccount,
-    programTokenAccount,
+    nftTokenAccount,
+    collection,
+    nftsVault,
+    vault,
   }: {
+    authority?: PublicKey;
     owner: PublicKey;
-    positionPda: PublicKey;
+    positionPda?: PublicKey;
     tokenMint: PublicKey;
+    nftMint?: PublicKey;
     tokenAccount?: PublicKey;
-    programTokenAccount?: PublicKey;
+    nftTokenAccount?: PublicKey;
+    collection?: PublicKey;
+    nftsVault?: PublicKey;
+    vault?: PublicKey;
   }): Promise<TransactionInstruction> {
     return claimPositionInstruction({
       program: this.program,
+      sdk: this,
+      authority,
       owner,
       positionPda,
       tokenMint,
+      nftMint,
       tokenAccount,
-      programTokenAccount,
+      nftTokenAccount,
+      collection,
+      nftsVault,
+      vault,
     });
   }
 
   /**
-   * Creates an instruction to claim a staking position
+   * Creates an RPC call to claim a staking position
    */
   async claimPositionRpc({
+    authority = this.provider.publicKey,
     owner,
     positionPda,
     tokenMint,
+    nftMint,
     tokenAccount,
-    programTokenAccount,
+    nftTokenAccount,
+    collection,
+    nftsVault,
+    vault,
   }: {
+    authority?: PublicKey;
     owner: PublicKey;
-    positionPda: PublicKey;
+    positionPda?: PublicKey;
     tokenMint: PublicKey;
+    nftMint?: PublicKey;
     tokenAccount?: PublicKey;
-    programTokenAccount?: PublicKey;
+    nftTokenAccount?: PublicKey;
+    collection?: PublicKey;
+    nftsVault?: PublicKey;
+    vault?: PublicKey;
   }): Promise<string> {
     let ix = await claimPositionInstruction({
       program: this.program,
+      sdk: this,
+      authority,
       owner,
       positionPda,
       tokenMint,
+      nftMint,
       tokenAccount,
-      programTokenAccount,
+      nftTokenAccount,
+      collection,
+      nftsVault,
+      vault,
     });
 
     const tx = new Transaction();

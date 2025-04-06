@@ -11,6 +11,7 @@ pub struct StakeToken<'info> {
     pub owner: Signer<'info>,
 
     #[account(
+        mut,
         has_one = vault,
         seeds = [b"config", config.authority.key().as_ref()],
         bump = config.bump,

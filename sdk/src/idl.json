@@ -40,6 +40,11 @@
                   105,
                   103
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "Config"
               }
             ]
           }
@@ -74,7 +79,22 @@
           }
         },
         {
+          "name": "collection",
+          "docs": [
+            "supposed to be in config also"
+          ],
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "nft_mint"
+        },
+        {
           "name": "mint",
+          "docs": [
+            "Token mint."
+          ],
           "relations": [
             "config"
           ]
@@ -170,13 +190,23 @@
           }
         },
         {
-          "name": "program_token_account",
+          "name": "nft_token_account"
+        },
+        {
+          "name": "nfts_vault",
+          "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "vault",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "account",
-                "path": "program_authority"
+                "path": "config"
               },
               {
                 "kind": "const",
@@ -257,27 +287,6 @@
                 89
               ]
             }
-          }
-        },
-        {
-          "name": "program_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
           }
         },
         {
@@ -646,6 +655,7 @@
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -764,6 +774,7 @@
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {

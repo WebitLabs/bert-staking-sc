@@ -11,6 +11,7 @@ pub struct StakeNFT<'info> {
     pub owner: Signer<'info>,
 
     #[account(
+        mut,
         has_one = nfts_vault,
         has_one = mint,
         has_one = collection,
