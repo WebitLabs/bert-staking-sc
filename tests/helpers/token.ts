@@ -12,12 +12,17 @@ import { createAndProcessTransaction } from "./bankrun";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { BanksClient } from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
+import { getCollectionV1AccountDataSerializer } from "@metaplex-foundation/mpl-core/dist/src/generated/types/collectionV1AccountData";
+import {
+  AssetV1AccountData,
+  getAssetV1AccountDataSerializer,
+} from "@metaplex-foundation/mpl-core/dist/src/hooked";
 
 export async function createAta(
   client: BanksClient,
   payer: Keypair,
   mint: PublicKey,
-  owner: PublicKey
+  owner: PublicKey,
 ) {
   // Create associated token account for the user
   let userTokenAccount = await getAssociatedTokenAddress(
@@ -25,7 +30,7 @@ export async function createAta(
     owner,
     false,
     TOKEN_PROGRAM_ID,
-    ASSOCIATED_TOKEN_PROGRAM_ID
+    ASSOCIATED_TOKEN_PROGRAM_ID,
   );
 
   const createAtaIx = createAssociatedTokenAccountInstruction(
@@ -34,7 +39,7 @@ export async function createAta(
     owner,
     mint,
     TOKEN_PROGRAM_ID,
-    ASSOCIATED_TOKEN_PROGRAM_ID
+    ASSOCIATED_TOKEN_PROGRAM_ID,
   );
 
   await createAndProcessTransaction(client, payer, createAtaIx);
@@ -46,13 +51,13 @@ export function createAtaForMint(
   provider: BankrunProvider,
   owner: PublicKey,
   mint: PublicKey,
-  amount = BigInt(1_000_000_000_000)
+  amount = BigInt(1_000_000_000_000),
 ) {
   const address = getAssociatedTokenAddressSync(
     mint,
     owner,
     true,
-    TOKEN_PROGRAM_ID
+    TOKEN_PROGRAM_ID,
   );
 
   const tokenAccData = Buffer.alloc(ACCOUNT_SIZE);
@@ -71,7 +76,7 @@ export function createAtaForMint(
       closeAuthorityOption: 0,
       closeAuthority: PublicKey.default,
     },
-    tokenAccData
+    tokenAccData,
   );
 
   const accountInfo = {
@@ -89,7 +94,7 @@ export function createAtaForMint(
 
 export async function getTokenBalance(
   client: BanksClient,
-  tokenAccountAddress: PublicKey
+  tokenAccountAddress: PublicKey,
 ) {
   const accountInfo = await client.getAccount(tokenAccountAddress);
 
@@ -110,4 +115,31 @@ export async function getMintDecimals(client: BanksClient, mint: PublicKey) {
 
   const tokenAccount = MintLayout.decode(accountInfo.data);
   return parseInt(tokenAccount.decimals.toString());
+}
+
+// export function createCollectionV1InContext(collection: PublicKey) {
+//   const serializer = getCollectionV1AccountDataSerializer();
+// }
+
+export async function getMplCoreAsset(client: BanksClient, pubkey: PublicKey) {
+  const accountInfo = await client.getAccount(pubkey);
+
+  const serializer = getAssetV1AccountDataSerializer();
+
+  const [assetAccountData] = serializer.deserialize(accountInfo.data);
+
+  return assetAccountData;
+}
+
+export async function getMplCoreCollection(
+  client: BanksClient,
+  pubkey: PublicKey,
+) {
+  const accountInfo = await client.getAccount(pubkey);
+
+  const serializer = getCollectionV1AccountDataSerializer();
+
+  const [assetAccountData] = serializer.deserialize(accountInfo.data);
+
+  return assetAccountData;
 }

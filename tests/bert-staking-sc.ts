@@ -13,13 +13,25 @@ import {
   Position,
   PositionType,
 } from "../sdk/src";
-import { AddedProgram, BanksClient, ProgramTestContext } from "solana-bankrun";
+import {
+  AddedAccount,
+  AddedProgram,
+  BanksClient,
+  ProgramTestContext,
+} from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { MPL_CORE_ADDRESS, USDC_MINT_ADDRESS } from "./helpers/constants";
+import {
+  B_545_ASSET,
+  B_COLLECTION,
+  MPL_CORE_ADDRESS,
+  USDC_MINT_ADDRESS,
+} from "./helpers/constants";
 import {
   createAtaForMint,
   getMintDecimals,
+  getMplCoreAsset,
+  getMplCoreCollection,
   getTokenBalance,
 } from "./helpers/token";
 
@@ -45,20 +57,24 @@ describe("bert-staking-sc", () => {
   // Token staking parameters
   let userTokenAccount: PublicKey;
 
-  let collection = PublicKey.default;
+  let collection = new PublicKey(B_COLLECTION);
   let decimals: number;
 
   let tokensInVault;
 
   before("before", async () => {
     const usdcMint = await getAddedAccountInfo(tokenMint);
+    const bCollection = await getAddedAccountInfo(new PublicKey(B_COLLECTION));
+    const bAsset = await getAddedAccountInfo(new PublicKey(B_545_ASSET));
+
+    const addedAccounts = [usdcMint, bCollection, bAsset];
 
     const {
       context: _context,
       payer: _payer,
       client: _client,
       provider: _provider,
-    } = await prelude(addedPrograms, [usdcMint]);
+    } = await prelude(addedPrograms, addedAccounts);
 
     context = _context;
     payer = _payer;
@@ -68,6 +84,15 @@ describe("bert-staking-sc", () => {
     sdk = new BertStakingSDK(provider);
 
     decimals = await getMintDecimals(client, tokenMint);
+
+    console.log(
+      "Mpl Core Collection:",
+      await getMplCoreCollection(client, bCollection.address),
+    );
+    console.log(
+      "Mpl Core Asset:",
+      await getMplCoreAsset(client, bAsset.address),
+    );
   });
 
   it("Initializes the Bert staking program", async () => {
