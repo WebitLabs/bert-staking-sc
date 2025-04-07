@@ -51,7 +51,10 @@ export function fetchPositionCommand(program: Command): void {
             );
             console.log(`- Amount: ${position.amount.toString()} tokens`);
             console.log(
-              `- Status: ${position.status === 0 ? "Unclaimed" : "Claimed"}`
+              `- Status: ${
+                //@ts-ignore
+                !!position.status.unclaimed ? "Unclaimed" : "Claimed"
+              }`
             );
             console.log(
               `- Deposit Time: ${new Date(
@@ -65,7 +68,7 @@ export function fetchPositionCommand(program: Command): void {
             );
 
             if (position.positionType === PositionType.NFT) {
-              console.log(`- NFT Mint: ${position.nftMint.toString()}`);
+              console.log(`- NFT Mint: ${position.nftMints.toString()}`);
             }
           });
 
@@ -111,7 +114,8 @@ export function fetchPositionCommand(program: Command): void {
         );
         console.log(`- Amount: ${position.amount.toString()} tokens`);
         console.log(
-          `- Status: ${position.status === 0 ? "Unclaimed" : "Claimed"}`
+          //@ts-ignore
+          `- Status: ${!!position.status.unclaimed ? "Unclaimed" : "Claimed"}`
         );
         console.log(
           `- Deposit Time: ${new Date(
@@ -125,7 +129,7 @@ export function fetchPositionCommand(program: Command): void {
         );
 
         if (position.positionType === PositionType.NFT) {
-          console.log(`- NFT Mint: ${position.nftMint.toString()}`);
+          console.log(`- NFT Mint: ${position.nftMints.toString()}`);
         }
       } catch (error) {
         ora().fail(`Failed to fetch position(s): ${error}`);

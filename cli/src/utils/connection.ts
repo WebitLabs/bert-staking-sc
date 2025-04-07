@@ -44,6 +44,8 @@ export function loadKeypair(keypairPath: string): Keypair {
 export function setupConnection(command: Command): void {
   const options = command.opts();
 
+  console.log("Setup Connection: options:", options);
+
   // Get network from options or default to localhost
   const network = options.network || "devnet";
   const url =
@@ -55,7 +57,9 @@ export function setupConnection(command: Command): void {
   connection = new Connection(url, "confirmed");
 
   // Load keypair from file
-  let keypairPath = options.keypair || `${os.homedir()}/.config/solana/id.json`;
+  let keypairPath = path.join(process.cwd(), "../admin.json");
+
+  console.log("keypairPath1: ", fs.existsSync(keypairPath));
   try {
     const keypair = loadKeypair(keypairPath);
     wallet = new Wallet(keypair);
@@ -64,7 +68,7 @@ export function setupConnection(command: Command): void {
     const provider = new AnchorProvider(
       connection,
       wallet,
-      AnchorProvider.defaultOptions(),
+      AnchorProvider.defaultOptions()
     );
 
     // Create SDK instance

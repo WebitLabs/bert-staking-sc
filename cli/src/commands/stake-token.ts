@@ -4,6 +4,7 @@ import { getSDK, getWallet } from "../utils/connection";
 import { LockPeriod } from "@bert-staking/sdk";
 import ora from "ora";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { MINT } from "../constants";
 
 /**
  * Stake tokens
@@ -18,51 +19,20 @@ export function stakeTokenCommand(program: Command): void {
     )
     .option("-t, --token-mint <pubkey>", "Token mint address")
     .option("-a, --amount <number>", "Amount of tokens to stake", "100")
-    .option(
-      "-l, --lock-period <period>",
-      "Lock period (1, 3, 7, or 30 days)",
-      "7"
-    )
     .action(async (options) => {
       try {
         const spinner = ora("Staking tokens...").start();
 
         const sdk = getSDK();
         const wallet = getWallet();
-
-        // Validate token mint address
-        if (!options.tokenMint) {
-          spinner.fail("Token mint address is required");
-          return;
-        }
-
-        // Parse lock period
-        let lockPeriod: LockPeriod;
-        switch (options.lockPeriod) {
-          case "1":
-            lockPeriod = LockPeriod.OneDay;
-            break;
-          case "3":
-            lockPeriod = LockPeriod.ThreeDays;
-            break;
-          case "7":
-            lockPeriod = LockPeriod.SevenDays;
-            break;
-          case "30":
-            lockPeriod = LockPeriod.ThirtyDays;
-            break;
-          default:
-            spinner.fail("Invalid lock period. Must be 1, 3, 7, or 30 days.");
-            return;
-        }
+        let tokenMint = options.tokenMint
+          ? new PublicKey(options.tokenMint)
+          : new PublicKey(MINT);
 
         // Get authority (default to wallet if not provided)
         const authority = options.authority
           ? new PublicKey(options.authority)
           : wallet.publicKey;
-
-        // Create transaction
-        const tokenMint = new PublicKey(options.tokenMint);
 
         const userTokenAccount = getAssociatedTokenAddressSync(
           tokenMint,
@@ -70,11 +40,10 @@ export function stakeTokenCommand(program: Command): void {
           true
         );
 
-        const result = await sdk.stakeToken({
+        const result = await sdk.stakeTokenRpc({
           authority,
           owner: wallet.publicKey,
           tokenMint,
-          period: lockPeriod,
           amount: parseInt(options.amount),
           tokenAccount: userTokenAccount,
         });
@@ -96,7 +65,8 @@ export function stakeTokenCommand(program: Command): void {
         console.log(`- Owner: ${position.owner.toString()}`);
         console.log(`- Amount: ${position.amount.toString()} tokens`);
         console.log(
-          `- Status: ${position.status === 0 ? "Unclaimed" : "Claimed"}`
+          //@ts-ignore
+          `- Status: ${!!position.status.unclaimed ? "Unclaimed" : "Claimed"}`
         );
         console.log(
           `- Deposit Time: ${new Date(

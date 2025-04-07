@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { PublicKey } from "@solana/web3.js";
 import { getSDK, getWallet } from "../utils/connection";
-import { PositionType } from "@bert-staking/sdk";
+import { LockPeriod, PositionType } from "@bert-staking/sdk";
 import ora from "ora";
 import { MINT } from "../constants";
 
@@ -14,17 +14,22 @@ export function initializePositionCommand(program: Command): void {
     .description("Initialize a staking position")
     .option(
       "-a, --authority <pubkey>",
-      "Authority public key (if different from wallet)",
+      "Authority public key (if different from wallet)"
     )
     .option("-t, --token-mint <pubkey>", "Token mint address")
     .option(
+      "-l, --lock-period <period>",
+      "Lock period (1, 3, 7, or 30 days)",
+      "7"
+    )
+    .option(
       "-p, --position-type <type>",
       "Position type (token or nft)",
-      "token",
+      "token"
     )
     .option(
       "-n, --nft-mint <pubkey>",
-      "NFT mint address (required for NFT positions)",
+      "NFT mint address (required for NFT positions)"
     )
     .action(async (options) => {
       try {
@@ -32,12 +37,28 @@ export function initializePositionCommand(program: Command): void {
 
         const sdk = getSDK();
         const wallet = getWallet();
-        let tokenMint = "";
+        let tokenMint = options.tokenMint
+          ? new PublicKey(options.tokenMint)
+          : new PublicKey(MINT);
 
-        // Validate token mint address
-        if (!options.tokenMint) {
-          //spinner.fail("Token mint address is required");
-          tokenMint = MINT;
+        // Parse lock period
+        let lockPeriod: LockPeriod;
+        switch (options.lockPeriod) {
+          case "1":
+            lockPeriod = LockPeriod.OneDay;
+            break;
+          case "3":
+            lockPeriod = LockPeriod.ThreeDays;
+            break;
+          case "7":
+            lockPeriod = LockPeriod.SevenDays;
+            break;
+          case "30":
+            lockPeriod = LockPeriod.ThirtyDays;
+            break;
+          default:
+            spinner.fail("Invalid lock period. Must be 1, 3, 7, or 30 days.");
+            return;
         }
 
         // Parse position type
@@ -61,7 +82,11 @@ export function initializePositionCommand(program: Command): void {
           authority,
           owner: authority,
           tokenMint: new PublicKey(tokenMint),
+          lockPeriod,
+          positionType,
         });
+
+        console.log("[initilize_position] 6");
 
         spinner.succeed(`Position initialized successfully. Tx: ${result}`);
 
@@ -71,7 +96,7 @@ export function initializePositionCommand(program: Command): void {
 
         const position = await sdk.fetchPosition(
           wallet.publicKey,
-          new PublicKey(options.tokenMint),
+          new PublicKey(options.tokenMint)
         );
 
         if (!position) {
@@ -84,20 +109,20 @@ export function initializePositionCommand(program: Command): void {
         console.log(
           `- Position Type: ${
             position.positionType === PositionType.NFT ? "NFT" : "Token"
-          }`,
+          }`
         );
         console.log(
-          `- Status: ${position.status === 0 ? "Unclaimed" : "Claimed"}`,
+          `- Status: ${position.status === 0 ? "Unclaimed" : "Claimed"}`
         );
 
         if (position.positionType === PositionType.NFT) {
-          console.log(`- NFT Mint: ${position.nftMint.toString()}`);
+          console.log(`- NFT Mint: ${position.nftMints.toString()}`);
         }
 
         console.log(
           `- Unlock Time: ${new Date(
-            position.unlockTime.toNumber() * 1000,
-          ).toLocaleString()}`,
+            position.unlockTime.toNumber() * 1000
+          ).toLocaleString()}`
         );
       } catch (error) {
         ora().fail(`Failed to initialize position: ${error}`);
