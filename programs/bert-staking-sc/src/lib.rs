@@ -15,13 +15,14 @@ pub mod bert_staking_sc {
 
     pub fn initialize(
         ctx: Context<Initialize>,
-        _id: u64,
+        id: u64,
         lock_period_yields: [LockPeriodYield; 4],
         max_cap: u64,
         nft_value_in_tokens: u64,
         nfts_limit_per_user: u8,
     ) -> Result<()> {
         ctx.accounts.initialize(
+            id,
             lock_period_yields,
             max_cap,
             nft_value_in_tokens,

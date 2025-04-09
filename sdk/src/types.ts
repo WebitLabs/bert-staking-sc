@@ -69,6 +69,7 @@ export interface Config {
   nftsVault: PublicKey;
   authorityVault: PublicKey;
   lockPeriodYields: LockPeriodYield[];
+  id: BN;
   maxCap: BN;
   nftValueInTokens: BN;
   nftsLimitPerUser: number;
@@ -89,6 +90,6 @@ export interface Position {
   unlockTime: BN;
   status: PositionStatus;
   nftMints: PublicKey[]; // Array of NFT mints (up to 5)
-  nftIndex: number;      // Number of NFTs staked
+  nftIndex: number; // Number of NFTs staked
   bump: number;
 }

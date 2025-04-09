@@ -45,6 +45,11 @@
                 "kind": "account",
                 "path": "config.authority",
                 "account": "Config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "Config"
               }
             ]
           }
@@ -506,7 +511,7 @@
       ],
       "args": [
         {
-          "name": "_id",
+          "name": "id",
           "type": "u64"
         },
         {
@@ -572,6 +577,11 @@
               {
                 "kind": "account",
                 "path": "config.authority",
+                "account": "Config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
                 "account": "Config"
               }
             ]
@@ -691,6 +701,11 @@
               {
                 "kind": "account",
                 "path": "config.authority",
+                "account": "Config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
                 "account": "Config"
               }
             ]
@@ -823,6 +838,11 @@
               {
                 "kind": "account",
                 "path": "config.authority",
+                "account": "Config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
                 "account": "Config"
               }
             ]
@@ -1266,6 +1286,10 @@
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
           {
             "name": "authority",
             "type": "pubkey"

@@ -17,6 +17,7 @@ pub struct LockPeriodYield {
 #[account]
 #[derive(InitSpace, Debug)]
 pub struct Config {
+    pub id: u64,
     pub authority: Pubkey,       // Authority that can update config settings
     pub mint: Pubkey,            // Token Mint
     pub collection: Pubkey,      // NFT Collection

@@ -13,7 +13,7 @@ pub struct InitializePosition<'info> {
 
     #[account(
         has_one = mint,
-        seeds = [b"config", config.authority.key().as_ref()],
+        seeds = [b"config", config.authority.key().as_ref(), config.id.to_le_bytes().as_ref()],
         bump = config.bump,
     )]
     pub config: Account<'info, Config>,
@@ -47,6 +47,12 @@ impl<'info> InitializePosition<'info> {
             return Err(StakingError::InvalidPositionType.into());
         }
 
+        msg!(
+            "[initialize_position] with index: {:?} | type: {:?}",
+            lock_period_yield_index,
+            position_type
+        );
+
         // Check if period and yield index is valid
         require!(
             self.config.lock_period_yields.len() > lock_period_yield_index as usize,
@@ -57,6 +63,7 @@ impl<'info> InitializePosition<'info> {
         let position = &mut self.position;
         position.owner = self.owner.key();
         position.position_type = PositionType::Token;
+        position.lock_period_yield_index = lock_period_yield_index;
 
         let lock_period_yield = self.config.lock_period_yields[lock_period_yield_index as usize];
 

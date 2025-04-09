@@ -52,10 +52,10 @@ export class BertStakingPda {
   ): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [
-        Buffer.from("position"), 
-        owner.toBuffer(), 
+        Buffer.from("position"),
+        owner.toBuffer(),
         mint.toBuffer(),
-        new BN(id).toArrayLike(Buffer, "le", 8)
+        new BN(id).toArrayLike(Buffer, "le", 8),
       ],
       this.programId
     );

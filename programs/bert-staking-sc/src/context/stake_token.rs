@@ -14,7 +14,7 @@ pub struct StakeToken<'info> {
     #[account(
         mut,
         has_one = vault,
-        seeds = [b"config", config.authority.key().as_ref()],
+        seeds = [b"config", config.authority.key().as_ref(), config.id.to_le_bytes().as_ref()],
         bump = config.bump,
     )]
     pub config: Account<'info, Config>,

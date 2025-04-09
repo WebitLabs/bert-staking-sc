@@ -62,6 +62,7 @@ export class BertStakingSDK {
    * Creates an instruction to initialize the staking program
    */
   async initialize({
+    id,
     authority,
     mint,
     collection,
@@ -71,6 +72,7 @@ export class BertStakingSDK {
     nftValueInTokens,
     nftsLimitPerUser,
   }: {
+    id: number;
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
@@ -83,6 +85,7 @@ export class BertStakingSDK {
     return initializeInstruction({
       program: this.program,
       pda: this.pda,
+      id,
       authority,
       mint,
       collection,
@@ -149,12 +152,16 @@ export class BertStakingSDK {
    */
   async initializePosition({
     authority,
+    configId,
+    positionId,
     owner,
     tokenMint,
     lockPeriodYieldIndex,
     positionType,
   }: {
     authority: PublicKey;
+    configId?: number;
+    positionId: number;
     owner: PublicKey;
     tokenMint: PublicKey;
     lockPeriodYieldIndex: number;
@@ -165,6 +172,8 @@ export class BertStakingSDK {
       pda: this.pda,
       owner,
       authority,
+      configId,
+      positionId,
       tokenMint,
       lockPeriodYieldIndex,
       positionType,
@@ -217,6 +226,8 @@ export class BertStakingSDK {
   async stakeNft({
     owner,
     authority,
+    configId,
+    positionId,
     mint,
     collection,
     asset,
@@ -225,6 +236,8 @@ export class BertStakingSDK {
   }: {
     owner: PublicKey;
     authority: PublicKey;
+    configId: number;
+    positionId: number;
     mint: PublicKey;
     collection: PublicKey;
     asset: PublicKey;
@@ -235,6 +248,8 @@ export class BertStakingSDK {
       program: this.program,
       pda: this.pda,
       owner,
+      configId,
+      positionId,
       authority,
       mint,
       collection,
@@ -295,6 +310,8 @@ export class BertStakingSDK {
    */
   async stakeToken({
     authority,
+    configId,
+    positionId,
     owner,
     tokenMint,
     amount,
@@ -303,6 +320,8 @@ export class BertStakingSDK {
   }: {
     owner: PublicKey;
     authority: PublicKey;
+    configId?: number;
+    positionId: number;
     tokenMint: PublicKey;
     amount: number | BN;
     tokenAccount?: PublicKey;
@@ -312,6 +331,8 @@ export class BertStakingSDK {
       program: this.program,
       pda: this.pda,
       owner,
+      configId,
+      positionId,
       authority,
       tokenMint,
       amount,
@@ -370,6 +391,7 @@ export class BertStakingSDK {
     authority = this.provider.publicKey,
     owner,
     positionPda,
+    configId,
     tokenMint,
     nftMint,
     tokenAccount,
@@ -380,6 +402,7 @@ export class BertStakingSDK {
   }: {
     authority?: PublicKey;
     owner: PublicKey;
+    configId: number;
     positionPda?: PublicKey;
     tokenMint: PublicKey;
     nftMint?: PublicKey;
@@ -393,6 +416,7 @@ export class BertStakingSDK {
       program: this.program,
       sdk: this,
       authority,
+      configId,
       owner,
       positionPda,
       tokenMint,
@@ -477,8 +501,8 @@ export class BertStakingSDK {
   /**
    * Fetches a position account for a given owner and mint
    */
-  async fetchPosition(owner: PublicKey, mint: PublicKey) {
-    return fetchPositionRpc(owner, mint, this.program);
+  async fetchPosition(owner: PublicKey, id: number, mint: PublicKey) {
+    return fetchPositionRpc(owner, mint, id, this.program);
   }
 
   /**

@@ -16,7 +16,7 @@ pub struct ClaimPosition<'info> {
         has_one = nfts_vault,
         has_one = mint,
         has_one = collection,
-        seeds = [b"config", config.authority.key().as_ref()],
+        seeds = [b"config", config.authority.key().as_ref(), config.id.to_le_bytes().as_ref()],
         bump = config.bump,
     )]
     pub config: Account<'info, Config>,

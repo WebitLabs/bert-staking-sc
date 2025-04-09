@@ -54,6 +54,7 @@ pub struct Initialize<'info> {
 impl<'info> Initialize<'info> {
     pub fn initialize(
         &mut self,
+        id: u64,
         lock_period_yields: [LockPeriodYield; 4],
         max_cap: u64,
         nft_value_in_tokens: u64,
@@ -63,6 +64,7 @@ impl<'info> Initialize<'info> {
         let config = &mut self.config;
 
         config.set_inner(Config {
+            id,
             authority: self.authority.key(),
             mint: self.mint.key(),
             collection: self.collection.key(),

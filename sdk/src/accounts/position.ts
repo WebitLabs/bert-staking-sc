@@ -2,19 +2,25 @@ import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { Position } from "../types";
 import { BertStakingSc } from "../idl";
+import { BN } from "@coral-xyz/anchor";
 
 /**
  * Fetch a position account for a given owner and collection
  */
 export async function fetchPositionRpc(
   owner: PublicKey,
-  collection: PublicKey,
+  mint: PublicKey,
+  id: number,
   program: Program<BertStakingSc>
 ): Promise<Position | null> {
   try {
-    // Find Position PDA
     const [positionPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("position"), owner.toBuffer(), collection.toBuffer()],
+      [
+        Buffer.from("position"),
+        owner.toBuffer(),
+        mint.toBuffer(),
+        new BN(id).toArrayLike(Buffer, "le", 8),
+      ],
       program.programId
     );
 
@@ -80,4 +86,3 @@ export async function fetchPositionsByOwnerRpc(
     return [];
   }
 }
-

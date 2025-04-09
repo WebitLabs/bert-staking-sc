@@ -51,6 +51,11 @@ export type BertStakingSc = {
                 "kind": "account",
                 "path": "config.authority",
                 "account": "config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "config"
               }
             ]
           }
@@ -579,6 +584,11 @@ export type BertStakingSc = {
                 "kind": "account",
                 "path": "config.authority",
                 "account": "config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "config"
               }
             ]
           }
@@ -697,6 +707,11 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "config.authority",
+                "account": "config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
                 "account": "config"
               }
             ]
@@ -829,6 +844,11 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "config.authority",
+                "account": "config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
                 "account": "config"
               }
             ]
@@ -1272,6 +1292,10 @@ export type BertStakingSc = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
           {
             "name": "authority",
             "type": "pubkey"
