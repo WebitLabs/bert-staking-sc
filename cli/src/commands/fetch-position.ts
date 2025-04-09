@@ -12,6 +12,7 @@ export function fetchPositionCommand(program: Command): void {
     .command("fetch-position")
     .description("Fetch staking position(s)")
     .option("-o, --owner <pubkey>", "Position owner (defaults to wallet)")
+    .option("-i, --id <number>", "Position id")
     .option("-m, --mint <pubkey>", "Token/NFT mint address")
     .option("-p, --position <pubkey>", "Position PDA address")
     .option("--all", "Fetch all positions for the owner", false)
@@ -90,6 +91,7 @@ export function fetchPositionCommand(program: Command): void {
           }...`;
           position = await sdk.fetchPosition(
             owner,
+            Number(options.id),
             new PublicKey(options.mint)
           );
         } else {

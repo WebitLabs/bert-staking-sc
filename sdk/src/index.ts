@@ -101,6 +101,7 @@ export class BertStakingSDK {
    * Creates an call to RPC to initialize the staking program
    */
   async initializeRpc({
+    id,
     authority,
     mint,
     collection,
@@ -110,6 +111,7 @@ export class BertStakingSDK {
     nftValueInTokens,
     nftsLimitPerUser,
   }: {
+    id: number;
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
@@ -121,6 +123,7 @@ export class BertStakingSDK {
     nftsLimitPerUser: number;
   }): Promise<string> {
     let ix = await initializeInstruction({
+      id,
       program: this.program,
       pda: this.pda,
       authority,
@@ -186,11 +189,15 @@ export class BertStakingSDK {
   async initializePositionRpc({
     authority,
     owner,
+    positionId,
+    configId,
     tokenMint,
     lockPeriodYieldIndex,
     positionType,
   }: {
     authority: PublicKey;
+    configId?: number;
+    positionId?: number;
     owner: PublicKey;
     tokenMint: PublicKey;
     lockPeriodYieldIndex: number;
@@ -200,6 +207,8 @@ export class BertStakingSDK {
       program: this.program,
       pda: this.pda,
       owner,
+      configId,
+      positionId,
       authority,
       tokenMint,
       lockPeriodYieldIndex,

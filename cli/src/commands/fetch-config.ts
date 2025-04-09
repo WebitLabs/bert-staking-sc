@@ -20,6 +20,8 @@ export function fetchConfigCommand(program: Command): void {
 
         let config;
 
+        console.log("fetching config by addr:", options.con);
+
         if (options.config) {
           // Fetch by config PDA
           config = await sdk.fetchConfigByAddress(
@@ -45,8 +47,13 @@ export function fetchConfigCommand(program: Command): void {
         console.log(`- Collection: ${config.collection.toString()}`);
         console.log(`- Vault: ${config.vault.toString()}`);
         console.log(`- Authority Vault: ${config.authorityVault.toString()}`);
-        console.log(`- Lock Period: ${Object.keys(config.lockPeriod)[0]}`);
-        console.log(`- Yield Rate: ${config.yieldRate.toString()} bps`);
+        config.lockPeriodYields.map((c) =>
+          console.log(
+            `- LockPeriodYield: ${JSON.stringify(c.lockPeriod)} - ${
+              c.yieldRate
+            }`
+          )
+        );
         console.log(`- Max Cap: ${config.maxCap.toString()} tokens`);
         console.log(
           `- NFT Value: ${config.nftValueInTokens.toString()} tokens`
@@ -62,4 +69,3 @@ export function fetchConfigCommand(program: Command): void {
       }
     });
 }
-

@@ -16,8 +16,8 @@ const program = new Command();
 // Display banner
 console.log(
   chalk.yellow(
-    figlet.textSync("BERT Staking CLI", { horizontalLayout: "full" }),
-  ),
+    figlet.textSync("BERT Staking CLI", { horizontalLayout: "full" })
+  )
 );
 
 // Program metadata
@@ -31,8 +31,8 @@ program
   });
 
 // Register commands
-createTokenCommand(program);
-createCoreNftCommand(program);
+// createTokenCommand(program);
+// createCoreNftCommand(program);
 initializeCommand(program);
 initializePositionCommand(program);
 stakeTokenCommand(program);

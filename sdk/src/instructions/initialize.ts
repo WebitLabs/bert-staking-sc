@@ -88,7 +88,7 @@ export function initializeInstruction({
       collection,
       vault: vaultTA,
       nftsVault: nftsVaultTA,
-      authorityVault: authorityVaultTA,
+      //authorityVault: authorityVaultTA,
       config: configPda,
       systemProgram: web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,

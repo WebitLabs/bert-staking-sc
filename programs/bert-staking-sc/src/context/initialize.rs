@@ -35,14 +35,15 @@ pub struct Initialize<'info> {
     )]
     pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    #[account(
-        token::mint = mint,
-        token::authority = config,
-        seeds = [b"authority_vault", config.key().as_ref(), mint.key().as_ref()],
-        bump
-    )]
-    pub authority_vault: Box<InterfaceAccount<'info, TokenAccount>>,
-
+    // #[account(
+    //     init,
+    //     payer = authority,
+    //     token::mint = mint,
+    //     token::authority = config,
+    //     seeds = [b"authority_vault", config.key().as_ref(), mint.key().as_ref()],
+    //     bump
+    // )]
+    // pub authority_vault: Box<InterfaceAccount<'info, TokenAccount>>,
     /// CHECK: TODO: will add type later!
     pub nfts_vault: UncheckedAccount<'info>,
 
@@ -70,14 +71,14 @@ impl<'info> Initialize<'info> {
             collection: self.collection.key(),
             vault: self.vault.key(),
             nfts_vault: self.nfts_vault.key(),
-            authority_vault: self.authority_vault.key(),
+            authority_vault: self.vault.key(),
             lock_period_yields,
             max_cap,
             nft_value_in_tokens,
             nfts_limit_per_user,
             total_staked_amount: 0,
             bump: bumps.config,
-            authority_vault_bump: bumps.authority_vault,
+            authority_vault_bump: bumps.config,
         });
 
         Ok(())

@@ -18,8 +18,8 @@ export function initializePositionCommand(program: Command): void {
     )
     .option("-t, --token-mint <pubkey>", "Token mint address")
     .option(
-      "-l, --lock-period <period>",
-      "Lock period (1, 3, 7, or 30 days)",
+      "-l, --lock-period-index <period>",
+      "Lock period (0 - 1day, 1 - 3days, 2 - 7days, or 3 for 30 days)",
       "7"
     )
     .option(
@@ -41,31 +41,20 @@ export function initializePositionCommand(program: Command): void {
           ? new PublicKey(options.tokenMint)
           : new PublicKey(MINT);
 
-        // Parse lock period
-        let lockPeriod: LockPeriod;
-        switch (options.lockPeriod) {
-          case "1":
-            lockPeriod = LockPeriod.OneDay;
-            break;
-          case "3":
-            lockPeriod = LockPeriod.ThreeDays;
-            break;
-          case "7":
-            lockPeriod = LockPeriod.SevenDays;
-            break;
-          case "30":
-            lockPeriod = LockPeriod.ThirtyDays;
-            break;
-          default:
-            spinner.fail("Invalid lock period. Must be 1, 3, 7, or 30 days.");
-            return;
-        }
-
         // Parse position type
         const positionType =
           options.positionType.toLowerCase() === "nft"
             ? PositionType.NFT
             : PositionType.Token;
+
+        let found = [0, 1, 2, 3].findIndex(
+          (n) => n == Number(options.lockPeriodIndex)
+        );
+
+        if (found < 0) {
+          spinner.fail("Lock period index invalid");
+          return;
+        }
 
         // Validate NFT mint for NFT positions
         if (positionType === PositionType.NFT && !options.nftMint) {
@@ -78,15 +67,19 @@ export function initializePositionCommand(program: Command): void {
           ? new PublicKey(options.authority)
           : wallet.publicKey;
 
+        let configId = 2;
+        let positionId = Math.floor(Math.random() * 1000000);
+        const lockPeriodYieldIndex = Number(options.lockPeriodIndex);
+
         const result = await sdk.initializePositionRpc({
           authority,
           owner: authority,
           tokenMint: new PublicKey(tokenMint),
-          lockPeriod,
+          configId,
+          lockPeriodYieldIndex,
+          positionId,
           positionType,
         });
-
-        console.log("[initilize_position] 6");
 
         spinner.succeed(`Position initialized successfully. Tx: ${result}`);
 
@@ -96,6 +89,7 @@ export function initializePositionCommand(program: Command): void {
 
         const position = await sdk.fetchPosition(
           wallet.publicKey,
+          positionId,
           new PublicKey(options.tokenMint)
         );
 
