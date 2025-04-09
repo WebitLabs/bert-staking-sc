@@ -1,4 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
+import { BN } from "@coral-xyz/anchor";
 
 /**
  * Helper class for deriving PDAs for the Bert Staking program
@@ -7,14 +8,19 @@ export class BertStakingPda {
   constructor(public programId: PublicKey) {}
 
   /**
-   * Find the Config PDA for a given authority
+   * Find the Config PDA for a given authority and ID
    * @param authority The authority public key
+   * @param id Optional ID for the config (defaults to 0)
    * @returns The Config PDA and bump
    */
-  findConfigPda(authority: PublicKey): [PublicKey, number] {
+  findConfigPda(authority: PublicKey, id: number = 0): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
-      [Buffer.from("config"), authority.toBuffer()],
-      this.programId,
+      [
+        Buffer.from("config"),
+        authority.toBuffer(),
+        new BN(id).toArrayLike(Buffer, "le", 8),
+      ],
+      this.programId
     );
   }
 
@@ -24,24 +30,34 @@ export class BertStakingPda {
    */
   findAuthorityVaultPda(
     mint: PublicKey,
-    owner: PublicKey,
+    owner: PublicKey
   ): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("authority_vault"), owner.toBuffer(), mint.toBuffer()],
-      this.programId,
+      this.programId
     );
   }
 
   /**
-   * Find the Position PDA for a given owner and collection
+   * Find the Position PDA for a given owner, mint, and ID
    * @param owner The owner public key
-   * @param collection The NFT collection public key
+   * @param mint The token mint public key
+   * @param id Optional ID for the position (defaults to 0)
    * @returns The Position PDA and bump
    */
-  findPositionPda(owner: PublicKey, collection: PublicKey): [PublicKey, number] {
+  findPositionPda(
+    owner: PublicKey,
+    mint: PublicKey,
+    id: number = 0
+  ): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
-      [Buffer.from("position"), owner.toBuffer(), collection.toBuffer()],
-      this.programId,
+      [
+        Buffer.from("position"), 
+        owner.toBuffer(), 
+        mint.toBuffer(),
+        new BN(id).toArrayLike(Buffer, "le", 8)
+      ],
+      this.programId
     );
   }
 }

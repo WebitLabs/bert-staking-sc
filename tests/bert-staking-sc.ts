@@ -24,13 +24,13 @@ import {
 } from "./helpers/constants";
 import {
   createAtaForMint,
-  createAtaForMintWithAddress,
   getMintDecimals,
   getTokenBalance,
 } from "./helpers/token";
 import { getMplCoreAsset, createCollectionAndMintAsset } from "./helpers/core";
 import { generateSigner, KeypairSigner } from "@metaplex-foundation/umi";
 import {
+  fromWeb3JsPublicKey,
   toWeb3JsKeypair,
   toWeb3JsPublicKey,
 } from "@metaplex-foundation/umi-web3js-adapters";
@@ -185,20 +185,10 @@ describe("bert-staking-sc", () => {
         `User has ${await getTokenBalance(client, userTokenAccount)} USDC`
       );
 
-      // TODO: change updateAuthority for collection to wallet
-      // await setAuthorityMplCoreCollection(
-      //   client,
-      //   provider,
-      //   collection,
-      //   payer.publicKey
-      // );
-      // await setOwnerMplCoreAsset(client, provider, asset, payer.publicKey);
-
-      // console.log("============== AFTER =============");
-      // console.log(
-      //   "Mpl Core Collection:",
-      //   await getMplCoreCollection(client, collection)
-      // );
+      console.log("============== ASSET =============");
+      console.log(
+        await getMplCoreAsset(client, toWeb3JsPublicKey(assetSigner.publicKey))
+      );
       console.log("Mpl Core Asset:", await getMplCoreAsset(client, asset));
     } catch (err) {
       console.error("Failed to set up token mint and accounts:", err);

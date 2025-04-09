@@ -16,6 +16,7 @@ use mpl_core::{
 };
 
 #[derive(Accounts)]
+#[instruction(id: u64)]
 pub struct StakeNFT<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -30,10 +31,8 @@ pub struct StakeNFT<'info> {
     pub config: Account<'info, Config>,
 
     #[account(
-        init,
-        payer = owner,
-        space = 8 + Position::INIT_SPACE,
-        seeds = [b"position", owner.key().as_ref(), collection.key().as_ref()],
+        mut,
+        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), id.to_le_bytes().as_ref()],
         bump,
     )]
     pub position: Account<'info, Position>,
@@ -73,6 +72,13 @@ impl<'info> StakeNFT<'info> {
         require!(
             self.position.nft_index < self.config.nfts_limit_per_user,
             StakingError::MaxCapReached
+        );
+
+        let index = self.position.lock_period_yield_index;
+        // Check if period and yield index is valid
+        require!(
+            self.config.lock_period_yields.len() > index as usize,
+            StakingError::InvalidLockPeriodAndYield
         );
 
         // Check if staking would exceed the max cap

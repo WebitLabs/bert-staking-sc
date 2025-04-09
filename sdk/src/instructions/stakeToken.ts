@@ -15,6 +15,8 @@ export type StakeTokenParams = {
   owner: web3.PublicKey;
   tokenMint: web3.PublicKey;
   amount: number | BN;
+  configId?: number; // ID for the config account
+  positionId?: number; // ID for the position account
   tokenAccount?: web3.PublicKey;
   vault?: web3.PublicKey;
 };
@@ -29,21 +31,23 @@ export async function stakeTokenInstruction({
   owner,
   tokenMint,
   amount,
+  configId = 0,
+  positionId = 0,
   tokenAccount,
   vault,
 }: StakeTokenParams): Promise<web3.TransactionInstruction> {
   // Convert amount to BN if needed
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
 
-  const [configPda] = pda.findConfigPda(authority);
-  const [positionPda] = pda.findPositionPda(owner, tokenMint);
+  const [configPda] = pda.findConfigPda(authority, configId);
+  const [positionPda] = pda.findPositionPda(owner, tokenMint, positionId);
 
   // Derive the token account if not provided
   const userTokenAccount =
     tokenAccount ||
     web3.PublicKey.findProgramAddressSync(
       [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), tokenMint.toBuffer()],
-      ASSOCIATED_TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
     )[0];
 
   // Get vault address
@@ -51,12 +55,12 @@ export async function stakeTokenInstruction({
     vault || getAssociatedTokenAddressSync(tokenMint, configPda, true);
 
   return program.methods
-    .stakeToken(amountBN)
+    .stakeToken(new BN(positionId), amountBN)
     .accountsStrict({
       owner,
       config: configPda,
       position: positionPda,
-      tokenMint,
+      mint: tokenMint,
       tokenAccount: userTokenAccount,
       vault: vaultAta,
       tokenProgram: TOKEN_PROGRAM_ID,

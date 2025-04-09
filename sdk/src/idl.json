@@ -74,6 +74,10 @@
               {
                 "kind": "account",
                 "path": "mint"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -302,7 +306,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "_id",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "initialize",
@@ -341,6 +350,10 @@
               {
                 "kind": "account",
                 "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -493,21 +506,21 @@
       ],
       "args": [
         {
-          "name": "lock_period",
+          "name": "_id",
+          "type": "u64"
+        },
+        {
+          "name": "lock_period_yields",
           "type": {
             "array": [
               {
                 "defined": {
-                  "name": "LockPeriod"
+                  "name": "LockPeriodYield"
                 }
               },
               4
             ]
           }
-        },
-        {
-          "name": "yield_rate",
-          "type": "u64"
         },
         {
           "name": "max_cap",
@@ -589,6 +602,10 @@
               {
                 "kind": "account",
                 "path": "mint"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -617,12 +634,12 @@
       ],
       "args": [
         {
-          "name": "lock_period",
-          "type": {
-            "defined": {
-              "name": "LockPeriod"
-            }
-          }
+          "name": "_id",
+          "type": "u64"
+        },
+        {
+          "name": "lock_period_yield_index",
+          "type": "u8"
         },
         {
           "name": "position_type",
@@ -703,7 +720,11 @@
               },
               {
                 "kind": "account",
-                "path": "collection"
+                "path": "mint"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -758,7 +779,12 @@
           "address": "SysvarRent111111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "_id",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "stake_token",
@@ -826,13 +852,17 @@
               },
               {
                 "kind": "account",
-                "path": "token_mint"
+                "path": "mint"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
         },
         {
-          "name": "token_mint"
+          "name": "mint"
         },
         {
           "name": "token_account",
@@ -882,7 +912,7 @@
               },
               {
                 "kind": "account",
-                "path": "token_mint"
+                "path": "mint"
               }
             ],
             "program": {
@@ -972,7 +1002,7 @@
               },
               {
                 "kind": "account",
-                "path": "token_mint"
+                "path": "mint"
               }
             ],
             "program": {
@@ -1035,6 +1065,10 @@
         }
       ],
       "args": [
+        {
+          "name": "_id",
+          "type": "u64"
+        },
         {
           "name": "amount",
           "type": "u64"
@@ -1129,8 +1163,8 @@
     },
     {
       "code": 6006,
-      "name": "InvalidLockPeriod",
-      "msg": "Invalid lock period"
+      "name": "InvalidLockPeriodAndYield",
+      "msg": "Invalid lock period and yield"
     },
     {
       "code": 6007,
@@ -1257,21 +1291,17 @@
             "type": "pubkey"
           },
           {
-            "name": "lock_period",
+            "name": "lock_period_yields",
             "type": {
               "array": [
                 {
                   "defined": {
-                    "name": "LockPeriod"
+                    "name": "LockPeriodYield"
                   }
                 },
                 4
               ]
             }
-          },
-          {
-            "name": "yield_rate",
-            "type": "u64"
           },
           {
             "name": "max_cap",
@@ -1347,6 +1377,26 @@
       }
     },
     {
+      "name": "LockPeriodYield",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "lock_period",
+            "type": {
+              "defined": {
+                "name": "LockPeriod"
+              }
+            }
+          },
+          {
+            "name": "yield_rate",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "Position",
       "type": {
         "kind": "struct",
@@ -1370,6 +1420,10 @@
                 "name": "PositionType"
               }
             }
+          },
+          {
+            "name": "lock_period_yield_index",
+            "type": "u8"
           },
           {
             "name": "unlock_time",

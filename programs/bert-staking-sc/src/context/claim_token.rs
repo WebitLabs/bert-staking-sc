@@ -6,6 +6,7 @@ use anchor_spl::{
 };
 
 #[derive(Accounts)]
+#[instruction(id: u64)]
 pub struct ClaimPosition<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -22,7 +23,7 @@ pub struct ClaimPosition<'info> {
 
     #[account(
         mut,
-        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref()],
+        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), id.to_le_bytes().as_ref()],
         bump = position.bump,
         constraint = position.owner == owner.key(),
         constraint = position.status == PositionStatus::Unclaimed,
@@ -75,13 +76,17 @@ impl<'info> ClaimPosition<'info> {
             return Err(StakingError::PositionLocked.into());
         }
 
-        msg!("[claim_position] 1");
-        msg!("position_amount: {:?}", self.position.amount);
-        msg!("yeild_rte: {:?}", self.config.yield_rate);
+        let index = self.position.lock_period_yield_index;
+        require!(
+            self.config.lock_period_yields.len() > index as usize,
+            StakingError::InvalidLockPeriodAndYield
+        );
+
+        let lock_period_yield = self.config.lock_period_yields[index as usize];
 
         // Calculate yield based on position type and config
         let position_amount = self.position.amount;
-        let yield_rate = self.config.yield_rate;
+        let yield_rate = lock_period_yield.yield_rate;
         let base_amount = position_amount;
         let yield_value = base_amount
             .checked_mul(yield_rate)
@@ -118,7 +123,9 @@ impl<'info> ClaimPosition<'info> {
                 final_amount,
             )?;
 
-            // TODO Implement NFT Transfer
+            //
+            // TODO Implement NFT Unlock
+            //
         } else {
             // For tokens, transfer the original amount plus yield
             anchor_spl::token::transfer(
@@ -134,8 +141,6 @@ impl<'info> ClaimPosition<'info> {
                 final_amount,
             )?;
         }
-
-        msg!("[claim_position] 2");
 
         // Update position status to claimed
         let position = &mut self.position;

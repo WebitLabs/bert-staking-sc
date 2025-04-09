@@ -1,4 +1,4 @@
-import { Program, web3 } from "@coral-xyz/anchor";
+import { Program, web3, BN } from "@coral-xyz/anchor";
 import { BertStakingSc } from "../idl";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import {
@@ -20,6 +20,8 @@ export type ClaimPositionParams = {
   collection?: web3.PublicKey;
   nftsVault?: web3.PublicKey;
   vault?: web3.PublicKey;
+  configId?: number; // ID for the config account
+  positionId?: number; // ID for the position account
 };
 
 /**
@@ -38,13 +40,15 @@ export async function claimPositionInstruction({
   collection = web3.PublicKey.default,
   nftsVault,
   vault,
+  configId = 0,
+  positionId = 0,
 }: ClaimPositionParams): Promise<web3.TransactionInstruction> {
-  // Get authority from config
-  const [configPda] = sdk.pda.findConfigPda(authority);
+  // Get authority from config using the configId
+  const [configPda] = sdk.pda.findConfigPda(authority, configId);
 
   // Calculate position PDA if not provided
   const positionAddress =
-    positionPda || sdk.pda.findPositionPda(owner, tokenMint)[0];
+    positionPda || sdk.pda.findPositionPda(owner, tokenMint, positionId)[0];
 
   // Derive user token account if not provided
   const userTokenAccount =
@@ -54,7 +58,7 @@ export async function claimPositionInstruction({
       owner,
       true,
       TOKEN_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
   // Derive user NFT token account if not provided and nftMint is provided
@@ -68,7 +72,7 @@ export async function claimPositionInstruction({
           owner,
           true,
           TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
         )
       : web3.Keypair.generate().publicKey); // Dummy key if nftMint not provided
 
@@ -80,7 +84,7 @@ export async function claimPositionInstruction({
       configPda,
       true,
       TOKEN_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
   // Get config to determine NFTs vault
@@ -96,7 +100,7 @@ export async function claimPositionInstruction({
   }
 
   return program.methods
-    .claimPosition()
+    .claimPosition(new BN(positionId)) // Pass position ID
     .accountsStrict({
       owner,
       config: configPda,

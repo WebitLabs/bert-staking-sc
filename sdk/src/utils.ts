@@ -1,5 +1,5 @@
-import { IdlTypes } from "@coral-xyz/anchor";
-import { LockPeriod, PositionType } from "./types";
+import { BN, IdlTypes } from "@coral-xyz/anchor";
+import { LockPeriod, LockPeriodYield, PositionType } from "./types";
 import { BertStakingSc } from "./idl";
 
 /**
@@ -43,6 +43,7 @@ export function calculateUnlockTime(
 
 type LockPeriodIdlType = IdlTypes<BertStakingSc>["lockPeriod"];
 type PositionTypeIdlType = IdlTypes<BertStakingSc>["positionType"];
+type LockPeriodYieldIdlType = IdlTypes<BertStakingSc>["lockPeriodYield"];
 
 /**
  * Converts a LockPeriod enum value to its IDL representation
@@ -67,6 +68,51 @@ export function getLockPeriodFromIdl(p: LockPeriod): LockPeriodIdlType {
  */
 export function getLockPeriodsArrayFromIdl(periods: LockPeriod[]) {
   return periods.map((period) => getLockPeriodFromIdl(period));
+}
+
+/**
+ * Create a LockPeriodYield IDL object
+ */
+export function createLockPeriodYieldIdl(
+  lockPeriod: LockPeriod, 
+  yieldRate: number | BN
+): LockPeriodYieldIdlType {
+  const yieldRateBN = typeof yieldRate === "number" ? new BN(yieldRate) : yieldRate;
+  return {
+    lockPeriod: getLockPeriodFromIdl(lockPeriod),
+    yieldRate: yieldRateBN
+  };
+}
+
+/**
+ * Create an array of LockPeriodYield objects for all lock periods
+ * @param defaultYieldRate Default yield rate to use for all periods
+ * @returns Array of LockPeriodYield objects
+ */
+export function createDefaultLockPeriodYields(
+  defaultYieldRate: number | BN = 500
+): LockPeriodYieldIdlType[] {
+  return [
+    createLockPeriodYieldIdl(LockPeriod.OneDay, defaultYieldRate),
+    createLockPeriodYieldIdl(LockPeriod.ThreeDays, defaultYieldRate),
+    createLockPeriodYieldIdl(LockPeriod.SevenDays, defaultYieldRate),
+    createLockPeriodYieldIdl(LockPeriod.ThirtyDays, defaultYieldRate),
+  ];
+}
+
+/**
+ * Create a custom array of LockPeriodYield objects with specific yield rates
+ * @param yields Map of lock periods to yield rates
+ * @returns Array of LockPeriodYield objects
+ */
+export function createCustomLockPeriodYields(
+  yields: Map<LockPeriod, number | BN>
+): LockPeriodYieldIdlType[] {
+  const allPeriods = getAllLockPeriods();
+  return allPeriods.map(period => {
+    const yieldRate = yields.get(period) || 500; // Default to 5% if not specified
+    return createLockPeriodYieldIdl(period, yieldRate);
+  });
 }
 
 /**

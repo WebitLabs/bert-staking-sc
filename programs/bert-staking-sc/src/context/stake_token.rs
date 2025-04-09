@@ -6,6 +6,7 @@ use anchor_spl::{
 };
 
 #[derive(Accounts)]
+#[instruction(id: u64)]
 pub struct StakeToken<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -20,23 +21,23 @@ pub struct StakeToken<'info> {
 
     #[account(
         mut,
-        seeds = [b"position", owner.key().as_ref(), token_mint.key().as_ref()],
+        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), id.to_le_bytes().as_ref()],
         bump = position.bump,
     )]
     pub position: Account<'info, Position>,
 
-    pub token_mint: Account<'info, Mint>,
+    pub mint: Account<'info, Mint>,
 
     #[account(
         mut,
-        associated_token::mint = token_mint,
+        associated_token::mint = mint,
         associated_token::authority = owner,
     )]
     pub token_account: Account<'info, TokenAccount>,
 
     #[account(
         mut,
-        associated_token::mint = token_mint,
+        associated_token::mint = mint,
         associated_token::authority = config,
     )]
     pub vault: Account<'info, TokenAccount>,
@@ -53,6 +54,13 @@ impl<'info> StakeToken<'info> {
         if amount == 0 {
             return Err(StakingError::InvalidAmount.into());
         }
+
+        let index = self.position.lock_period_yield_index;
+        // Check if period and yield index is valid
+        require!(
+            self.config.lock_period_yields.len() > index as usize,
+            StakingError::InvalidLockPeriodAndYield
+        );
 
         // Check if staking would exceed the max cap
         let new_total = self

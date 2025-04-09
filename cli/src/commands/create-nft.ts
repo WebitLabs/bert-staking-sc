@@ -44,7 +44,7 @@ export function createCoreNftCommand(program: Command): void {
         umi.use(mplCore());
 
         const userWallet = umi.eddsa.createKeypairFromSecretKey(
-          new Uint8Array(payer.secretKey),
+          new Uint8Array(payer.secretKey)
         );
         const userWalletSigner = createSignerFromKeypair(umi, userWallet);
 
@@ -73,14 +73,19 @@ export function createCoreNftCommand(program: Command): void {
             }).sendAndConfirm(umi, txConfig);
           }
 
-          const n = Math.random() % 100;
+          const random = Math.floor(Math.random() * 100);
+          console.log("======= random: ", random);
+
           const asset = generateSigner(umi);
           await createV1(umi, {
-            name: `${options.name} #${n}`,
+            name: `${options.name} #${random}`,
             uri: "https://your.domain.com/asset-id.json",
             asset: asset,
             collection: collectionPubkey,
             authority: userWalletSigner,
+            // owner: options.owner
+            //   ? publicKey(options.owner)
+            //   : userWalletSigner.publicKey,
           }).sendAndConfirm(umi, txConfig);
 
           spinner.succeed(`NFT created: ${asset.publicKey.toString()}`);
@@ -88,13 +93,14 @@ export function createCoreNftCommand(program: Command): void {
           // Token information summary
           console.log("\nMPL Core NFT Created Successfully:");
           console.log(`- Mint Address: ${asset.publicKey.toString()}`);
-          console.log(`- Name: ${options.name}`);
+          console.log(`- Name: ${options.name} #${random}`);
           console.log(`- Authority: ${payer.publicKey.toString()}`);
         } catch (error) {
-          spinner.fail(`Failed to MPL Core NFT mint: ${error}`);
+          console.error("Failed to MPL Core NFT asset:", error);
+          spinner.fail(`Failed to MPL Core NFT asset: ${error}`);
         }
       } catch (error) {
-        ora().fail(`Failed to create token: ${error}`);
+        ora().fail(`Failed to create MPL Conre NFT assset: ${error}`);
       }
     });
 }

@@ -16,6 +16,7 @@ import {
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import {
   fromWeb3JsKeypair,
+  fromWeb3JsPublicKey,
   toWeb3JsInstruction,
   toWeb3JsKeypair,
 } from "@metaplex-foundation/umi-web3js-adapters";
@@ -83,6 +84,7 @@ export async function createCollectionAndMintAsset(
       asset: asset,
       collection: collection.publicKey,
       authority: signerWallet,
+      owner: fromWeb3JsPublicKey(authority.publicKey),
     }).getInstructions();
 
     let web3Createixs = createIxs.map((ix) => toWeb3JsInstruction(ix));

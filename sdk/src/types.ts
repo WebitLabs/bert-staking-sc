@@ -44,10 +44,19 @@ export enum LockPeriod {
   ThirtyDays = 30,
 }
 
-// export type CurveType = IdlTypes<Amm>["CurveType"]
+// IDL types
 export type LockPeriodIdl = IdlTypes<BertStakingSc>["lockPeriod"];
 export type ConfigIdl = IdlAccounts<BertStakingSc>["config"];
 export type PositionIdl = IdlAccounts<BertStakingSc>["position"];
+export type LockPeriodYieldIdl = IdlTypes<BertStakingSc>["lockPeriodYield"];
+
+/**
+ * Lock period yield mapping structure
+ */
+export interface LockPeriodYield {
+  lockPeriod: LockPeriod;
+  yieldRate: BN;
+}
 
 /**
  * Config account data structure
@@ -59,8 +68,7 @@ export interface Config {
   vault: PublicKey;
   nftsVault: PublicKey;
   authorityVault: PublicKey;
-  lockPeriod: LockPeriod[];
-  yieldRate: BN;
+  lockPeriodYields: LockPeriodYield[];
   maxCap: BN;
   nftValueInTokens: BN;
   nftsLimitPerUser: number;
@@ -77,6 +85,7 @@ export interface Position {
   depositTime: BN;
   amount: BN;
   positionType: PositionType;
+  lockPeriodYieldIndex: number; // Index into the config's lockPeriodYields array
   unlockTime: BN;
   status: PositionStatus;
   nftMints: PublicKey[]; // Array of NFT mints (up to 5)

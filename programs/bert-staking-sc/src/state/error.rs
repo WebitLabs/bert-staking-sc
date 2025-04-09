@@ -20,8 +20,8 @@ pub enum StakingError {
     #[msg("Arithmetic overflow")]
     ArithmeticOverflow,
 
-    #[msg("Invalid lock period")]
-    InvalidLockPeriod,
+    #[msg("Invalid lock period and yield")]
+    InvalidLockPeriodAndYield,
 
     #[msg("Invalid position type")]
     InvalidPositionType,

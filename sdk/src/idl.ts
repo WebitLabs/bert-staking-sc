@@ -80,6 +80,10 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "mint"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -308,7 +312,12 @@ export type BertStakingSc = {
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "id",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "initialize",
@@ -347,6 +356,10 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -499,21 +512,21 @@ export type BertStakingSc = {
       ],
       "args": [
         {
-          "name": "lockPeriod",
+          "name": "id",
+          "type": "u64"
+        },
+        {
+          "name": "lockPeriodYields",
           "type": {
             "array": [
               {
                 "defined": {
-                  "name": "lockPeriod"
+                  "name": "lockPeriodYield"
                 }
               },
               4
             ]
           }
-        },
-        {
-          "name": "yieldRate",
-          "type": "u64"
         },
         {
           "name": "maxCap",
@@ -595,6 +608,10 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "mint"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -623,12 +640,12 @@ export type BertStakingSc = {
       ],
       "args": [
         {
-          "name": "lockPeriod",
-          "type": {
-            "defined": {
-              "name": "lockPeriod"
-            }
-          }
+          "name": "id",
+          "type": "u64"
+        },
+        {
+          "name": "lockPeriodYieldIndex",
+          "type": "u8"
         },
         {
           "name": "positionType",
@@ -709,7 +726,11 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "collection"
+                "path": "mint"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -764,7 +785,12 @@ export type BertStakingSc = {
           "address": "SysvarRent111111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "id",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "stakeToken",
@@ -832,13 +858,17 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "tokenMint"
+                "path": "mint"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
         },
         {
-          "name": "tokenMint"
+          "name": "mint"
         },
         {
           "name": "tokenAccount",
@@ -888,7 +918,7 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "tokenMint"
+                "path": "mint"
               }
             ],
             "program": {
@@ -978,7 +1008,7 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "tokenMint"
+                "path": "mint"
               }
             ],
             "program": {
@@ -1041,6 +1071,10 @@ export type BertStakingSc = {
         }
       ],
       "args": [
+        {
+          "name": "id",
+          "type": "u64"
+        },
         {
           "name": "amount",
           "type": "u64"
@@ -1135,8 +1169,8 @@ export type BertStakingSc = {
     },
     {
       "code": 6006,
-      "name": "invalidLockPeriod",
-      "msg": "Invalid lock period"
+      "name": "invalidLockPeriodAndYield",
+      "msg": "Invalid lock period and yield"
     },
     {
       "code": 6007,
@@ -1263,21 +1297,17 @@ export type BertStakingSc = {
             "type": "pubkey"
           },
           {
-            "name": "lockPeriod",
+            "name": "lockPeriodYields",
             "type": {
               "array": [
                 {
                   "defined": {
-                    "name": "lockPeriod"
+                    "name": "lockPeriodYield"
                   }
                 },
                 4
               ]
             }
-          },
-          {
-            "name": "yieldRate",
-            "type": "u64"
           },
           {
             "name": "maxCap",
@@ -1353,6 +1383,26 @@ export type BertStakingSc = {
       }
     },
     {
+      "name": "lockPeriodYield",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "lockPeriod",
+            "type": {
+              "defined": {
+                "name": "lockPeriod"
+              }
+            }
+          },
+          {
+            "name": "yieldRate",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "position",
       "type": {
         "kind": "struct",
@@ -1376,6 +1426,10 @@ export type BertStakingSc = {
                 "name": "positionType"
               }
             }
+          },
+          {
+            "name": "lockPeriodYieldIndex",
+            "type": "u8"
           },
           {
             "name": "unlockTime",

@@ -7,7 +7,10 @@ import {
   getAssociatedTokenAddressSync,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { getLockPeriodFromIdl, getLockPeriodsArrayFromIdl } from "../utils";
+import {
+  createCustomLockPeriodYields,
+  createDefaultLockPeriodYields,
+} from "../utils";
 
 export type InitializeParams = {
   program: Program<BertStakingSc>;
@@ -18,8 +21,9 @@ export type InitializeParams = {
   vault?: web3.PublicKey;
   nftsVault?: web3.PublicKey;
   authorityVault?: web3.PublicKey;
-  lockPeriods?: LockPeriod[];
-  yieldRate: number | BN;
+  id?: number; // Optional ID for the config
+  lockPeriodYields?: Map<LockPeriod, number | BN>; // Map of lock periods to yield rates
+  defaultYieldRate?: number | BN; // Default yield rate for all periods if lockPeriodYields not provided
   maxCap: number | BN;
   nftValueInTokens: number | BN;
   nftsLimitPerUser: number;
@@ -37,33 +41,27 @@ export function initializeInstruction({
   vault,
   nftsVault,
   authorityVault,
-  lockPeriods,
-  yieldRate,
+  id = 0, // Default ID to 0 if not provided
+  lockPeriodYields,
+  defaultYieldRate = 500, // Default to 5% if not specified
   maxCap,
   nftValueInTokens,
   nftsLimitPerUser,
 }: InitializeParams): Promise<web3.TransactionInstruction> {
   // Convert numbers to BN if needed
-  const yieldRateBN =
-    typeof yieldRate === "number" ? new BN(yieldRate) : yieldRate;
   const maxCapBN = typeof maxCap === "number" ? new BN(maxCap) : maxCap;
   const nftValueInTokensBN =
     typeof nftValueInTokens === "number"
       ? new BN(nftValueInTokens)
       : nftValueInTokens;
 
-  // Find Config PDA
-  const [configPda] = pda.findConfigPda(authority);
+  // Find Config PDA with the provided ID
+  const [configPda] = pda.findConfigPda(authority, id);
 
-  // Use provided lock periods or default to all periods
-  const actualLockPeriods = lockPeriods
-    ? getLockPeriodsArrayFromIdl(lockPeriods)
-    : getLockPeriodsArrayFromIdl([
-        LockPeriod.OneDay,
-        LockPeriod.ThreeDays,
-        LockPeriod.SevenDays,
-        LockPeriod.ThirtyDays,
-      ]);
+  // Create lock period yields mapping
+  const lockPeriodYieldsArray = lockPeriodYields
+    ? createCustomLockPeriodYields(lockPeriodYields)
+    : createDefaultLockPeriodYields(defaultYieldRate);
 
   // Get token accounts
   const vaultTA = vault || getAssociatedTokenAddressSync(mint, configPda, true);
@@ -71,25 +69,25 @@ export function initializeInstruction({
     nftsVault ||
     web3.PublicKey.findProgramAddressSync(
       [Buffer.from("nfts_vault"), configPda.toBuffer()],
-      program.programId,
+      program.programId
     )[0];
   const authorityVaultTA =
     authorityVault || pda.findAuthorityVaultPda(mint, configPda)[0];
 
   return program.methods
     .initialize(
-      actualLockPeriods,
-      yieldRateBN,
+      new BN(id),
+      lockPeriodYieldsArray,
       maxCapBN,
       nftValueInTokensBN,
-      nftsLimitPerUser,
+      nftsLimitPerUser
     )
     .accountsStrict({
       authority,
       mint,
       collection,
       vault: vaultTA,
-      nftsVault: nftsVaultTA, // Added NFTs vault
+      nftsVault: nftsVaultTA,
       authorityVault: authorityVaultTA,
       config: configPda,
       systemProgram: web3.SystemProgram.programId,

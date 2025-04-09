@@ -6,6 +6,7 @@ use anchor_spl::{
 };
 
 #[derive(Accounts)]
+#[instruction(id: u64)]
 pub struct InitializePosition<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -21,7 +22,7 @@ pub struct InitializePosition<'info> {
         init,
         payer = owner,
         space = 8 + Position::INIT_SPACE,
-        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref()],
+        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), id.to_le_bytes().as_ref()],
         bump
     )]
     pub position: Account<'info, Position>,
@@ -37,7 +38,7 @@ pub struct InitializePosition<'info> {
 impl<'info> InitializePosition<'info> {
     pub fn initialize_position(
         &mut self,
-        period: LockPeriod,
+        lock_period_yield_index: u8,
         position_type: PositionType,
         bumps: &InitializePositionBumps,
     ) -> Result<()> {
@@ -46,19 +47,22 @@ impl<'info> InitializePosition<'info> {
             return Err(StakingError::InvalidPositionType.into());
         }
 
-        // Check if period is valid
-        if !self.config.lock_period.contains(&period) {
-            return Err(StakingError::InvalidLockPeriod.into());
-        }
+        // Check if period and yield index is valid
+        require!(
+            self.config.lock_period_yields.len() > lock_period_yield_index as usize,
+            StakingError::InvalidLockPeriodAndYield
+        );
 
         // Create a position
         let position = &mut self.position;
         position.owner = self.owner.key();
         position.position_type = PositionType::Token;
 
+        let lock_period_yield = self.config.lock_period_yields[lock_period_yield_index as usize];
+
         // Calculate unlock time (current time + lock_time in seconds)
         // lock_time is in days, convert to seconds
-        let lock_days = match period {
+        let lock_days = match lock_period_yield.lock_period {
             LockPeriod::OneDay => 1,
             LockPeriod::ThreeDays => 3,
             LockPeriod::SevenDays => 7,

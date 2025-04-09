@@ -65,9 +65,8 @@ export class BertStakingSDK {
     authority,
     mint,
     collection,
-    lockPeriods,
+    lockPeriodYields,
     nftsVault,
-    yieldRate,
     maxCap,
     nftValueInTokens,
     nftsLimitPerUser,
@@ -75,9 +74,8 @@ export class BertStakingSDK {
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
-    lockPeriods?: LockPeriod[];
     nftsVault?: PublicKey;
-    yieldRate: number | BN;
+    lockPeriodYields: Map<LockPeriod, BN | number>;
     maxCap: number | BN;
     nftValueInTokens: number | BN;
     nftsLimitPerUser: number;
@@ -88,9 +86,8 @@ export class BertStakingSDK {
       authority,
       mint,
       collection,
-      nftsVault, // Added nftsVault
-      lockPeriods, // Changed from lockPeriod to lockPeriods
-      yieldRate,
+      nftsVault,
+      lockPeriodYields,
       maxCap,
       nftValueInTokens,
       nftsLimitPerUser,
@@ -104,9 +101,8 @@ export class BertStakingSDK {
     authority,
     mint,
     collection,
-    lockPeriods,
+    lockPeriodYields,
     nftsVault,
-    yieldRate,
     maxCap,
     nftValueInTokens,
     nftsLimitPerUser,
@@ -114,7 +110,7 @@ export class BertStakingSDK {
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
-    lockPeriods?: LockPeriod[]; // Changed from single lockPeriod to array
+    lockPeriodYields?: Map<LockPeriod, number | BN>;
     nftsVault?: PublicKey; // Added optional nftsVault
     yieldRate: number | BN;
     maxCap: number | BN;
@@ -127,9 +123,8 @@ export class BertStakingSDK {
       authority,
       mint,
       collection,
-      nftsVault, // Added nftsVault
-      lockPeriods, // Changed from lockPeriod to lockPeriods
-      yieldRate,
+      nftsVault,
+      lockPeriodYields, // Changed from lockPeriod to lockPeriods
       maxCap,
       nftValueInTokens,
       nftsLimitPerUser,
@@ -156,13 +151,13 @@ export class BertStakingSDK {
     authority,
     owner,
     tokenMint,
-    lockPeriod,
+    lockPeriodYieldIndex,
     positionType,
   }: {
     authority: PublicKey;
     owner: PublicKey;
     tokenMint: PublicKey;
-    lockPeriod: LockPeriod;
+    lockPeriodYieldIndex: number;
     positionType: PositionType;
   }): Promise<TransactionInstruction> {
     return initializePositionInstruction({
@@ -171,7 +166,7 @@ export class BertStakingSDK {
       owner,
       authority,
       tokenMint,
-      lockPeriod,
+      lockPeriodYieldIndex,
       positionType,
     });
   }
@@ -183,13 +178,13 @@ export class BertStakingSDK {
     authority,
     owner,
     tokenMint,
-    lockPeriod,
+    lockPeriodYieldIndex,
     positionType,
   }: {
     authority: PublicKey;
     owner: PublicKey;
     tokenMint: PublicKey;
-    lockPeriod: LockPeriod;
+    lockPeriodYieldIndex: number;
     positionType: PositionType;
   }): Promise<string> {
     let ix = await initializePositionInstruction({
@@ -198,7 +193,7 @@ export class BertStakingSDK {
       owner,
       authority,
       tokenMint,
-      lockPeriod,
+      lockPeriodYieldIndex,
       positionType,
     });
 

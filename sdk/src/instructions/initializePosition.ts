@@ -1,8 +1,8 @@
-import { Program, web3 } from "@coral-xyz/anchor";
+import { Program, web3, BN } from "@coral-xyz/anchor";
 import { BertStakingSc } from "../idl";
 import { BertStakingPda } from "../pda";
-import { LockPeriod, PositionType } from "../types";
-import { getLockPeriodFromIdl, getPositionTypeIdl } from "../utils";
+import { PositionType } from "../types";
+import { getPositionTypeIdl } from "../utils";
 
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -15,7 +15,9 @@ export type InitializePositionParams = {
   owner: web3.PublicKey;
   authority: web3.PublicKey;
   tokenMint: web3.PublicKey;
-  lockPeriod: LockPeriod;
+  configId?: number; // ID for the config account
+  positionId?: number; // ID for the position account
+  lockPeriodYieldIndex: number; // Index into the config's lockPeriodYields array
   positionType: PositionType;
 };
 
@@ -28,26 +30,27 @@ export async function initializePositionInstruction({
   owner,
   authority,
   tokenMint,
-  lockPeriod,
+  configId = 0,
+  positionId = 0,
+  lockPeriodYieldIndex,
   positionType,
 }: InitializePositionParams): Promise<web3.TransactionInstruction> {
-  // Find Config PDA
-  const [configPda] = pda.findConfigPda(authority);
+  // Find Config PDA with the provided ID
+  const [configPda] = pda.findConfigPda(authority, configId);
 
-  // Find Position PDA
-  const [positionPda] = pda.findPositionPda(owner, tokenMint);
+  // Find Position PDA with the provided ID
+  const [positionPda] = pda.findPositionPda(owner, tokenMint, positionId);
 
-  // Get lock period in IDL format
-  const lockPeriodObj = getLockPeriodFromIdl(lockPeriod);
+  // Get position type in IDL format
   const positionTypeObj = getPositionTypeIdl(positionType);
 
   return program.methods
-    .initiatePosition(lockPeriodObj, positionTypeObj)
+    .initiatePosition(new BN(positionId), lockPeriodYieldIndex, positionTypeObj)
     .accountsStrict({
       owner,
       config: configPda,
       position: positionPda,
-      mint: tokenMint, // Changed to match Rust code
+      mint: tokenMint,
       systemProgram: web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,

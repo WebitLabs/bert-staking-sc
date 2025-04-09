@@ -7,6 +7,7 @@ use anchor_spl::{
 use crate::state::*;
 
 #[derive(Accounts)]
+#[instruction(id: u64)]
 pub struct Initialize<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -15,7 +16,7 @@ pub struct Initialize<'info> {
         init,
         payer = authority,
         space = 8 + Config::INIT_SPACE,
-        seeds = [b"config", authority.key().as_ref()],
+        seeds = [b"config", authority.key().as_ref(), id.to_le_bytes().as_ref()],
         bump
     )]
     pub config: Box<Account<'info, Config>>,
@@ -53,8 +54,7 @@ pub struct Initialize<'info> {
 impl<'info> Initialize<'info> {
     pub fn initialize(
         &mut self,
-        lock_period: [LockPeriod; 4],
-        yield_rate: u64,
+        lock_period_yields: [LockPeriodYield; 4],
         max_cap: u64,
         nft_value_in_tokens: u64,
         nfts_limit_per_user: u8,
@@ -69,8 +69,7 @@ impl<'info> Initialize<'info> {
             vault: self.vault.key(),
             nfts_vault: self.nfts_vault.key(),
             authority_vault: self.authority_vault.key(),
-            lock_period,
-            yield_rate,
+            lock_period_yields,
             max_cap,
             nft_value_in_tokens,
             nfts_limit_per_user,

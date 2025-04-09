@@ -1,4 +1,4 @@
-import { Program, web3 } from "@coral-xyz/anchor";
+import { Program, web3, BN } from "@coral-xyz/anchor";
 import { BertStakingSc } from "../idl";
 
 import {
@@ -17,6 +17,8 @@ export type StakeNftParams = {
   asset: web3.PublicKey;
   updateAuthority: web3.PublicKey;
   payer: web3.PublicKey;
+  configId?: number; // ID for the config account
+  positionId?: number; // ID for the position account
   coreProgram?: web3.PublicKey;
 };
 
@@ -33,14 +35,19 @@ export async function stakeNftInstruction({
   asset,
   updateAuthority,
   payer,
-  coreProgram = new web3.PublicKey("mpLbyGeKdRpHLZvN87ggbNGNWQwkz5JWQJ5hKaKwHcw"),
+  configId = 0,
+  positionId = 0,
+  coreProgram = new web3.PublicKey(
+    "mpLbyGeKdRpHLZvN87ggbNGNWQwkz5JWQJ5hKaKwHcw"
+  ),
 }: StakeNftParams): Promise<web3.TransactionInstruction> {
-  // Find Config PDA
-  const [configPda] = pda.findConfigPda(authority);
-  const [positionPda] = pda.findPositionPda(owner, collection);
+  // Find Config PDA with the provided ID
+  const [configPda] = pda.findConfigPda(authority, configId);
+  // Find Position PDA with the provided ID
+  const [positionPda] = pda.findPositionPda(owner, mint, positionId);
 
   return program.methods
-    .stakeNft()
+    .stakeNft(new BN(positionId))
     .accountsStrict({
       owner,
       config: configPda,
@@ -58,3 +65,4 @@ export async function stakeNftInstruction({
     })
     .instruction();
 }
+
