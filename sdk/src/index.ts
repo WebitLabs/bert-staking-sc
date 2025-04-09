@@ -356,6 +356,8 @@ export class BertStakingSDK {
   async stakeTokenRpc({
     authority,
     owner,
+    configId,
+    positionId,
     tokenMint,
     amount,
     tokenAccount,
@@ -364,6 +366,8 @@ export class BertStakingSDK {
     owner: PublicKey;
     authority: PublicKey;
     tokenMint: PublicKey;
+    configId?: number;
+    positionId: number;
     amount: number | BN;
     tokenAccount?: PublicKey;
     vault?: PublicKey;
@@ -374,6 +378,8 @@ export class BertStakingSDK {
       owner,
       authority,
       tokenMint,
+      configId,
+      positionId,
       amount,
       tokenAccount,
       vault,
