@@ -13,12 +13,7 @@ import {
   Position,
   PositionType,
 } from "../sdk/src";
-import {
-  AddedAccount,
-  AddedProgram,
-  BanksClient,
-  ProgramTestContext,
-} from "solana-bankrun";
+import { AddedProgram, BanksClient, ProgramTestContext } from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import {
@@ -29,11 +24,16 @@ import {
 } from "./helpers/constants";
 import {
   createAtaForMint,
+  createAtaForMintWithAddress,
   getMintDecimals,
-  getMplCoreAsset,
-  getMplCoreCollection,
   getTokenBalance,
 } from "./helpers/token";
+import { getMplCoreAsset, createCollectionAndMintAsset } from "./helpers/core";
+import { generateSigner, KeypairSigner } from "@metaplex-foundation/umi";
+import {
+  toWeb3JsKeypair,
+  toWeb3JsPublicKey,
+} from "@metaplex-foundation/umi-web3js-adapters";
 
 const addedPrograms: AddedProgram[] = [
   { name: "mpl_core", programId: new PublicKey(MPL_CORE_ADDRESS) },
@@ -58,14 +58,18 @@ describe("bert-staking-sc", () => {
   let userTokenAccount: PublicKey;
 
   let collection = new PublicKey(B_COLLECTION);
+  let asset = new PublicKey(B_545_ASSET);
   let decimals: number;
 
-  let tokensInVault;
+  let collectionSigner: KeypairSigner;
+  let assetSigner: KeypairSigner;
+
+  let tokensInVault: number;
 
   before("before", async () => {
     const usdcMint = await getAddedAccountInfo(tokenMint);
-    const bCollection = await getAddedAccountInfo(new PublicKey(B_COLLECTION));
-    const bAsset = await getAddedAccountInfo(new PublicKey(B_545_ASSET));
+    const bCollection = await getAddedAccountInfo(collection);
+    const bAsset = await getAddedAccountInfo(asset);
 
     const addedAccounts = [usdcMint, bCollection, bAsset];
 
@@ -85,14 +89,14 @@ describe("bert-staking-sc", () => {
 
     decimals = await getMintDecimals(client, tokenMint);
 
-    console.log(
-      "Mpl Core Collection:",
-      await getMplCoreCollection(client, bCollection.address),
+    const result = await createCollectionAndMintAsset(
+      payer,
+      client,
+      "B_COLLECTION"
     );
-    console.log(
-      "Mpl Core Asset:",
-      await getMplCoreAsset(client, bAsset.address),
-    );
+
+    collectionSigner = result.collection;
+    assetSigner = result.asset;
   });
 
   it("Initializes the Bert staking program", async () => {
@@ -101,6 +105,11 @@ describe("bert-staking-sc", () => {
 
     const [configPda] = sdk.pda.findConfigPda(authority.publicKey);
     console.log("Config PDA:", configPda.toString());
+
+    // create token vault
+    const [vaultTA] = sdk.pda.findAuthorityVaultPda(tokenMint, configPda);
+
+    createAtaForMintWithAddress(provider, vaultTA, configPda, tokenMint);
 
     // Create the initialize instruction
     const initializeIx = await sdk.initialize({
@@ -116,7 +125,7 @@ describe("bert-staking-sc", () => {
     let configAccount: Config;
     try {
       // Create and process the transaction
-      await createAndProcessTransaction(client, authority, initializeIx);
+      await createAndProcessTransaction(client, authority, [initializeIx]);
 
       // Fetch the config account to verify initialization
       configAccount = await sdk.fetchConfigByAddress(configPda);
@@ -127,7 +136,7 @@ describe("bert-staking-sc", () => {
 
     const lockPeriods = BertStakingSDK.getSupportedLockPeriods();
     const convertedLockPeriod = lockPeriods.map((p) =>
-      BertStakingSDK.getLockPeriodFromIdl(p),
+      BertStakingSDK.getLockPeriodFromIdl(p)
     );
 
     // Assert that all config values are set correctly
@@ -137,20 +146,20 @@ describe("bert-staking-sc", () => {
     expect(configAccount.yieldRate.toString()).to.equal(yieldRate.toString());
     expect(configAccount.maxCap.toString()).to.equal(maxCap.toString());
     expect(configAccount.nftValueInTokens.toString()).to.equal(
-      nftValueInTokens.toString(),
+      nftValueInTokens.toString()
     );
     expect(configAccount.nftsLimitPerUser).to.equal(nftsLimitPerUser);
     expect(configAccount.totalStakedAmount.toString()).to.equal("0");
 
     console.log(
-      "Config initialized successfully with the following parameters:",
+      "Config initialized successfully with the following parameters:"
     );
     console.log("Lock Time (days):", configAccount.lockPeriod.toString());
     console.log("Yield Rate (bps):", configAccount.yieldRate.toString());
     console.log("Max Cap:", configAccount.maxCap.toString());
     console.log(
       "NFT Value in Tokens:",
-      configAccount.nftValueInTokens.toString(),
+      configAccount.nftValueInTokens.toString()
     );
     console.log("NFTs Limit Per User:", configAccount.nftsLimitPerUser);
   });
@@ -159,6 +168,8 @@ describe("bert-staking-sc", () => {
     try {
       const owner = payer.publicKey;
       const mint = tokenMint;
+
+      console.log(" ====== wallet: ", owner.toBase58(), " ===========");
 
       const [configPda] = sdk.pda.findConfigPda(payer.publicKey);
 
@@ -171,8 +182,24 @@ describe("bert-staking-sc", () => {
       userTokenAccount = getAssociatedTokenAddressSync(mint, owner, true);
 
       console.log(
-        `User has ${await getTokenBalance(client, userTokenAccount)} USDC`,
+        `User has ${await getTokenBalance(client, userTokenAccount)} USDC`
       );
+
+      // TODO: change updateAuthority for collection to wallet
+      // await setAuthorityMplCoreCollection(
+      //   client,
+      //   provider,
+      //   collection,
+      //   payer.publicKey
+      // );
+      // await setOwnerMplCoreAsset(client, provider, asset, payer.publicKey);
+
+      // console.log("============== AFTER =============");
+      // console.log(
+      //   "Mpl Core Collection:",
+      //   await getMplCoreCollection(client, collection)
+      // );
+      console.log("Mpl Core Asset:", await getMplCoreAsset(client, asset));
     } catch (err) {
       console.error("Failed to set up token mint and accounts:", err);
       expect.fail("Token setup failed");
@@ -203,7 +230,7 @@ describe("bert-staking-sc", () => {
       });
 
       // Process the initialize position transaction
-      await createAndProcessTransaction(client, payer, initPositionIx);
+      await createAndProcessTransaction(client, payer, [initPositionIx]);
       console.log("Position initialized successfully");
     } catch (err) {
       console.error("Failed to initialize position or stake tokens:", err);
@@ -229,7 +256,7 @@ describe("bert-staking-sc", () => {
       });
 
       // Process the stake token transaction
-      await createAndProcessTransaction(client, payer, stakeTokenIx);
+      await createAndProcessTransaction(client, payer, [stakeTokenIx]);
       console.log("Tokens staked successfully");
     } catch (err) {
       console.error("Failed to stake tokens:", err);
@@ -241,7 +268,7 @@ describe("bert-staking-sc", () => {
     // 1. Check user's token balance decreased
     const userTokenAccountBalance = await getTokenBalance(
       client,
-      userTokenAccount,
+      userTokenAccount
     );
 
     const expectedRemainingBalance = mintAmount - stakeAmount;
@@ -269,11 +296,11 @@ describe("bert-staking-sc", () => {
     console.log("- Amount:", position.amount.toString());
     console.log(
       "- Deposit time:",
-      new Date(position.depositTime.toNumber() * 1000).toISOString(),
+      new Date(position.depositTime.toNumber() * 1000).toISOString()
     );
     console.log(
       "- Unlock time:",
-      new Date(position.unlockTime.toNumber() * 1000).toISOString(),
+      new Date(position.unlockTime.toNumber() * 1000).toISOString()
     );
 
     // 4. Check config total staked amount increased
@@ -282,8 +309,127 @@ describe("bert-staking-sc", () => {
     expect(configAccount.totalStakedAmount.toNumber()).to.equal(stakeAmount);
     console.log(
       "Total staked amount:",
-      configAccount.totalStakedAmount.toString(),
+      configAccount.totalStakedAmount.toString()
     );
+  });
+
+  it("Stakes a Metaplex Core asset successfully", async () => {
+    try {
+      // Get the Config PDA and account data
+      const [configPda] = sdk.pda.findConfigPda(payer.publicKey);
+      const configAccount = await sdk.fetchConfigByAddress(configPda);
+
+      console.log("Staking a single Metaplex Core asset...");
+      console.log("Owner:", payer.publicKey.toString());
+      console.log("Asset:", assetSigner.publicKey.toString());
+      console.log("Collection:", collectionSigner.publicKey.toString());
+
+      // Find the Position PDA for this owner and collection
+      const [positionPda] = sdk.pda.findPositionPda(
+        payer.publicKey,
+        toWeb3JsPublicKey(collectionSigner.publicKey)
+      );
+      console.log("Position PDA:", positionPda.toString());
+
+      // Create the stake NFT instruction
+      const stakeNftIx = await sdk.stakeNft({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        asset: toWeb3JsPublicKey(assetSigner.publicKey),
+        // updateAuthority: toWeb3JsPublicKey(collectionSigner.publicKey),
+        updateAuthority: payer.publicKey,
+        payer: payer.publicKey,
+      });
+
+      // Process the transaction
+      await createAndProcessTransaction(
+        client,
+        payer,
+        [stakeNftIx],
+        [toWeb3JsKeypair(collectionSigner)]
+      );
+      console.log("NFT staked successfully");
+
+      // Verify the position was created correctly
+      const position = await sdk.fetchPosition(
+        payer.publicKey,
+        toWeb3JsPublicKey(collectionSigner.publicKey)
+      );
+
+      expect(position).to.not.be.null;
+      expect(position.owner.toString()).to.equal(payer.publicKey.toString());
+      expect(position.positionType).to.deep.equal({ nft: {} }); // NFT position type
+      expect(position.amount.toNumber()).to.equal(nftValueInTokens); // Should be set to nftValueInTokens
+
+      // Verify the staked NFT is in the position's nft_mints array
+      expect(position.nftMints[0].toString()).to.equal(
+        assetSigner.publicKey.toString()
+      );
+      expect(position.nftIndex).to.equal(1); // Should have 1 NFT staked
+
+      console.log("Position after staking NFT:");
+      console.log("- Owner:", position.owner.toString());
+      console.log("- Amount:", position.amount.toString());
+      console.log("- Position Type:", position.positionType);
+      console.log("- NFT Index:", position.nftIndex);
+      console.log("- NFT Mint:", position.nftMints[0].toString());
+
+      // Verify config total staked amount increased
+      const updatedConfig = await sdk.fetchConfigByAddress(configPda);
+      const expectedTotalStaked =
+        configAccount.totalStakedAmount.toNumber() + nftValueInTokens;
+      expect(updatedConfig.totalStakedAmount.toNumber()).to.equal(
+        expectedTotalStaked
+      );
+
+      console.log(
+        "Total staked amount updated:",
+        updatedConfig.totalStakedAmount.toString()
+      );
+
+      // Try to fetch the asset to verify it was properly updated with Metaplex Core attributes
+      const assetData = await getMplCoreAsset(
+        client,
+        toWeb3JsPublicKey(assetSigner.publicKey)
+      );
+      console.log("Asset data after staking:", assetData);
+
+      // Verify the asset has been updated with staking attributes
+      // if (assetData.plugins) {
+      //   console.log("Asset plugins after staking:", assetData.plugins);
+      //
+      //   // Check if the FreezeDelegate plugin was added and asset is frozen
+      //   const freezePlugin = assetData.plugins.find(p => p.hasOwnProperty('freezeDelegate'));
+      //   expect(freezePlugin).to.not.be.undefined;
+      //   if (freezePlugin) {
+      //     expect(freezePlugin.freezeDelegate.frozen).to.be.true;
+      //     console.log("Asset successfully frozen:", freezePlugin);
+      //   }
+      //
+      //   // Check if attributes plugin was added with staking information
+      //   const attributesPlugin = assetData.plugins.find(p => p.hasOwnProperty('attributes'));
+      //   expect(attributesPlugin).to.not.be.undefined;
+      //   if (attributesPlugin) {
+      //     const stakedAttr = attributesPlugin.attributes.attribute_list.find(
+      //       attr => attr.key === 'staked'
+      //     );
+      //     expect(stakedAttr).to.not.be.undefined;
+      //     expect(stakedAttr.value).to.not.equal('0'); // Should contain a timestamp
+      //     console.log("Staking attribute added:", stakedAttr);
+      //
+      //     const stakedTimeAttr = attributesPlugin.attributes.attribute_list.find(
+      //       attr => attr.key === 'staked_time'
+      //     );
+      //     expect(stakedTimeAttr).to.not.be.undefined;
+      //     console.log("Staked time attribute:", stakedTimeAttr);
+      //   }
+      // }
+    } catch (err) {
+      console.error("Failed to stake NFT:", err);
+      expect.fail(`NFT staking failed: ${err}`);
+    }
   });
 
   it("Claims tokens after lock period", async () => {
@@ -306,10 +452,10 @@ describe("bert-staking-sc", () => {
         positionType: position.positionType,
         status: position.status,
         depositTime: new Date(
-          position.depositTime.toNumber() * 1000,
+          position.depositTime.toNumber() * 1000
         ).toISOString(),
         unlockTime: new Date(
-          position.unlockTime.toNumber() * 1000,
+          position.unlockTime.toNumber() * 1000
         ).toISOString(),
       });
 
@@ -359,7 +505,7 @@ describe("bert-staking-sc", () => {
       });
 
       console.log("Claim position instruction created, sending transaction...");
-      await createAndProcessTransaction(client, payer, claimPositionIx);
+      await createAndProcessTransaction(client, payer, [claimPositionIx]);
       console.log("Transaction processed successfully");
     } catch (err) {
       console.error("Failed to claim tokens:", err);
@@ -396,11 +542,11 @@ describe("bert-staking-sc", () => {
     // 4. Check config's total staked amount was decreased
     const configAfter = await sdk.fetchConfigByAddress(configPda);
     expect(configAfter.totalStakedAmount.toNumber()).to.equal(
-      configAccount.totalStakedAmount.toNumber() - stakeAmount,
+      configAccount.totalStakedAmount.toNumber() - stakeAmount
     );
     console.log(
       "Total staked amount after claiming:",
-      configAfter.totalStakedAmount.toString(),
+      configAfter.totalStakedAmount.toString()
     );
 
     console.log("Claim position test completed successfully");

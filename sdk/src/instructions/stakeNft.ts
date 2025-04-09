@@ -14,13 +14,14 @@ export type StakeNftParams = {
   authority: web3.PublicKey;
   mint: web3.PublicKey;
   collection: web3.PublicKey;
-  nftMint: web3.PublicKey;
-  nftTokenAccount?: web3.PublicKey;
-  nftsVault?: web3.PublicKey;
+  asset: web3.PublicKey;
+  updateAuthority: web3.PublicKey;
+  payer: web3.PublicKey;
+  coreProgram?: web3.PublicKey;
 };
 
 /**
- * Create an instruction to stake an NFT
+ * Create an instruction to stake an NFT using Metaplex Core
  */
 export async function stakeNftInstruction({
   program,
@@ -29,29 +30,14 @@ export async function stakeNftInstruction({
   authority,
   mint,
   collection,
-  nftMint,
-  nftTokenAccount,
-  nftsVault,
+  asset,
+  updateAuthority,
+  payer,
+  coreProgram = new web3.PublicKey("mpLbyGeKdRpHLZvN87ggbNGNWQwkz5JWQJ5hKaKwHcw"),
 }: StakeNftParams): Promise<web3.TransactionInstruction> {
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority);
-  const [positionPda] = pda.findPositionPda(owner, nftMint);
-
-  // Derive the NFT token account if not provided
-  const userNftTokenAccount =
-    nftTokenAccount ||
-    web3.PublicKey.findProgramAddressSync(
-      [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), nftMint.toBuffer()],
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-    )[0];
-
-  // Get the NFTs vault address
-  const nftsVaultAddress =
-    nftsVault ||
-    web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("nfts_vault"), configPda.toBuffer()],
-      program.programId,
-    )[0];
+  const [positionPda] = pda.findPositionPda(owner, collection);
 
   return program.methods
     .stakeNft()
@@ -59,11 +45,12 @@ export async function stakeNftInstruction({
       owner,
       config: configPda,
       position: positionPda,
-      mint,
+      updateAuthority,
+      payer: payer || owner,
+      asset,
       collection,
-      nftMint,
-      nftTokenAccount: userNftTokenAccount,
-      nftsVault: nftsVaultAddress, // Updated to nftsVault
+      coreProgram,
+      mint,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       systemProgram: web3.SystemProgram.programId,

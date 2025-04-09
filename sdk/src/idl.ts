@@ -449,7 +449,6 @@ export type BertStakingSc = {
         },
         {
           "name": "authorityVault",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -657,7 +656,10 @@ export type BertStakingSc = {
         {
           "name": "owner",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "asset"
+          ]
         },
         {
           "name": "config",
@@ -707,36 +709,40 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "nftMint"
+                "path": "collection"
               }
             ]
           }
         },
         {
-          "name": "mint",
+          "name": "updateAuthority",
+          "signer": true,
           "relations": [
-            "config"
+            "collection"
           ]
         },
         {
-          "name": "collection",
-          "docs": [
-            "supposed to be in config also"
-          ],
-          "relations": [
-            "config"
-          ]
+          "name": "payer",
+          "writable": true,
+          "signer": true
         },
         {
-          "name": "nftMint"
-        },
-        {
-          "name": "nftTokenAccount",
+          "name": "asset",
           "writable": true
         },
         {
-          "name": "nftsVault",
+          "name": "collection",
           "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "coreProgram",
+          "address": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+        },
+        {
+          "name": "mint",
           "relations": [
             "config"
           ]
@@ -1044,6 +1050,32 @@ export type BertStakingSc = {
   ],
   "accounts": [
     {
+      "name": "baseAssetV1",
+      "discriminator": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "baseCollectionV1",
+      "discriminator": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
       "name": "config",
       "discriminator": [
         155,
@@ -1115,9 +1147,92 @@ export type BertStakingSc = {
       "code": 6008,
       "name": "invalidNftMint",
       "msg": "Invalid Nft Mint"
+    },
+    {
+      "code": 6009,
+      "name": "alreadyStaked",
+      "msg": "Already staked"
     }
   ],
   "types": [
+    {
+      "name": "baseAssetV1",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "defined": {
+                "name": "key"
+              }
+            }
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "updateAuthority",
+            "type": {
+              "defined": {
+                "name": "updateAuthority"
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          },
+          {
+            "name": "seq",
+            "type": {
+              "option": "u64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "baseCollectionV1",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "defined": {
+                "name": "key"
+              }
+            }
+          },
+          {
+            "name": "updateAuthority",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          },
+          {
+            "name": "numMinted",
+            "type": "u32"
+          },
+          {
+            "name": "currentSize",
+            "type": "u32"
+          }
+        ]
+      }
+    },
     {
       "name": "config",
       "type": {
@@ -1187,6 +1302,32 @@ export type BertStakingSc = {
           {
             "name": "authorityVaultBump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "key",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "uninitialized"
+          },
+          {
+            "name": "assetV1"
+          },
+          {
+            "name": "hashedAssetV1"
+          },
+          {
+            "name": "pluginHeaderV1"
+          },
+          {
+            "name": "pluginRegistryV1"
+          },
+          {
+            "name": "collectionV1"
           }
         ]
       }
@@ -1292,6 +1433,29 @@ export type BertStakingSc = {
           },
           {
             "name": "token"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateAuthority",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "none"
+          },
+          {
+            "name": "address",
+            "fields": [
+              "pubkey"
+            ]
+          },
+          {
+            "name": "collection",
+            "fields": [
+              "pubkey"
+            ]
           }
         ]
       }

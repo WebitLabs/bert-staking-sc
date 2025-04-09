@@ -33,14 +33,14 @@ export class BertStakingPda {
   }
 
   /**
-   * Find the Position PDA for a given owner and mint
+   * Find the Position PDA for a given owner and collection
    * @param owner The owner public key
-   * @param mint The NFT or token mint
+   * @param collection The NFT collection public key
    * @returns The Position PDA and bump
    */
-  findPositionPda(owner: PublicKey, mint: PublicKey): [PublicKey, number] {
+  findPositionPda(owner: PublicKey, collection: PublicKey): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
-      [Buffer.from("position"), owner.toBuffer(), mint.toBuffer()],
+      [Buffer.from("position"), owner.toBuffer(), collection.toBuffer()],
       this.programId,
     );
   }

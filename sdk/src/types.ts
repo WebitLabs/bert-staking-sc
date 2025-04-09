@@ -31,6 +31,7 @@ export enum StakingError {
   InvalidLockPeriod = 6006,
   InvalidPositionType = 6007,
   InvalidNftMint = 6008,
+  AlreadyStaked = 6009,
 }
 
 /**

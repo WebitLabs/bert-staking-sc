@@ -18,7 +18,7 @@ pub struct Initialize<'info> {
         seeds = [b"config", authority.key().as_ref()],
         bump
     )]
-    pub config: Account<'info, Config>,
+    pub config: Box<Account<'info, Config>>,
 
     pub mint: InterfaceAccount<'info, Mint>,
 
@@ -32,17 +32,15 @@ pub struct Initialize<'info> {
         associated_token::mint = mint,
         associated_token::authority = config,
     )]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
+    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
-        init,
-        payer = authority,
         token::mint = mint,
         token::authority = config,
         seeds = [b"authority_vault", config.key().as_ref(), mint.key().as_ref()],
         bump
     )]
-    pub authority_vault: InterfaceAccount<'info, TokenAccount>,
+    pub authority_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK: TODO: will add type later!
     pub nfts_vault: UncheckedAccount<'info>,

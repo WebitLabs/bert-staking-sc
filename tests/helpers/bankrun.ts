@@ -17,15 +17,15 @@ import {
 export async function createAndProcessTransaction(
   client: BanksClient,
   payer: Keypair,
-  instruction: TransactionInstruction,
-  additionalSigners: Keypair[] = [],
+  instructions: TransactionInstruction[],
+  additionalSigners: Keypair[] = []
 ): Promise<BanksTransactionResultWithMeta> {
   const tx = new Transaction();
 
   const [latestBlockhash] = await client.getLatestBlockhash();
   tx.recentBlockhash = latestBlockhash;
 
-  tx.add(instruction);
+  tx.add(...instructions);
   tx.feePayer = payer.publicKey;
   tx.sign(payer, ...additionalSigners);
 
@@ -40,7 +40,7 @@ export async function getAddedAccountInfo(pubkey: PublicKey) {
 
 export async function advanceUnixTimeStamp(
   provider: BankrunProvider,
-  seconds: bigint,
+  seconds: bigint
 ) {
   const curClock = await provider.context.banksClient.getClock();
   provider.context.setClock(
@@ -49,8 +49,8 @@ export async function advanceUnixTimeStamp(
       curClock.epochStartTimestamp,
       curClock.epoch,
       curClock.leaderScheduleEpoch,
-      curClock.unixTimestamp + seconds,
-    ),
+      curClock.unixTimestamp + seconds
+    )
   );
   await provider.context.banksClient.getClock();
 }

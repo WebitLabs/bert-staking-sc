@@ -443,7 +443,6 @@
         },
         {
           "name": "authority_vault",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -651,7 +650,10 @@
         {
           "name": "owner",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "asset"
+          ]
         },
         {
           "name": "config",
@@ -701,36 +703,40 @@
               },
               {
                 "kind": "account",
-                "path": "nft_mint"
+                "path": "collection"
               }
             ]
           }
         },
         {
-          "name": "mint",
+          "name": "update_authority",
+          "signer": true,
           "relations": [
-            "config"
+            "collection"
           ]
         },
         {
-          "name": "collection",
-          "docs": [
-            "supposed to be in config also"
-          ],
-          "relations": [
-            "config"
-          ]
+          "name": "payer",
+          "writable": true,
+          "signer": true
         },
         {
-          "name": "nft_mint"
-        },
-        {
-          "name": "nft_token_account",
+          "name": "asset",
           "writable": true
         },
         {
-          "name": "nfts_vault",
+          "name": "collection",
           "writable": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "core_program",
+          "address": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+        },
+        {
+          "name": "mint",
           "relations": [
             "config"
           ]
@@ -1038,6 +1044,32 @@
   ],
   "accounts": [
     {
+      "name": "BaseAssetV1",
+      "discriminator": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "BaseCollectionV1",
+      "discriminator": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
       "name": "Config",
       "discriminator": [
         155,
@@ -1109,9 +1141,92 @@
       "code": 6008,
       "name": "InvalidNftMint",
       "msg": "Invalid Nft Mint"
+    },
+    {
+      "code": 6009,
+      "name": "AlreadyStaked",
+      "msg": "Already staked"
     }
   ],
   "types": [
+    {
+      "name": "BaseAssetV1",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "defined": {
+                "name": "Key"
+              }
+            }
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "update_authority",
+            "type": {
+              "defined": {
+                "name": "UpdateAuthority"
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          },
+          {
+            "name": "seq",
+            "type": {
+              "option": "u64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BaseCollectionV1",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "defined": {
+                "name": "Key"
+              }
+            }
+          },
+          {
+            "name": "update_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          },
+          {
+            "name": "num_minted",
+            "type": "u32"
+          },
+          {
+            "name": "current_size",
+            "type": "u32"
+          }
+        ]
+      }
+    },
     {
       "name": "Config",
       "type": {
@@ -1181,6 +1296,32 @@
           {
             "name": "authority_vault_bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Key",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Uninitialized"
+          },
+          {
+            "name": "AssetV1"
+          },
+          {
+            "name": "HashedAssetV1"
+          },
+          {
+            "name": "PluginHeaderV1"
+          },
+          {
+            "name": "PluginRegistryV1"
+          },
+          {
+            "name": "CollectionV1"
           }
         ]
       }
@@ -1286,6 +1427,29 @@
           },
           {
             "name": "Token"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateAuthority",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "None"
+          },
+          {
+            "name": "Address",
+            "fields": [
+              "pubkey"
+            ]
+          },
+          {
+            "name": "Collection",
+            "fields": [
+              "pubkey"
+            ]
           }
         ]
       }

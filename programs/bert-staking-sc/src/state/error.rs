@@ -28,4 +28,7 @@ pub enum StakingError {
 
     #[msg("Invalid Nft Mint")]
     InvalidNftMint,
+
+    #[msg("Already staked")]
+    AlreadyStaked,
 }

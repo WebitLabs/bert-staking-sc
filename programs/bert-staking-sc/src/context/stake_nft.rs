@@ -5,6 +5,16 @@ use anchor_spl::{
     token::{Mint, Token},
 };
 
+use mpl_core::{
+    accounts::{BaseAssetV1, BaseCollectionV1},
+    fetch_plugin,
+    instructions::{AddPluginV1CpiBuilder, RemovePluginV1CpiBuilder, UpdatePluginV1CpiBuilder},
+    types::{
+        Attribute, Attributes, FreezeDelegate, Plugin, PluginAuthority, PluginType, UpdateAuthority,
+    },
+    ID as CORE_PROGRAM_ID,
+};
+
 #[derive(Accounts)]
 pub struct StakeNFT<'info> {
     #[account(mut)]
@@ -12,7 +22,6 @@ pub struct StakeNFT<'info> {
 
     #[account(
         mut,
-        has_one = nfts_vault,
         has_one = mint,
         has_one = collection,
         seeds = [b"config", config.authority.key().as_ref()],
@@ -24,27 +33,34 @@ pub struct StakeNFT<'info> {
         init,
         payer = owner,
         space = 8 + Position::INIT_SPACE,
-        seeds = [b"position", owner.key().as_ref(), nft_mint.key().as_ref()],
+        seeds = [b"position", owner.key().as_ref(), collection.key().as_ref()],
         bump,
     )]
     pub position: Account<'info, Position>,
 
+    pub update_authority: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        mut,
+        has_one = owner,
+        constraint = asset.update_authority == UpdateAuthority::Collection(collection.key()),
+    )]
+    pub asset: Account<'info, BaseAssetV1>,
+
+    #[account(
+        mut,
+        has_one = update_authority
+    )]
+    pub collection: Account<'info, BaseCollectionV1>,
+
+    #[account(address = CORE_PROGRAM_ID)]
+    /// CHECK: this will be checked by core
+    pub core_program: UncheckedAccount<'info>,
+
     pub mint: Account<'info, Mint>,
-
-    /// CHECK: TODO: Either check it's from collection or check against this account which is
-    /// supposed to be in config also
-    pub collection: UncheckedAccount<'info>,
-
-    /// CHECK: TODO: Check it's from collection
-    pub nft_mint: Account<'info, Mint>,
-
-    #[account(mut)]
-    /// CHECK: TODO:
-    pub nft_token_account: UncheckedAccount<'info>,
-
-    #[account(mut)]
-    /// CHECK: TODO: Add constraints!
-    pub nfts_vault: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -54,43 +70,121 @@ pub struct StakeNFT<'info> {
 
 impl<'info> StakeNFT<'info> {
     pub fn stake_nft(&mut self) -> Result<()> {
-        let amount = self.config.nft_value_in_tokens;
-
-        if self.position.nft_index >= self.config.nfts_limit_per_user {
-            return Err(StakingError::MaxCapReached.into());
-        }
+        require!(
+            self.position.nft_index < self.config.nfts_limit_per_user,
+            StakingError::MaxCapReached
+        );
 
         // Check if staking would exceed the max cap
         let new_total = self
             .config
             .total_staked_amount
-            .checked_add(amount)
+            .checked_add(self.config.nft_value_in_tokens)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        if new_total > self.config.max_cap {
-            return Err(StakingError::MaxCapReached.into());
-        }
+        require!(new_total < self.config.max_cap, StakingError::MaxCapReached);
 
         // Create a position for the staked tokens
         let position = &mut self.position;
-        position.deposit_time = Clock::get()?.unix_timestamp;
-        position.amount = position.amount.checked_add(amount).unwrap();
+        //position.deposit_time = Clock::get()?.unix_timestamp;
+        position.amount = self.config.nft_value_in_tokens;
         position.position_type = PositionType::NFT;
 
-        // =====================
-        // TODO: Transfer tokens from user to program nfts vault
-        // =====================
+        self.stake()?;
 
         // Push nft mint into array
         let position = &mut self.position;
         let index = position.nft_index as usize;
         let nft_mints = &mut position.nft_mints;
-        nft_mints[index] = self.nft_mint.key();
+        nft_mints[index] = self.asset.key();
         position.nft_index = index as u8 + 1;
 
         // Update config's total staked amount
         let config = &mut self.config;
         config.total_staked_amount = new_total;
+
+        Ok(())
+    }
+
+    pub fn stake(&self) -> Result<()> {
+        // Check if the asset has the attribute plugin already on
+        match fetch_plugin::<BaseAssetV1, Attributes>(
+            &self.asset.to_account_info(),
+            mpl_core::types::PluginType::Attributes,
+        ) {
+            Ok((_, fetched_attribute_list, _)) => {
+                // If yes, check if the asset is already staked, and if the staking attribute are already initialized
+                let mut attribute_list: Vec<Attribute> = Vec::new();
+                let mut is_initialized: bool = false;
+
+                for attribute in fetched_attribute_list.attribute_list {
+                    if attribute.key == "staked" {
+                        require!(attribute.value == "0", StakingError::AlreadyStaked);
+                        attribute_list.push(Attribute {
+                            key: "staked".to_string(),
+                            value: Clock::get()?.unix_timestamp.to_string(),
+                        });
+                        is_initialized = true;
+                    } else {
+                        attribute_list.push(attribute);
+                    }
+                }
+
+                if !is_initialized {
+                    attribute_list.push(Attribute {
+                        key: "staked".to_string(),
+                        value: Clock::get()?.unix_timestamp.to_string(),
+                    });
+                    attribute_list.push(Attribute {
+                        key: "staked_time".to_string(),
+                        value: 0.to_string(),
+                    });
+                }
+
+                UpdatePluginV1CpiBuilder::new(&self.core_program.to_account_info())
+                    .asset(&self.asset.to_account_info())
+                    .collection(Some(&self.collection.to_account_info()))
+                    .payer(&self.payer.to_account_info())
+                    .authority(Some(&self.update_authority.to_account_info()))
+                    .system_program(&self.system_program.to_account_info())
+                    .plugin(Plugin::Attributes(Attributes { attribute_list }))
+                    .invoke()?;
+            }
+            Err(_) => {
+                // If not, add the attribute plugin to the asset
+                AddPluginV1CpiBuilder::new(&self.core_program.to_account_info())
+                    .asset(&self.asset.to_account_info())
+                    .collection(Some(&self.collection.to_account_info()))
+                    .payer(&self.payer.to_account_info())
+                    .authority(Some(&self.update_authority.to_account_info()))
+                    .system_program(&self.system_program.to_account_info())
+                    .plugin(Plugin::Attributes(Attributes {
+                        attribute_list: vec![
+                            Attribute {
+                                key: "staked".to_string(),
+                                value: Clock::get()?.unix_timestamp.to_string(),
+                            },
+                            Attribute {
+                                key: "staked_time".to_string(),
+                                value: 0.to_string(),
+                            },
+                        ],
+                    }))
+                    .init_authority(PluginAuthority::UpdateAuthority)
+                    .invoke()?;
+            }
+        }
+
+        // Freeze the asset
+        AddPluginV1CpiBuilder::new(&self.core_program.to_account_info())
+            .asset(&self.asset.to_account_info())
+            .collection(Some(&self.collection.to_account_info()))
+            .payer(&self.payer.to_account_info())
+            .authority(Some(&self.owner.to_account_info()))
+            .system_program(&self.system_program.to_account_info())
+            .plugin(Plugin::FreezeDelegate(FreezeDelegate { frozen: true }))
+            .init_authority(PluginAuthority::UpdateAuthority)
+            .invoke()?;
 
         Ok(())
     }

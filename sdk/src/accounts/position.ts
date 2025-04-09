@@ -4,17 +4,17 @@ import { Position } from "../types";
 import { BertStakingSc } from "../idl";
 
 /**
- * Fetch a position account for a given owner and mint
+ * Fetch a position account for a given owner and collection
  */
 export async function fetchPositionRpc(
   owner: PublicKey,
-  mint: PublicKey,
+  collection: PublicKey,
   program: Program<BertStakingSc>
 ): Promise<Position | null> {
   try {
     // Find Position PDA
     const [positionPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("position"), owner.toBuffer(), mint.toBuffer()],
+      [Buffer.from("position"), owner.toBuffer(), collection.toBuffer()],
       program.programId
     );
 

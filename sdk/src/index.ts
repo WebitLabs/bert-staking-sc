@@ -52,7 +52,7 @@ export class BertStakingSDK {
    */
   constructor(
     public provider: AnchorProvider | BankrunProvider,
-    public programId: PublicKey = new PublicKey(IDL.address),
+    public programId: PublicKey = new PublicKey(IDL.address)
   ) {
     this.program = new Program(IDL as any, provider);
     this.pda = new BertStakingPda(programId);
@@ -224,17 +224,17 @@ export class BertStakingSDK {
     authority,
     mint,
     collection,
-    nftMint,
-    nftTokenAccount,
-    nftsVault,
+    asset,
+    updateAuthority,
+    payer,
   }: {
     owner: PublicKey;
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
-    nftMint: PublicKey;
-    nftTokenAccount?: PublicKey;
-    nftsVault?: PublicKey;
+    asset: PublicKey;
+    updateAuthority: PublicKey;
+    payer: PublicKey;
   }): Promise<TransactionInstruction> {
     return stakeNftInstruction({
       program: this.program,
@@ -243,9 +243,9 @@ export class BertStakingSDK {
       authority,
       mint,
       collection,
-      nftMint,
-      nftTokenAccount,
-      nftsVault,
+      asset,
+      updateAuthority,
+      payer,
     });
   }
 
@@ -257,17 +257,17 @@ export class BertStakingSDK {
     authority,
     mint,
     collection,
-    nftMint,
-    nftTokenAccount,
-    nftsVault,
+    asset,
+    updateAuthority,
+    payer,
   }: {
     owner: PublicKey;
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
-    nftMint: PublicKey;
-    nftTokenAccount?: PublicKey;
-    nftsVault?: PublicKey;
+    asset: PublicKey;
+    updateAuthority: PublicKey;
+    payer: PublicKey;
   }): Promise<string> {
     let ix = await stakeNftInstruction({
       program: this.program,
@@ -276,9 +276,9 @@ export class BertStakingSDK {
       authority,
       mint,
       collection,
-      nftMint,
-      nftTokenAccount,
-      nftsVault,
+      asset,
+      updateAuthority,
+      payer,
     });
 
     const tx = new Transaction();
@@ -510,12 +510,12 @@ export class BertStakingSDK {
       signTransaction: any;
       signAllTransactions: any;
     },
-    programId?: PublicKey,
+    programId?: PublicKey
   ): BertStakingSDK {
     const provider = new AnchorProvider(
       connection,
       wallet,
-      AnchorProvider.defaultOptions(),
+      AnchorProvider.defaultOptions()
     );
     return new BertStakingSDK(provider, programId);
   }
