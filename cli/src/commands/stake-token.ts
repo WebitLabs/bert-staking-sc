@@ -40,44 +40,44 @@ export function stakeTokenCommand(program: Command): void {
           true
         );
 
-        const result = await sdk.stakeTokenRpc({
-          authority,
-          owner: wallet.publicKey,
-          tokenMint,
-          amount: parseInt(options.amount),
-          tokenAccount: userTokenAccount,
-        });
+        // const result = await sdk.stakeTokenRpc({
+        //   authority,
+        //   owner: wallet.publicKey,
+        //   tokenMint,
+        //   amount: parseInt(options.amount),
+        //   tokenAccount: userTokenAccount,
+        // });
 
-        spinner.succeed(`Tokens staked successfully. Tx: ${result}`);
+        // spinner.succeed(`Tokens staked successfully. Tx: ${result}`);
 
         // Fetch and display position
         spinner.text = "Fetching position details...";
         spinner.start();
 
-        const position = await sdk.fetchPosition(wallet.publicKey, tokenMint);
-
-        if (!position) {
-          spinner.fail("Failed to fetch position after staking");
-          return;
-        }
-
-        spinner.succeed("Position details after staking:");
-        console.log(`- Owner: ${position.owner.toString()}`);
-        console.log(`- Amount: ${position.amount.toString()} tokens`);
-        console.log(
-          //@ts-ignore
-          `- Status: ${!!position.status.unclaimed ? "Unclaimed" : "Claimed"}`
-        );
-        console.log(
-          `- Deposit Time: ${new Date(
-            position.depositTime.toNumber() * 1000
-          ).toLocaleString()}`
-        );
-        console.log(
-          `- Unlock Time: ${new Date(
-            position.unlockTime.toNumber() * 1000
-          ).toLocaleString()}`
-        );
+        // const position = await sdk.fetchPosition(wallet.publicKey, tokenMint);
+        //
+        // if (!position) {
+        //   spinner.fail("Failed to fetch position after staking");
+        //   return;
+        // }
+        //
+        // spinner.succeed("Position details after staking:");
+        // console.log(`- Owner: ${position.owner.toString()}`);
+        // console.log(`- Amount: ${position.amount.toString()} tokens`);
+        // console.log(
+        //   //@ts-ignore
+        //   `- Status: ${!!position.status.unclaimed ? "Unclaimed" : "Claimed"}`
+        // );
+        // console.log(
+        //   `- Deposit Time: ${new Date(
+        //     position.depositTime.toNumber() * 1000
+        //   ).toLocaleString()}`
+        // );
+        // console.log(
+        //   `- Unlock Time: ${new Date(
+        //     position.unlockTime.toNumber() * 1000
+        //   ).toLocaleString()}`
+        // );
       } catch (error) {
         ora().fail(`Failed to stake tokens: ${error}`);
       }

@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { PublicKey } from "@solana/web3.js";
 import { getSDK, getWallet } from "../utils/connection";
-import { Position, PositionType } from "@bert-staking/sdk";
+import { Position, PositionIdl, PositionType } from "@bert-staking/sdk";
 import ora from "ora";
 
 /**
@@ -18,7 +18,7 @@ export function fetchPositionCommand(program: Command): void {
     .option("--all", "Fetch all positions for the owner", false)
     .action(async (options) => {
       try {
-        const spinner = ora("Fetching position(s)...").start();
+        //const spinner = ora("Fetching position(s)...").start();
 
         const sdk = getSDK();
         const wallet = getWallet();
@@ -30,24 +30,27 @@ export function fetchPositionCommand(program: Command): void {
 
         if (options.all) {
           // Fetch all positions for the owner
-          spinner.text = `Fetching all positions for ${owner.toString()}...`;
+          // spinner.text = `Fetching all positions for 123 ${owner.toString()}...`;
+
+          console.log("here 123123");
           const positions = await sdk.fetchPositionsByOwner(owner);
+          console.log("mother fatherm");
 
           if (positions.length === 0) {
-            spinner.info("No positions found for this owner");
+            // spinner.info("No positions found for this owner");
             return;
           }
 
-          spinner.succeed(
-            `Found ${positions.length} position(s) for ${owner.toString()}:`
-          );
+          // spinner.succeed(
+          //   `Found ${positions.length} position(s) for ${owner.toString()}:`
+          // );
 
-          positions.forEach((position: Position, index: number) => {
+          positions.forEach((position: PositionIdl, index: number) => {
             console.log(`\nPosition #${index + 1}:`);
             console.log(`- Owner: ${position.owner.toString()}`);
             console.log(
               `- Position Type: ${
-                position.positionType === PositionType.NFT ? "NFT" : "Token"
+                !!position.positionType.nft ? "NFT" : "Token"
               }`
             );
             console.log(`- Amount: ${position.amount.toString()} tokens`);
@@ -68,7 +71,7 @@ export function fetchPositionCommand(program: Command): void {
               ).toLocaleString()}`
             );
 
-            if (position.positionType === PositionType.NFT) {
+            if (position.positionType.nft) {
               console.log(`- NFT Mint: ${position.nftMints.toString()}`);
             }
           });
@@ -80,39 +83,37 @@ export function fetchPositionCommand(program: Command): void {
 
         if (options.position) {
           // Fetch by position PDA
-          spinner.text = `Fetching position by address: ${options.position}...`;
+          // spinner.text = `Fetching position by address: ${options.position}...`;
           position = await sdk.fetchPositionByAddress(
             new PublicKey(options.position)
           );
         } else if (options.mint) {
           // Fetch by owner and mint
-          spinner.text = `Fetching position for owner ${owner.toString()} and mint ${
-            options.mint
-          }...`;
+          // spinner.text = `Fetching position for owner ${owner.toString()} and mint ${
+          //   options.mint
+          // }...`;
           position = await sdk.fetchPosition(
             owner,
             Number(options.id),
             new PublicKey(options.mint)
           );
         } else {
-          spinner.fail(
-            "Either mint, position address, or --all flag is required"
-          );
+          // spinner.fail(
+          //   "Either mint, position address, or --all flag is required"
+          // );
           return;
         }
 
         if (!position) {
-          spinner.fail("Position not found");
+          // spinner.fail("Position not found");
           return;
         }
 
-        spinner.succeed("Position details:");
+        // spinner.succeed("Position details:");
 
         console.log(`- Owner: ${position.owner.toString()}`);
         console.log(
-          `- Position Type: ${
-            position.positionType === PositionType.NFT ? "NFT" : "Token"
-          }`
+          `- Position Type: ${position.positionType.nft ? "NFT" : "Token"}`
         );
         console.log(`- Amount: ${position.amount.toString()} tokens`);
         console.log(
@@ -130,7 +131,7 @@ export function fetchPositionCommand(program: Command): void {
           ).toLocaleString()}`
         );
 
-        if (position.positionType === PositionType.NFT) {
+        if (position.positionType.nft) {
           console.log(`- NFT Mint: ${position.nftMints.toString()}`);
         }
       } catch (error) {

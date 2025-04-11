@@ -1108,16 +1108,16 @@ export type BertStakingSc = {
       ]
     },
     {
-      "name": "position",
+      "name": "positionV2",
       "discriminator": [
-        170,
-        188,
-        143,
-        228,
-        122,
-        64,
-        247,
-        208
+        117,
+        176,
+        212,
+        199,
+        245,
+        180,
+        133,
+        182
       ]
     }
   ],
@@ -1392,7 +1392,35 @@ export type BertStakingSc = {
       }
     },
     {
-      "name": "position",
+      "name": "positionStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "unclaimed"
+          },
+          {
+            "name": "claimed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "positionType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "nft"
+          },
+          {
+            "name": "token"
+          }
+        ]
+      }
+    },
+    {
+      "name": "positionV2",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1448,34 +1476,6 @@ export type BertStakingSc = {
           {
             "name": "bump",
             "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "positionStatus",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "unclaimed"
-          },
-          {
-            "name": "claimed"
-          }
-        ]
-      }
-    },
-    {
-      "name": "positionType",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "nft"
-          },
-          {
-            "name": "token"
           }
         ]
       }

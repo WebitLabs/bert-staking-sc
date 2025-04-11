@@ -101,15 +101,13 @@ export function initializePositionCommand(program: Command): void {
         spinner.succeed("Position details:");
         console.log(`- Owner: ${position.owner.toString()}`);
         console.log(
-          `- Position Type: ${
-            position.positionType === PositionType.NFT ? "NFT" : "Token"
-          }`
+          `- Position Type: ${position.positionType.nft ? "NFT" : "Token"}`
         );
         console.log(
-          `- Status: ${position.status === 0 ? "Unclaimed" : "Claimed"}`
+          `- Status: ${position.status.unclaimed ? "Unclaimed" : "Claimed"}`
         );
 
-        if (position.positionType === PositionType.NFT) {
+        if (position.positionType.nft) {
           console.log(`- NFT Mint: ${position.nftMints.toString()}`);
         }
 

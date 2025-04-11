@@ -21,11 +21,11 @@ pub struct InitializePosition<'info> {
     #[account(
         init,
         payer = owner,
-        space = 8 + Position::INIT_SPACE,
+        space = 8 + PositionV2::INIT_SPACE,
         seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), id.to_le_bytes().as_ref()],
         bump
     )]
-    pub position: Account<'info, Position>,
+    pub position: Account<'info, PositionV2>,
 
     pub mint: InterfaceAccount<'info, Mint>,
 

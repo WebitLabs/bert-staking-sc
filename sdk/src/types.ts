@@ -47,7 +47,7 @@ export enum LockPeriod {
 // IDL types
 export type LockPeriodIdl = IdlTypes<BertStakingSc>["lockPeriod"];
 export type ConfigIdl = IdlAccounts<BertStakingSc>["config"];
-export type PositionIdl = IdlAccounts<BertStakingSc>["position"];
+export type PositionIdl = IdlAccounts<BertStakingSc>["positionV2"];
 export type LockPeriodYieldIdl = IdlTypes<BertStakingSc>["lockPeriodYield"];
 
 /**

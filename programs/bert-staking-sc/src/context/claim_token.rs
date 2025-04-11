@@ -28,7 +28,7 @@ pub struct ClaimPosition<'info> {
         constraint = position.owner == owner.key(),
         constraint = position.status == PositionStatus::Unclaimed,
     )]
-    pub position: Account<'info, Position>,
+    pub position: Account<'info, PositionV2>,
 
     /// CHECK: TODO: Either check it's from collection or check against this account which is
     /// supposed to be in config also
