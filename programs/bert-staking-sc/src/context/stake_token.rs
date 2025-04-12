@@ -17,14 +17,23 @@ pub struct StakeToken<'info> {
         seeds = [b"config", config.authority.key().as_ref(), config.id.to_le_bytes().as_ref()],
         bump = config.bump,
     )]
-    pub config: Account<'info, Config>,
+    pub config: Box<Account<'info, Config>>,
 
     #[account(
         mut,
-        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), id.to_le_bytes().as_ref()],
-        bump = position.bump,
+        seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
+        bump = user_account.bump,
     )]
-    pub position: Account<'info, PositionV2>,
+    pub user_account: Box<Account<'info, UserAccount>>,
+
+    #[account(
+        init,
+        payer = owner,
+        space = 8 + PositionV2::INIT_SPACE,
+        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), id.to_le_bytes().as_ref()],
+        bump,
+    )]
+    pub position: Box<Account<'info, PositionV2>>,
 
     pub mint: Account<'info, Mint>,
 
@@ -49,27 +58,41 @@ pub struct StakeToken<'info> {
 }
 
 impl<'info> StakeToken<'info> {
-    pub fn stake_token(&mut self, amount: u64) -> Result<()> {
+    pub fn stake_token(&mut self, pool_index: u8, amount: u64) -> Result<()> {
         // Check if amount is valid
         if amount == 0 {
             return Err(StakingError::InvalidAmount.into());
         }
 
-        let index = self.position.lock_period_yield_index;
-        // Check if period and yield index is valid
+        // Check if pool_index is valid
         require!(
-            self.config.lock_period_yields.len() > index as usize,
+            self.config.pools_config.len() > pool_index as usize,
             StakingError::InvalidLockPeriodAndYield
         );
 
+        let config = &mut self.config;
+        let pool_config = config.pools_config[pool_index as usize];
+        let mut pool_stats = config.pools_stats[pool_index as usize];
+
+        // Check if staking would exceed the max cap / user / pool
+        let new_pool_total_staked = pool_stats
+            .total_tokens_staked
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Check user has not exceed its caps
+        require!(
+            new_pool_total_staked > pool_config.max_tokens_cap,
+            StakingError::UserTokensLimitCapReached
+        );
+
         // Check if staking would exceed the max cap
-        let new_total = self
-            .config
+        let new_total = config
             .total_staked_amount
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        if new_total > self.config.max_cap {
+        if new_total > config.max_cap {
             return Err(StakingError::MaxCapReached.into());
         }
 
@@ -78,6 +101,17 @@ impl<'info> StakeToken<'info> {
         position.deposit_time = Clock::get()?.unix_timestamp;
         position.amount = position.amount.checked_add(amount).unwrap();
         position.position_type = PositionType::Token;
+        position.lock_period_yield_index = pool_index;
+
+        // Caclulate unlock time (curremt time + lock_time in seconds)
+        let lock_days = match pool_config.lock_period {
+            LockPeriod::OneDay => 1,
+            LockPeriod::ThreeDays => 3,
+            LockPeriod::SevenDays => 7,
+            LockPeriod::ThirtyDays => 30,
+        };
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days * 24 * 60 * 60);
+        position.status = PositionStatus::Unclaimed;
 
         // Transfer tokens from user to program
         anchor_spl::token::transfer(
@@ -93,8 +127,25 @@ impl<'info> StakeToken<'info> {
         )?;
 
         // Update config's total staked amount
-        let config = &mut self.config;
         config.total_staked_amount = new_total;
+
+        // Update pool config
+        pool_stats.total_tokens_staked = new_pool_total_staked;
+        pool_stats.lifetime_tokens_staked = pool_stats
+            .lifetime_tokens_staked
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Update user stats
+        let user_account = &mut self.user_account;
+        user_account
+            .total_staked_token_amount
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+        user_account
+            .total_staked_value
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
         Ok(())
     }

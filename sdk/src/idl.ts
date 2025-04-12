@@ -87,8 +87,9 @@ export type BertStakingSc = {
                 "path": "mint"
               },
               {
-                "kind": "arg",
-                "path": "id"
+                "kind": "account",
+                "path": "position.id",
+                "account": "positionV2"
               }
             ]
           }
@@ -317,12 +318,7 @@ export type BertStakingSc = {
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": [
-        {
-          "name": "id",
-          "type": "u64"
-        }
-      ]
+      "args": []
     },
     {
       "name": "initialize",
@@ -709,8 +705,9 @@ export type BertStakingSc = {
                 "path": "mint"
               },
               {
-                "kind": "arg",
-                "path": "id"
+                "kind": "account",
+                "path": "position.id",
+                "account": "positionV2"
               }
             ]
           }
@@ -765,12 +762,7 @@ export type BertStakingSc = {
           "address": "SysvarRent111111111111111111111111111111111"
         }
       ],
-      "args": [
-        {
-          "name": "id",
-          "type": "u64"
-        }
-      ]
+      "args": []
     },
     {
       "name": "stakeToken",
@@ -846,8 +838,9 @@ export type BertStakingSc = {
                 "path": "mint"
               },
               {
-                "kind": "arg",
-                "path": "id"
+                "kind": "account",
+                "path": "position.id",
+                "account": "positionV2"
               }
             ]
           }
@@ -1056,10 +1049,6 @@ export type BertStakingSc = {
         }
       ],
       "args": [
-        {
-          "name": "id",
-          "type": "u64"
-        },
         {
           "name": "amount",
           "type": "u64"
@@ -1476,6 +1465,10 @@ export type BertStakingSc = {
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "id",
+            "type": "u64"
           }
         ]
       }

@@ -100,7 +100,7 @@ export async function claimPositionInstruction({
   }
 
   return program.methods
-    .claimPosition(new BN(positionId)) // Pass position ID
+    .claimPosition()
     .accountsStrict({
       owner,
       config: configPda,

@@ -10,7 +10,7 @@ import { BertStakingSc } from "./idl";
  */
 export function calculateYield(
   amount: number | bigint,
-  yieldRate: number | bigint,
+  yieldRate: number | bigint
 ): bigint {
   const amountBigInt = BigInt(amount);
   const yieldRateBigInt = BigInt(yieldRate);
@@ -36,7 +36,7 @@ export function daysToSeconds(days: number): number {
  */
 export function calculateUnlockTime(
   lockDays: number,
-  currentTimestamp = Math.floor(Date.now() / 1000),
+  currentTimestamp = Math.floor(Date.now() / 1000)
 ): number {
   return currentTimestamp + daysToSeconds(lockDays);
 }
@@ -74,13 +74,14 @@ export function getLockPeriodsArrayFromIdl(periods: LockPeriod[]) {
  * Create a LockPeriodYield IDL object
  */
 export function createLockPeriodYieldIdl(
-  lockPeriod: LockPeriod, 
+  lockPeriod: LockPeriod,
   yieldRate: number | BN
 ): LockPeriodYieldIdlType {
-  const yieldRateBN = typeof yieldRate === "number" ? new BN(yieldRate) : yieldRate;
+  const yieldRateBN =
+    typeof yieldRate === "number" ? new BN(yieldRate) : yieldRate;
   return {
     lockPeriod: getLockPeriodFromIdl(lockPeriod),
-    yieldRate: yieldRateBN
+    yieldRate: yieldRateBN,
   };
 }
 
@@ -109,7 +110,7 @@ export function createCustomLockPeriodYields(
   yields: Map<LockPeriod, number | BN>
 ): LockPeriodYieldIdlType[] {
   const allPeriods = getAllLockPeriods();
-  return allPeriods.map(period => {
+  return allPeriods.map((period) => {
     const yieldRate = yields.get(period) || 500; // Default to 5% if not specified
     return createLockPeriodYieldIdl(period, yieldRate);
   });
@@ -131,7 +132,7 @@ export function getAllLockPeriods(): LockPeriod[] {
 export function getPositionTypeIdl(p: PositionType): PositionTypeIdlType {
   if (p == PositionType.Token) {
     return { token: {} };
-  } else if (PositionType.NFT) {
+  } else if (p == PositionType.NFT) {
     return { nft: {} };
   } else {
     throw Error("Invalid lock period");

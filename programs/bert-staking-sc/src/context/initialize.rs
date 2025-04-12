@@ -23,7 +23,6 @@ pub struct Initialize<'info> {
 
     pub mint: InterfaceAccount<'info, Mint>,
 
-    //pub collection: InterfaceAccount<'info, Mint>,
     /// CHECK:
     pub collection: UncheckedAccount<'info>,
 
@@ -56,7 +55,7 @@ impl<'info> Initialize<'info> {
     pub fn initialize(
         &mut self,
         id: u64,
-        lock_period_yields: [LockPeriodYield; 4],
+        pools_config: [PoolConfig; 4],
         max_cap: u64,
         nft_value_in_tokens: u64,
         nfts_limit_per_user: u8,
@@ -64,21 +63,41 @@ impl<'info> Initialize<'info> {
     ) -> Result<()> {
         let config = &mut self.config;
 
+        let pools_stats = pools_config.map(|pool| PoolStats {
+            lock_period: pool.lock_period,
+
+            total_nfts_staked: 0,
+            total_tokens_staked: 0,
+
+            lifetime_nfts_staked: 0,
+            lifetime_tokens_staked: 0,
+            lifetime_claimed_yield: 0,
+
+            _padding: [0; 64],
+        });
+
         config.set_inner(Config {
             id,
             authority: self.authority.key(),
             mint: self.mint.key(),
             collection: self.collection.key(),
             vault: self.vault.key(),
-            nfts_vault: self.nfts_vault.key(),
             authority_vault: self.vault.key(),
-            lock_period_yields,
+
+            pools_config,
+            pools_stats,
+
             max_cap,
             nft_value_in_tokens,
             nfts_limit_per_user,
+
             total_staked_amount: 0,
+            total_nfts_staked: 0,
+
             bump: bumps.config,
             authority_vault_bump: bumps.config,
+
+            _padding: [0; 128],
         });
 
         Ok(())

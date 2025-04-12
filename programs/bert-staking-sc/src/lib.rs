@@ -1,3 +1,4 @@
+#![allow(unexpected_cfgs)]
 use anchor_lang::prelude::*;
 
 mod context;
@@ -16,7 +17,7 @@ pub mod bert_staking_sc {
     pub fn initialize(
         ctx: Context<Initialize>,
         id: u64,
-        lock_period_yields: [LockPeriodYield; 4],
+        lock_period_yields: [PoolConfig; 4],
         max_cap: u64,
         nft_value_in_tokens: u64,
         nfts_limit_per_user: u8,
@@ -31,25 +32,23 @@ pub mod bert_staking_sc {
         )
     }
 
-    pub fn initiate_position(
-        ctx: Context<InitializePosition>,
-        _id: u64,
-        lock_period_yield_index: u8,
-        position_type: PositionType,
-    ) -> Result<()> {
-        ctx.accounts
-            .initialize_position(lock_period_yield_index, position_type, &ctx.bumps)
+    pub fn initiate_user(ctx: Context<InitializeUser>) -> Result<()> {
+        ctx.accounts.initialize_user(&ctx.bumps)
     }
 
-    pub fn stake_nft(ctx: Context<StakeNFT>, _id: u64) -> Result<()> {
-        ctx.accounts.stake_nft()
+    pub fn stake_nft(ctx: Context<StakeNFT>, pool_index: u8) -> Result<()> {
+        ctx.accounts.stake_nft(pool_index)
     }
 
-    pub fn stake_token(ctx: Context<StakeToken>, _id: u64, amount: u64) -> Result<()> {
-        ctx.accounts.stake_token(amount)
+    pub fn stake_token(ctx: Context<StakeToken>, pool_index: u8, amount: u64) -> Result<()> {
+        ctx.accounts.stake_token(pool_index, amount)
     }
 
-    pub fn claim_position(ctx: Context<ClaimPosition>, _id: u64) -> Result<()> {
-        ctx.accounts.claim_position()
+    pub fn claim_position_nft(ctx: Context<ClaimPositionNft>) -> Result<()> {
+        ctx.accounts.claim_nft()
+    }
+
+    pub fn claim_position_token(ctx: Context<ClaimPositionToken>) -> Result<()> {
+        ctx.accounts.claim_token()
     }
 }

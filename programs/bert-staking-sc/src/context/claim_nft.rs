@@ -1,0 +1,364 @@
+use crate::state::*;
+use anchor_lang::prelude::*;
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token::{Mint, Token, TokenAccount},
+};
+
+use mpl_core::{
+    accounts::{BaseAssetV1, BaseCollectionV1},
+    fetch_plugin,
+    instructions::{AddPluginV1CpiBuilder, RemovePluginV1CpiBuilder, UpdatePluginV1CpiBuilder},
+    types::{
+        Attribute, Attributes, FreezeDelegate, Plugin, PluginAuthority, PluginType, UpdateAuthority,
+    },
+    ID as CORE_PROGRAM_ID,
+};
+
+#[derive(Accounts)]
+pub struct ClaimPositionNft<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        mut,
+        has_one = mint,
+        has_one = collection,
+        seeds = [b"config", config.authority.key().as_ref(), config.id.to_le_bytes().as_ref()],
+        bump = config.bump,
+    )]
+    pub config: Box<Account<'info, Config>>,
+
+    #[account(
+        mut,
+        seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
+        bump = user_account.bump,
+    )]
+    pub user_account: Box<Account<'info, UserAccount>>,
+
+    #[account(
+        mut,
+        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), asset.key().as_ref()],
+        bump = position.bump,
+        constraint = position.owner == owner.key(),
+        constraint = position.status == PositionStatus::Unclaimed,
+
+    )]
+    pub position: Box<Account<'info, PositionV2>>,
+
+    /// CHECK: TODO: Either check it's from collection or check against this account which is
+    /// supposed to be in config also
+    pub collection: UncheckedAccount<'info>,
+
+    pub update_authority: Signer<'info>,
+
+    #[account(
+        mut,
+        has_one = owner,
+        constraint = asset.update_authority == UpdateAuthority::Collection(collection.key()),
+    )]
+    pub asset: Account<'info, BaseAssetV1>,
+
+    /// Token mint.
+    pub mint: Account<'info, Mint>,
+
+    #[account(
+        mut,
+        associated_token::mint = mint,
+        associated_token::authority = owner,
+    )]
+    pub token_account: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        associated_token::mint = mint,
+        associated_token::authority = config,
+    )]
+    pub vault: Account<'info, TokenAccount>,
+
+    #[account(address = CORE_PROGRAM_ID)]
+    /// CHECK: this will be checked by core
+    pub core_program: UncheckedAccount<'info>,
+
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> ClaimPositionNft<'info> {
+    // pub fn claim_nft(&mut self) -> Result<()> {
+    //     // Check if position is unlocked
+    //     let current_time = Clock::get()?.unix_timestamp;
+    //     if current_time < self.position.unlock_time {
+    //         return Err(StakingError::PositionLocked.into());
+    //     }
+    //
+    //     let index = self.position.lock_period_yield_index;
+    //     require!(
+    //         self.config.pools_config.len() > index as usize,
+    //         StakingError::InvalidLockPeriodAndYield
+    //     );
+    //
+    //     let lock_period_yield = self.config.pools_config[index as usize];
+    //
+    //     // Calculate yield based on position type and config
+    //     let position_amount = self.position.amount;
+    //     let yield_rate = lock_period_yield.yield_rate;
+    //     let base_amount = position_amount;
+    //     let yield_value = base_amount
+    //         .checked_mul(yield_rate)
+    //         .ok_or(StakingError::ArithmeticOverflow)?
+    //         .checked_div(10000) // Basis points conversion (e.g., 500 = 5%)
+    //         .ok_or(StakingError::ArithmeticOverflow)?;
+    //
+    //     let final_amount = base_amount
+    //         .checked_add(yield_value)
+    //         .ok_or(StakingError::ArithmeticOverflow)?;
+    //
+    //     // Transfer tokens back to user with yield
+    //     let bump = self.config.bump;
+    //     let authority = self.config.authority.key();
+    //
+    //     // seeds = [b"config", config.authority.key().as_ref(), config.id.to_le_bytes().as_ref()],
+    //     let id = self.config.id.to_le_bytes();
+    //     let seeds = &[b"config".as_ref(), authority.as_ref(), id.as_ref(), &[bump]];
+    //     let signer_seeds = &[&seeds[..]];
+    //
+    //     if self.position.position_type == PositionType::NFT {
+    //         // Transfer yield
+    //         anchor_spl::token::transfer(
+    //             CpiContext::new_with_signer(
+    //                 self.token_program.to_account_info(),
+    //                 anchor_spl::token::Transfer {
+    //                     from: self.vault.to_account_info(),
+    //                     to: self.token_account.to_account_info(),
+    //                     authority: self.config.to_account_info(),
+    //                 },
+    //                 signer_seeds,
+    //             ),
+    //             final_amount,
+    //         )?;
+    //
+    //         //
+    //         // TODO Implement NFT Unlock
+    //         //
+    //     } else {
+    //         // For tokens, transfer the original amount plus yield
+    //         anchor_spl::token::transfer(
+    //             CpiContext::new_with_signer(
+    //                 self.token_program.to_account_info(),
+    //                 anchor_spl::token::Transfer {
+    //                     from: self.vault.to_account_info(),
+    //                     to: self.token_account.to_account_info(),
+    //                     authority: self.config.to_account_info(),
+    //                 },
+    //                 signer_seeds,
+    //             ),
+    //             final_amount,
+    //         )?;
+    //     }
+    //
+    //     // Update position status to claimed
+    //     let position = &mut self.position;
+    //     position.status = PositionStatus::Claimed;
+    //
+    //     // Update config's total staked amount
+    //     let config = &mut self.config;
+    //     config.total_staked_amount = config
+    //         .total_staked_amount
+    //         .checked_sub(position_amount)
+    //         .ok_or(ProgramError::ArithmeticOverflow)?;
+    //
+    //     Ok(())
+    // }
+
+    pub fn claim_nft(&mut self) -> Result<()> {
+        // Check if position is unlocked
+        let current_time = Clock::get()?.unix_timestamp;
+        if current_time < self.position.unlock_time {
+            return Err(StakingError::PositionLocked.into());
+        }
+
+        require!(
+            self.position.position_type == PositionType::NFT,
+            StakingError::InvalidPositionType
+        );
+
+        // This require is trivial - should not happen!
+        let pool_index = self.position.lock_period_yield_index;
+        require!(
+            self.config.pools_config.len() > pool_index as usize,
+            StakingError::InvalidLockPeriodAndYield
+        );
+
+        let lock_period_yield = self.config.pools_config[pool_index as usize];
+
+        // Calculate yield based on position type and config
+        let position_amount = self.position.amount;
+        let yield_rate = lock_period_yield.yield_rate;
+        let base_amount = position_amount;
+        let yield_value = base_amount
+            .checked_mul(yield_rate)
+            .ok_or(StakingError::ArithmeticOverflow)?
+            .checked_div(10000) // Basis points conversion (e.g., 500 = 5%)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        let final_amount = base_amount
+            .checked_add(yield_value)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Transfer tokens back to user with yield
+        let bump = self.config.bump;
+        let authority = self.config.authority.key();
+
+        let id = self.config.id.to_le_bytes();
+        let seeds = &[b"config".as_ref(), authority.as_ref(), id.as_ref(), &[bump]];
+        let signer_seeds = &[&seeds[..]];
+
+        // TODO: it's possible here to implement 2 transfers.
+        // 1. yield from authority vault
+        // 2. principal from vault
+
+        // For tokens, transfer the original amount plus yield
+        anchor_spl::token::transfer(
+            CpiContext::new_with_signer(
+                self.token_program.to_account_info(),
+                anchor_spl::token::Transfer {
+                    from: self.vault.to_account_info(), // TODO: This is not 100% correct if we
+                    // want to have separation between yield
+                    // vault and regular vault. FIX
+                    to: self.token_account.to_account_info(),
+                    authority: self.config.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            final_amount,
+        )?;
+
+        // TODO: UNSTAKE
+        // Check if the asset has the attribute plugin already on
+        match fetch_plugin::<BaseAssetV1, Attributes>(
+            &self.asset.to_account_info(),
+            mpl_core::types::PluginType::Attributes,
+        ) {
+            Ok((_, fetched_attribute_list, _)) => {
+                let mut attribute_list: Vec<Attribute> = Vec::new();
+                let mut is_initialized: bool = false;
+                let mut staked_time: i64 = 0;
+
+                for attribute in fetched_attribute_list.attribute_list.iter() {
+                    if attribute.key == "staked" {
+                        require!(attribute.value != "0", StakingError::AssetNotStaked);
+                        attribute_list.push(Attribute {
+                            key: "staked".to_string(),
+                            value: 0.to_string(),
+                        });
+                        staked_time = staked_time
+                            .checked_add(
+                                Clock::get()?
+                                    .unix_timestamp
+                                    .checked_sub(
+                                        attribute
+                                            .value
+                                            .parse::<i64>()
+                                            .map_err(|_| StakingError::InvalidTimestamp)?,
+                                    )
+                                    .ok_or(StakingError::ArithmeticOverflow)?,
+                            )
+                            .ok_or(StakingError::ArithmeticOverflow)?;
+                        is_initialized = true;
+                    } else if attribute.key == "staked_time" {
+                        staked_time = staked_time
+                            .checked_add(
+                                attribute
+                                    .value
+                                    .parse::<i64>()
+                                    .map_err(|_| StakingError::InvalidTimestamp)?,
+                            )
+                            .ok_or(StakingError::ArithmeticOverflow)?;
+                    } else {
+                        attribute_list.push(attribute.clone());
+                    }
+                }
+
+                attribute_list.push(Attribute {
+                    key: "staked_time".to_string(),
+                    value: staked_time.to_string(),
+                });
+
+                // require!(is_initialized, StakingError::StakingNotInitialized);
+
+                UpdatePluginV1CpiBuilder::new(&self.core_program.to_account_info())
+                    .asset(&self.asset.to_account_info())
+                    .collection(Some(&self.collection.to_account_info()))
+                    .payer(&self.payer.to_account_info())
+                    .authority(Some(&self.update_authority.to_account_info()))
+                    .system_program(&self.system_program.to_account_info())
+                    .plugin(Plugin::Attributes(Attributes { attribute_list }))
+                    .invoke()?;
+            }
+            Err(_) => {
+                return Err(StakingError::AttributesNotInitialized.into());
+            }
+        }
+
+        // Unfreeze the asset
+        UpdatePluginV1CpiBuilder::new(&self.core_program.to_account_info())
+            .asset(&self.asset.to_account_info())
+            .collection(Some(&self.collection.to_account_info()))
+            .payer(&self.payer.to_account_info())
+            .authority(Some(&self.update_authority.to_account_info()))
+            .system_program(&self.system_program.to_account_info())
+            .plugin(Plugin::FreezeDelegate(FreezeDelegate { frozen: false }))
+            .invoke()?;
+
+        // Remove the FreezeDelegate Plugin
+        RemovePluginV1CpiBuilder::new(&self.core_program)
+            .asset(&self.asset.to_account_info())
+            .collection(Some(&self.collection.to_account_info()))
+            .payer(&self.payer)
+            .authority(Some(&self.owner))
+            .system_program(&self.system_program)
+            .plugin_type(PluginType::FreezeDelegate)
+            .invoke()?;
+
+        // Update position status to claimed
+        let position = &mut self.position;
+        position.status = PositionStatus::Claimed;
+
+        let config = &mut self.config;
+        let mut pool_stats = config.pools_stats[pool_index as usize];
+
+        // Update config's total staked amount
+        config.total_staked_amount = config
+            .total_staked_amount
+            .checked_sub(position_amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+
+        // Update pool config
+        pool_stats.total_tokens_staked = pool_stats
+            .total_tokens_staked
+            .checked_sub(position_amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+        pool_stats.lifetime_claimed_yield = pool_stats
+            .lifetime_claimed_yield
+            .checked_add(yield_value)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Update user stats
+        let user_account = &mut self.user_account;
+        user_account
+            .total_staked_token_amount
+            .checked_sub(position_amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+        user_account
+            .total_staked_value
+            .checked_add(position_amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        Ok(())
+    }
+}

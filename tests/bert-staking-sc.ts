@@ -11,6 +11,7 @@ import {
   Config,
   LockPeriod,
   Position,
+  PositionIdl,
   PositionType,
 } from "../sdk/src";
 import { AddedProgram, BanksClient, ProgramTestContext } from "solana-bankrun";
@@ -34,6 +35,13 @@ const addedPrograms: AddedProgram[] = [
   { name: "mpl_core", programId: new PublicKey(MPL_CORE_ADDRESS) },
 ];
 
+const lockPeriodYields = new Map<LockPeriod, number>([
+  [LockPeriod.OneDay, 300], // 3% for 1 day
+  [LockPeriod.ThreeDays, 500], // 5% for 3 days
+  [LockPeriod.SevenDays, 800], // 8% for 7 days
+  [LockPeriod.ThirtyDays, 1200], // 12% for 30 days
+]);
+
 describe("bert-staking-sc", () => {
   let context: ProgramTestContext;
   let client: BanksClient;
@@ -46,19 +54,12 @@ describe("bert-staking-sc", () => {
   // Global IDs for configs and positions
   const configId = 1; // Using 1 instead of 0 to test non-default ID
   const positionId = 42; // Using arbitrary ID for positions
+  const nftPositionId = positionId + 100;
 
   // Test parameters for initialization
   const maxCap = 1_000_000_000; // 1 billion tokens
   const nftValueInTokens = 100_000; // 100k tokens per NFT
   const nftsLimitPerUser = 5; // 5 NFTs max per user
-
-  // Define lock period yields with increasing rates for longer periods
-  const lockPeriodYields = new Map<LockPeriod, number>([
-    [LockPeriod.OneDay, 300], // 3% for 1 day
-    [LockPeriod.ThreeDays, 500], // 5% for 3 days
-    [LockPeriod.SevenDays, 800], // 8% for 7 days
-    [LockPeriod.ThirtyDays, 1200], // 12% for 30 days
-  ]);
 
   // Token staking parameters
   let userTokenAccount: PublicKey;
@@ -277,8 +278,8 @@ describe("bert-staking-sc", () => {
         authority: payer.publicKey,
         owner: payer.publicKey,
         tokenMint,
-        configId, // Pass the config ID
-        positionId, // Pass the position ID
+        configId,
+        positionId,
         amount: stakeAmount,
         tokenAccount: userTokenAccount,
       });
@@ -333,6 +334,11 @@ describe("bert-staking-sc", () => {
       new Date(position.unlockTime.toNumber() * 1000).toISOString()
     );
 
+    // Check unlock time is increased by 7 * 24 * 60 * 60 = 604800
+    const unlockTime = position.unlockTime.toNumber();
+    const depositTime = position.depositTime.toNumber();
+    expect(unlockTime - depositTime).to.equal(604800);
+
     // 4. Check config total staked amount increased
     const configAccount = await sdk.fetchConfigByAddress(configPda);
 
@@ -343,161 +349,11 @@ describe("bert-staking-sc", () => {
     );
   });
 
-  it("Stakes a Metaplex Core asset successfully", async () => {
-    const nftPositionId = positionId + 100;
-    const lockPeriodYieldIndex = 3;
-
-    // Get the Config PDA and account data with our configId
-    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
-    const configAccount = await sdk.fetchConfigByAddress(configPda);
-
-    try {
-      // Use a distinct position ID for the NFT stake
-
-      // First, initialize the position for the NFT
-      console.log("Initializing position for NFT staking...");
-      const initPositionIx = await sdk.initializePosition({
-        authority: payer.publicKey,
-        owner: payer.publicKey,
-        tokenMint,
-        configId,
-        positionId: nftPositionId,
-        lockPeriodYieldIndex,
-        positionType: PositionType.NFT,
-      });
-
-      // Process the initialize position transaction
-      await createAndProcessTransaction(client, payer, [initPositionIx]);
-      console.log("NFT position initialized successfully");
-    } catch (err) {
-      console.error("Failed to stake NFT:", err);
-      expect.fail(`NFT staking failed: ${err}`);
-    }
-
-    console.log("Staking a single Metaplex Core asset...");
-    console.log("Owner:", payer.publicKey.toString());
-    console.log("Asset:", assetSigner.publicKey.toString());
-    console.log("Collection:", collectionSigner.publicKey.toString());
-
-    // Find the Position PDA for this owner, mint and positionId
-    const [positionPda] = sdk.pda.findPositionPda(
-      payer.publicKey,
-      tokenMint,
-      nftPositionId
-    );
-    console.log("Position PDA:", positionPda.toString());
-
-    // Create the stake NFT instruction
-    const stakeNftIx = await sdk.stakeNft({
-      authority: payer.publicKey,
-      owner: payer.publicKey,
-      mint: tokenMint,
-      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
-      asset: toWeb3JsPublicKey(assetSigner.publicKey),
-      updateAuthority: payer.publicKey,
-      payer: payer.publicKey,
-      configId,
-      positionId: nftPositionId,
-    });
-
-    // Process the transaction
-    await createAndProcessTransaction(
-      client,
-      payer,
-      [stakeNftIx],
-      [toWeb3JsKeypair(collectionSigner)]
-    );
-    console.log("NFT staked successfully");
-
-    // Verify the position was updated correctly
-    const position = await sdk.fetchPosition(
-      payer.publicKey,
-      nftPositionId,
-      tokenMint
-    );
-
-    expect(position).to.not.be.null;
-    expect(position.owner.toString()).to.equal(payer.publicKey.toString());
-    expect(position.positionType).to.deep.equal({ nft: {} }); // NFT position type
-    expect(position.amount.toNumber()).to.equal(nftValueInTokens); // Should be set to nftValueInTokens
-    expect(position.lockPeriodYieldIndex).to.equal(lockPeriodYieldIndex);
-
-    // Verify the staked NFT is in the position's nft_mints array
-    expect(position.nftMints[0].toString()).to.equal(
-      assetSigner.publicKey.toString()
-    );
-    expect(position.nftIndex).to.equal(1); // Should have 1 NFT staked
-
-    console.log("Position after staking NFT:");
-    console.log("- Owner:", position.owner.toString());
-    console.log("- Amount:", position.amount.toString());
-    console.log("- Position Type:", position.positionType);
-    console.log("- Lock Period Yield Index:", position.lockPeriodYieldIndex);
-    console.log("- NFT Index:", position.nftIndex);
-    console.log("- NFT Mint:", position.nftMints[0].toString());
-
-    // Verify config total staked amount increased
-    const updatedConfig = await sdk.fetchConfigByAddress(configPda);
-    const expectedTotalStaked =
-      configAccount.totalStakedAmount.toNumber() + nftValueInTokens;
-    expect(updatedConfig.totalStakedAmount.toNumber()).to.equal(
-      expectedTotalStaked
-    );
-
-    console.log(
-      "Total staked amount updated:",
-      updatedConfig.totalStakedAmount.toString()
-    );
-
-    // Try to fetch the asset to verify it was properly updated with Metaplex Core attributes
-    const assetData = await getMplCoreAsset(
-      client,
-      toWeb3JsPublicKey(assetSigner.publicKey)
-    );
-    console.log("Asset data after staking:", assetData);
-
-    // Verify the asset has been updated with staking attributes
-    // if (assetData.plugins) {
-    //   console.log("Asset plugins after staking:", assetData.plugins);
-    //
-    //   // Check if the FreezeDelegate plugin was added and asset is frozen
-    //   const freezePlugin = assetData.plugins.find((p) =>
-    //     p.hasOwnProperty("freezeDelegate")
-    //   );
-    //   expect(freezePlugin).to.not.be.undefined;
-    //   if (freezePlugin) {
-    //     expect(freezePlugin.freezeDelegate.frozen).to.be.true;
-    //     console.log("Asset successfully frozen:", freezePlugin);
-    //   }
-    //
-    //   // Check if attributes plugin was added with staking information
-    //   const attributesPlugin = assetData.plugins.find((p) =>
-    //     p.hasOwnProperty("attributes")
-    //   );
-    //   expect(attributesPlugin).to.not.be.undefined;
-    //   if (attributesPlugin) {
-    //     const stakedAttr = attributesPlugin.attributes.attribute_list.find(
-    //       (attr) => attr.key === "staked"
-    //     );
-    //     expect(stakedAttr).to.not.be.undefined;
-    //     expect(stakedAttr.value).to.not.equal("0"); // Should contain a timestamp
-    //     console.log("Staking attribute added:", stakedAttr);
-    //
-    //     const stakedTimeAttr =
-    //       attributesPlugin.attributes.attribute_list.find(
-    //         (attr) => attr.key === "staked_time"
-    //       );
-    //     expect(stakedTimeAttr).to.not.be.undefined;
-    //     console.log("Staked time attribute:", stakedTimeAttr);
-    //   }
-    // }
-  });
-
   it("Claims tokens after lock period", async () => {
     let configPda: PublicKey;
     let configAccount: Config;
     let positionPda: PublicKey;
-    let position: Position;
+    let position: PositionIdl;
     let userBalanceBefore: number;
     let vaultBalanceBefore: number;
     let vaultAta: PublicKey;
@@ -509,6 +365,7 @@ describe("bert-staking-sc", () => {
         tokenMint,
         positionId
       );
+
       position = await sdk.fetchPosition(
         payer.publicKey,
         positionId,
@@ -636,5 +493,144 @@ describe("bert-staking-sc", () => {
     );
 
     console.log("Claim position test completed successfully");
+  });
+
+  it("Stakes a Metaplex Core asset successfully", async () => {
+    const lockPeriodYieldIndex = 3;
+
+    // Get the Config PDA and account data with our configId
+    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+    const configAccount = await sdk.fetchConfigByAddress(configPda);
+
+    try {
+      // Use a distinct position ID for the NFT stake
+
+      // First, initialize the position for the NFT
+      console.log("Initializing position for NFT staking...");
+      const initPositionIx = await sdk.initializePosition({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        tokenMint,
+        configId,
+        positionId: nftPositionId,
+        lockPeriodYieldIndex,
+        positionType: PositionType.NFT,
+      });
+
+      // Process the initialize position transaction
+      await createAndProcessTransaction(client, payer, [initPositionIx]);
+      console.log("NFT position initialized successfully");
+    } catch (err) {
+      console.error("Failed to stake NFT:", err);
+      expect.fail(`NFT staking failed: ${err}`);
+    }
+
+    console.log("Staking a single Metaplex Core asset...");
+    console.log("Owner:", payer.publicKey.toString());
+    console.log("Asset:", assetSigner.publicKey.toString());
+    console.log("Collection:", collectionSigner.publicKey.toString());
+
+    // Find the Position PDA for this owner, mint and positionId
+    const [positionPda] = sdk.pda.findPositionPda(
+      payer.publicKey,
+      tokenMint,
+      nftPositionId
+    );
+    console.log("Position PDA:", positionPda.toString());
+
+    // Create the stake NFT instruction
+    const stakeNftIx = await sdk.stakeNft({
+      authority: payer.publicKey,
+      owner: payer.publicKey,
+      mint: tokenMint,
+      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+      asset: toWeb3JsPublicKey(assetSigner.publicKey),
+      updateAuthority: payer.publicKey,
+      payer: payer.publicKey,
+      configId,
+      positionId: nftPositionId,
+    });
+
+    // Process the transaction
+    await createAndProcessTransaction(
+      client,
+      payer,
+      [stakeNftIx],
+      [toWeb3JsKeypair(collectionSigner)]
+    );
+    console.log("NFT staked successfully");
+
+    // Verify the position was updated correctly
+    const position = await sdk.fetchPosition(
+      payer.publicKey,
+      nftPositionId,
+      tokenMint
+    );
+
+    expect(position).to.not.be.null;
+    expect(position.owner.toString()).to.equal(payer.publicKey.toString());
+    expect(position.positionType).to.deep.equal({ nft: {} });
+    expect(position.amount.toNumber()).to.equal(nftValueInTokens);
+    expect(position.lockPeriodYieldIndex).to.equal(lockPeriodYieldIndex);
+
+    // Verify the staked NFT is in the position's nft_mints array
+    expect(position.nftMints[0].toString()).to.equal(
+      assetSigner.publicKey.toString()
+    );
+    expect(position.nftIndex).to.equal(1); // Should have 1 NFT staked
+
+    console.log("Position after staking NFT:");
+    console.log("- Owner:", position.owner.toString());
+    console.log("- Amount:", position.amount.toString());
+    console.log("- Position Type:", position.positionType);
+    console.log("- Lock Period Yield Index:", position.lockPeriodYieldIndex);
+    console.log("- NFT Index:", position.nftIndex);
+    console.log("- NFT Mint:", position.nftMints[0].toString());
+
+    // Verify config total staked amount increased
+    const updatedConfig = await sdk.fetchConfigByAddress(configPda);
+    const expectedTotalStaked =
+      configAccount.totalStakedAmount.toNumber() + nftValueInTokens;
+    expect(updatedConfig.totalStakedAmount.toNumber()).to.equal(
+      expectedTotalStaked
+    );
+
+    console.log(
+      "Total staked amount updated:",
+      updatedConfig.totalStakedAmount.toString()
+    );
+
+    const assetData = await getMplCoreAsset(
+      client,
+      toWeb3JsPublicKey(assetSigner.publicKey)
+    );
+
+    // Verify the asset has been updated with staking attributes
+    if (assetData.pluginHeader) {
+      console.log("Asset pluginHeaders after staking:", assetData.pluginHeader);
+
+      // Check if the FreezeDelegate pluginHeader was added and asset is frozen
+      expect(assetData.freezeDelegate).to.not.be.undefined;
+      expect(assetData.freezeDelegate.frozen).to.be.true;
+      console.log(
+        "Asset successfully frozen:",
+        assetData.freezeDelegate.frozen
+      );
+
+      // Check if attributes plugin was added with staking information
+      expect(assetData.attributes).to.not.be.undefined;
+      const stakedAttr = assetData.attributes.attributeList.find(
+        (attr) => attr.key === "staked"
+      );
+      expect(stakedAttr).to.not.be.undefined;
+      expect(stakedAttr.value).to.not.equal("0"); // TODO: Verify that timestamp matches the indeShould contain a timestamp
+      console.log("Staking attribute added:", stakedAttr);
+
+      const stakedTimeAttr = assetData.attributes.attributeList.find(
+        (attr) => attr.key === "staked_time"
+      );
+      expect(stakedTimeAttr).to.not.be.undefined;
+      console.log("Staked time attribute:", stakedTimeAttr);
+    }
   });
 });

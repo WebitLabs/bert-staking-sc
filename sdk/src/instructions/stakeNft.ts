@@ -38,7 +38,7 @@ export async function stakeNftInstruction({
   configId = 0,
   positionId = 0,
   coreProgram = new web3.PublicKey(
-    "mpLbyGeKdRpHLZvN87ggbNGNWQwkz5JWQJ5hKaKwHcw"
+    "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
   ),
 }: StakeNftParams): Promise<web3.TransactionInstruction> {
   // Find Config PDA with the provided ID
@@ -47,7 +47,7 @@ export async function stakeNftInstruction({
   const [positionPda] = pda.findPositionPda(owner, mint, positionId);
 
   return program.methods
-    .stakeNft(new BN(positionId))
+    .stakeNft()
     .accountsStrict({
       owner,
       config: configPda,
@@ -65,4 +65,3 @@ export async function stakeNftInstruction({
     })
     .instruction();
 }
-

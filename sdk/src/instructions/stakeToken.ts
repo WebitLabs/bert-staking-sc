@@ -55,7 +55,7 @@ export async function stakeTokenInstruction({
     vault || getAssociatedTokenAddressSync(tokenMint, configPda, true);
 
   return program.methods
-    .stakeToken(new BN(positionId), amountBN)
+    .stakeToken(amountBN)
     .accountsStrict({
       owner,
       config: configPda,

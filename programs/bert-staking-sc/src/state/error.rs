@@ -31,4 +31,16 @@ pub enum StakingError {
 
     #[msg("Already staked")]
     AlreadyStaked,
+
+    #[msg("Tokens limit per user reached")]
+    UserTokensLimitCapReached,
+
+    #[msg("Asset Not Staked")]
+    AssetNotStaked,
+
+    #[msg("Attributes Not Initialized")]
+    AttributesNotInitialized,
+
+    #[msg("Invalid Timestamp")]
+    InvalidTimestamp,
 }

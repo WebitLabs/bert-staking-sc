@@ -81,8 +81,9 @@
                 "path": "mint"
               },
               {
-                "kind": "arg",
-                "path": "id"
+                "kind": "account",
+                "path": "position.id",
+                "account": "PositionV2"
               }
             ]
           }
@@ -311,12 +312,7 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": [
-        {
-          "name": "_id",
-          "type": "u64"
-        }
-      ]
+      "args": []
     },
     {
       "name": "initialize",
@@ -609,7 +605,7 @@
       ],
       "args": [
         {
-          "name": "_id",
+          "name": "id",
           "type": "u64"
         },
         {
@@ -703,8 +699,9 @@
                 "path": "mint"
               },
               {
-                "kind": "arg",
-                "path": "id"
+                "kind": "account",
+                "path": "position.id",
+                "account": "PositionV2"
               }
             ]
           }
@@ -759,12 +756,7 @@
           "address": "SysvarRent111111111111111111111111111111111"
         }
       ],
-      "args": [
-        {
-          "name": "_id",
-          "type": "u64"
-        }
-      ]
+      "args": []
     },
     {
       "name": "stake_token",
@@ -840,8 +832,9 @@
                 "path": "mint"
               },
               {
-                "kind": "arg",
-                "path": "id"
+                "kind": "account",
+                "path": "position.id",
+                "account": "PositionV2"
               }
             ]
           }
@@ -1050,10 +1043,6 @@
         }
       ],
       "args": [
-        {
-          "name": "_id",
-          "type": "u64"
-        },
         {
           "name": "amount",
           "type": "u64"
@@ -1470,6 +1459,10 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "id",
+            "type": "u64"
           }
         ]
       }
