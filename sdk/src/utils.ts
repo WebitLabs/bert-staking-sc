@@ -1,6 +1,12 @@
 import { BN, IdlTypes } from "@coral-xyz/anchor";
 import { LockPeriod, LockPeriodYield, PositionType } from "./types";
 import { BertStakingSc } from "./idl";
+import { PublicKey } from "@solana/web3.js";
+
+// Core program ID from MPL Core
+export const CORE_PROGRAM_ID = new PublicKey(
+  "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+);
 
 /**
  * Calculate the yield amount for a staked amount

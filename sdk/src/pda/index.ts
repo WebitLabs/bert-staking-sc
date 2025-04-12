@@ -25,6 +25,16 @@ export class BertStakingPda {
   }
 
   /**
+   * Find the User Account PDA
+   */
+  findUserAccountPda(owner: PublicKey, config: PublicKey): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("user"), owner.toBuffer(), config.toBuffer()],
+      this.programId
+    );
+  }
+
+  /**
    * Find the Program Authority PDA
    * @returns The Program Authority PDA and bump
    */
@@ -56,6 +66,25 @@ export class BertStakingPda {
         owner.toBuffer(),
         mint.toBuffer(),
         new BN(id).toArrayLike(Buffer, "le", 8),
+      ],
+      this.programId
+    );
+  }
+
+  /**
+   * Find the NFT Position PDA for a given owner, mint, and ID
+   */
+  findNftPositionPda(
+    owner: PublicKey,
+    mint: PublicKey,
+    asset: PublicKey
+  ): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("position"),
+        owner.toBuffer(),
+        mint.toBuffer(),
+        asset.toBuffer(),
       ],
       this.programId
     );

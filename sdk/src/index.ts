@@ -18,7 +18,8 @@ import {
   initializePositionInstruction,
   stakeNftInstruction,
   stakeTokenInstruction,
-  claimPositionInstruction,
+  claimTokenPositionInstruction,
+  claimNftPositionInstruction,
 } from "./instructions";
 
 // Import account functions
@@ -400,89 +401,183 @@ export class BertStakingSDK {
   }
 
   /**
-   * Creates an instruction to claim a staking position
+   * Creates an instruction to claim a token staking position
    */
-  async claimPosition({
+  async claimTokenPosition({
     authority = this.provider.publicKey,
     owner,
     positionPda,
     configId,
     tokenMint,
-    nftMint,
     tokenAccount,
-    nftTokenAccount,
     collection,
-    nftsVault,
     vault,
+    positionId = 0,
   }: {
     authority?: PublicKey;
     owner: PublicKey;
-    configId: number;
+    configId?: number;
     positionPda?: PublicKey;
     tokenMint: PublicKey;
-    nftMint?: PublicKey;
     tokenAccount?: PublicKey;
-    nftTokenAccount?: PublicKey;
     collection?: PublicKey;
-    nftsVault?: PublicKey;
     vault?: PublicKey;
+    positionId?: number;
   }): Promise<TransactionInstruction> {
-    return claimPositionInstruction({
+    return claimTokenPositionInstruction({
       program: this.program,
       sdk: this,
       authority,
-      configId,
       owner,
       positionPda,
       tokenMint,
-      nftMint,
       tokenAccount,
-      nftTokenAccount,
       collection,
-      nftsVault,
       vault,
+      configId,
+      positionId,
     });
   }
 
   /**
-   * Creates an RPC call to claim a staking position
+   * Creates an RPC call to claim a token staking position
    */
-  async claimPositionRpc({
+  async claimTokenPositionRpc({
     authority = this.provider.publicKey,
     owner,
     positionPda,
+    configId = 0,
     tokenMint,
-    nftMint,
     tokenAccount,
-    nftTokenAccount,
     collection,
-    nftsVault,
     vault,
+    positionId = 0,
   }: {
     authority?: PublicKey;
     owner: PublicKey;
+    configId?: number;
     positionPda?: PublicKey;
     tokenMint: PublicKey;
-    nftMint?: PublicKey;
     tokenAccount?: PublicKey;
-    nftTokenAccount?: PublicKey;
     collection?: PublicKey;
-    nftsVault?: PublicKey;
     vault?: PublicKey;
+    positionId?: number;
   }): Promise<string> {
-    let ix = await claimPositionInstruction({
+    const ix = await claimTokenPositionInstruction({
       program: this.program,
       sdk: this,
       authority,
       owner,
       positionPda,
       tokenMint,
-      nftMint,
       tokenAccount,
-      nftTokenAccount,
       collection,
-      nftsVault,
       vault,
+      configId,
+      positionId,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
+   * Creates an instruction to claim an NFT staking position
+   */
+  async claimNftPosition({
+    authority = this.provider.publicKey,
+    owner,
+    payer,
+    positionPda,
+    configId = 0,
+    tokenMint,
+    asset,
+    tokenAccount,
+    collection,
+    updateAuthority,
+    vault,
+  }: {
+    authority?: PublicKey;
+    owner: PublicKey;
+    payer: PublicKey;
+    configId?: number;
+    positionPda?: PublicKey;
+    asset: PublicKey;
+    tokenMint: PublicKey;
+    tokenAccount?: PublicKey;
+    collection?: PublicKey;
+    updateAuthority: PublicKey;
+    vault?: PublicKey;
+  }): Promise<TransactionInstruction> {
+    return claimNftPositionInstruction({
+      program: this.program,
+      sdk: this,
+      authority,
+      owner,
+      payer,
+      positionPda,
+      asset,
+      tokenMint,
+      tokenAccount,
+      collection,
+      updateAuthority,
+      vault,
+      configId,
+    });
+  }
+
+  /**
+   * Creates an RPC call to claim an NFT staking position
+   */
+  async claimNftPositionRpc({
+    authority = this.provider.publicKey,
+    owner,
+    payer,
+    positionPda,
+    configId = 0,
+    asset,
+    tokenMint,
+    tokenAccount,
+    collection,
+    updateAuthority,
+    vault,
+  }: {
+    authority?: PublicKey;
+    owner: PublicKey;
+    payer: PublicKey;
+    configId?: number;
+    positionPda?: PublicKey;
+    asset: PublicKey;
+    tokenMint: PublicKey;
+    tokenAccount?: PublicKey;
+    collection?: PublicKey;
+    updateAuthority: PublicKey;
+    vault?: PublicKey;
+  }): Promise<string> {
+    const ix = await claimNftPositionInstruction({
+      program: this.program,
+      sdk: this,
+      authority,
+      owner,
+      payer,
+      positionPda,
+      asset,
+      tokenMint,
+      tokenAccount,
+      collection,
+      updateAuthority,
+      vault,
+      configId,
     });
 
     const tx = new Transaction();

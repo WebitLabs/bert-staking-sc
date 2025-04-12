@@ -413,21 +413,15 @@ describe("bert-staking-sc", () => {
       console.log("Vault balance before:", vaultBalanceBefore);
       console.log("User balance before:", userBalanceBefore);
 
-      const dummyNftMint = PublicKey.default;
-      const dummyNftTokenAccount = PublicKey.default;
-
       // Create and send the claim position instruction
       const claimPositionIx = await sdk.claimPosition({
         authority: payer.publicKey, // The authority who initialized the config
         owner: payer.publicKey, // The owner of the position
         positionPda, // The position PDA to claim
         tokenMint, // The token mint (USDC in this case)
-        nftMint: dummyNftMint, // Dummy NFT mint (not used for token position)
         tokenAccount: userTokenAccount, // User's token account to receive tokens
-        nftTokenAccount: dummyNftTokenAccount, // Dummy NFT token account
         vault: vaultAta, // Program vault for tokens
         collection: configAccount.collection, // NFT collection (required by instruction)
-        nftsVault: configAccount.nftsVault, // NFT vault (required by instruction)
         configId, // Pass the config ID
       });
 
