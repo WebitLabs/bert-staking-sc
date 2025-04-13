@@ -19,6 +19,7 @@ export type InitializeParams = {
   mint: web3.PublicKey;
   collection: web3.PublicKey;
   vault?: web3.PublicKey;
+  nftsVault?: web3.PublicKey; // New field for the NFTs vault
   id?: number; // Optional ID for the config
   poolsConfig?: PoolConfigParams[]; // Array of pool configurations
   defaultYieldRate?: number | BN; // Default yield rate if no poolsConfig provided
@@ -39,6 +40,7 @@ export async function initializeInstruction({
   mint,
   collection,
   vault,
+  nftsVault,
   id = 0, // Default ID to 0 if not provided
   poolsConfig,
   defaultYieldRate = 500, // Default to 5% if not specified
@@ -74,6 +76,9 @@ export async function initializeInstruction({
   // Get token accounts
   const vaultTA = vault || getAssociatedTokenAddressSync(mint, configPda, true);
 
+  // Create the NFTs vault PDA (if not provided)
+  const nftsVaultPDA = nftsVault || pda.findNftsVaultPda(configPda, mint)[0];
+
   return program.methods
     .initialize(
       new BN(id),
@@ -88,6 +93,7 @@ export async function initializeInstruction({
       mint,
       collection,
       vault: vaultTA,
+      nftsVault: nftsVaultPDA,
       systemProgram: web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,

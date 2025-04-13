@@ -1,7 +1,11 @@
 import { BN, IdlTypes } from "@coral-xyz/anchor";
 import { PositionType } from "./types";
 import { BertStakingSc } from "./idl";
-import { PublicKey } from "@solana/web3.js";
+import {
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+} from "@solana/web3.js";
 
 // Core program ID from MPL Core
 export const CORE_PROGRAM_ID = new PublicKey(
@@ -167,4 +171,26 @@ export function getPositionTypeIdl(p: PositionType): PositionTypeIdlType {
   } else {
     throw Error("Invalid position type");
   }
+}
+
+/**
+ * Creates a transaction instruction to create the NFTs vault account
+ * @param payer The account that will pay for the account creation
+ * @param nftsVaultPda The NFTs vault PDA
+ * @param programId The program ID
+ * @returns Transaction instruction to create the NFTs vault account
+ */
+export function createNftsVaultAccountInstruction(
+  payer: PublicKey,
+  nftsVaultPda: PublicKey,
+  programId: PublicKey
+): TransactionInstruction {
+  // The system account doesn't need any space as it's just used as a reference/PDA
+  return SystemProgram.createAccount({
+    fromPubkey: payer,
+    newAccountPubkey: nftsVaultPda,
+    lamports: 0, // Doesn't need to be rent exempt as it's an address-only reference
+    space: 0, // No space needed for data
+    programId, // Program that will own the account
+  });
 }

@@ -37,7 +37,7 @@ pub mod bert_staking_sc {
     }
 
     pub fn stake_nft(ctx: Context<StakeNFT>, pool_index: u8) -> Result<()> {
-        ctx.accounts.stake_nft(pool_index)
+        ctx.accounts.stake_nft(pool_index, &ctx.bumps)
     }
 
     pub fn stake_token(

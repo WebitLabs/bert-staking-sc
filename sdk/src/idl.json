@@ -806,6 +806,9 @@
           }
         },
         {
+          "name": "nfts_vault"
+        },
+        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         },
@@ -1042,19 +1045,11 @@
           }
         },
         {
-          "name": "update_authority",
-          "signer": true,
-          "relations": [
-            "collection"
-          ]
-        },
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
           "name": "asset",
+          "writable": true
+        },
+        {
+          "name": "nft_vault_owner",
           "writable": true
         },
         {
@@ -1667,6 +1662,10 @@
           },
           {
             "name": "authority_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "nfts_vault",
             "type": "pubkey"
           },
           {

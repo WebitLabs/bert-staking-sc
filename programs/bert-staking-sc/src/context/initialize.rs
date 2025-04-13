@@ -36,6 +36,16 @@ pub struct Initialize<'info> {
 
     // #[account(
     //     init,
+    //     space = 0,
+    //     payer = authority,
+    //     seeds = [b"nfts_vault", config.key().as_ref(), mint.key().as_ref()],
+    //     bump,
+    // )]
+    /// CHECK:
+    pub nfts_vault: UncheckedAccount<'info>,
+
+    // #[account(
+    //     init,
     //     payer = authority,
     //     token::mint = mint,
     //     token::authority = config,
@@ -79,6 +89,7 @@ impl<'info> Initialize<'info> {
             mint: self.mint.key(),
             collection: self.collection.key(),
             vault: self.vault.key(),
+            nfts_vault: self.nfts_vault.key(),
             authority_vault: self.vault.key(),
 
             pools_config,

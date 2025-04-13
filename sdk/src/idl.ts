@@ -812,6 +812,9 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "nftsVault"
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         },
@@ -1048,19 +1051,11 @@ export type BertStakingSc = {
           }
         },
         {
-          "name": "updateAuthority",
-          "signer": true,
-          "relations": [
-            "collection"
-          ]
-        },
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
           "name": "asset",
+          "writable": true
+        },
+        {
+          "name": "nftVaultOwner",
           "writable": true
         },
         {
@@ -1673,6 +1668,10 @@ export type BertStakingSc = {
           },
           {
             "name": "authorityVault",
+            "type": "pubkey"
+          },
+          {
+            "name": "nftsVault",
             "type": "pubkey"
           },
           {

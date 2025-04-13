@@ -35,6 +35,7 @@ pub struct Config {
     pub collection: Pubkey,      // NFT Collection
     pub vault: Pubkey,           // Token Vault
     pub authority_vault: Pubkey, // Authority Vault
+    pub nfts_vault: Pubkey,      // NFTs Vault
 
     pub pools_config: [PoolConfig; 4],
     pub pools_stats: [PoolStats; 4],

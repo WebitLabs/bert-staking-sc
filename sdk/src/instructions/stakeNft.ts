@@ -16,10 +16,9 @@ export type StakeNftParams = {
   mint: web3.PublicKey;
   collection: web3.PublicKey;
   asset: web3.PublicKey;
-  updateAuthority: web3.PublicKey;
-  payer: web3.PublicKey;
   poolIndex: number; // Index of the pool config to use (determines lock period and yield)
   configId?: number; // ID for the config account
+  nftsVault?: web3.PublicKey; // Optional NFTs vault owner, will be derived if not provided
   coreProgram?: web3.PublicKey;
 };
 
@@ -34,10 +33,9 @@ export async function stakeNftInstruction({
   mint,
   collection,
   asset,
-  updateAuthority,
-  payer,
   poolIndex,
   configId = 0,
+  nftsVault,
   coreProgram = CORE_PROGRAM_ID,
 }: StakeNftParams): Promise<web3.TransactionInstruction> {
   // Find Config PDA with the provided ID
@@ -49,6 +47,9 @@ export async function stakeNftInstruction({
   // Find Position PDA with the asset
   const [positionPda] = pda.findNftPositionPda(owner, mint, asset);
 
+  // Get NFTs vault if not provided (use the vault PDA from config and mint)
+  const nftsVaultPda = nftsVault || pda.findNftsVaultPda(configPda, mint)[0];
+
   return program.methods
     .stakeNft(poolIndex)
     .accountsStrict({
@@ -56,9 +57,8 @@ export async function stakeNftInstruction({
       config: configPda,
       userAccount: userAccountPda,
       position: positionPda,
-      updateAuthority,
-      payer: payer || owner,
       asset,
+      nftVaultOwner: nftsVaultPda,
       collection,
       coreProgram,
       mint,

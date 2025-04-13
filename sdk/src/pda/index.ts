@@ -89,4 +89,24 @@ export class BertStakingPda {
       this.programId
     );
   }
+
+  /**
+   * Find the NFTs vault PDA for the staking program
+   * @param config The config public key
+   * @param mint The token mint public key
+   * @returns The NFTs vault PDA and bump
+   */
+  findNftsVaultPda(
+    config: PublicKey,
+    mint: PublicKey
+  ): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("nfts_vault"),
+        config.toBuffer(),
+        mint.toBuffer(),
+      ],
+      this.programId
+    );
+  }
 }

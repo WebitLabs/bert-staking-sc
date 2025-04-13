@@ -160,7 +160,7 @@ impl<'info> ClaimPositionToken<'info> {
             .ok_or(StakingError::ArithmeticOverflow)?;
         user_account.total_staked_value = user_account
             .total_staked_value
-            .checked_add(position_amount)
+            .checked_sub(position_amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
         Ok(())

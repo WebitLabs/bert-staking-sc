@@ -33,10 +33,7 @@ import {
   fetchUserAccountByAddressRpc,
 } from "./accounts";
 import { PositionType } from "./types";
-import {
-  getStandardLockPeriodDays,
-  PoolConfigParams,
-} from "./utils";
+import { getStandardLockPeriodDays, PoolConfigParams } from "./utils";
 
 // Export types
 export * from "./types";
@@ -74,6 +71,7 @@ export class BertStakingSDK {
     collection,
     poolsConfig,
     vault,
+    nftsVault,
     maxNftsCap,
     maxTokensCap,
     maxCap,
@@ -85,6 +83,7 @@ export class BertStakingSDK {
     mint: PublicKey;
     collection: PublicKey;
     vault?: PublicKey;
+    nftsVault?: PublicKey;
     poolsConfig?: PoolConfigParams[];
     maxNftsCap?: number;
     maxTokensCap?: number | BN;
@@ -101,6 +100,7 @@ export class BertStakingSDK {
       mint,
       collection,
       vault,
+      nftsVault,
       poolsConfig,
       maxNftsCap,
       maxTokensCap,
@@ -120,6 +120,7 @@ export class BertStakingSDK {
     collection,
     poolsConfig,
     vault,
+    nftsVault,
     maxNftsCap,
     maxTokensCap,
     maxCap,
@@ -133,6 +134,7 @@ export class BertStakingSDK {
     collection: PublicKey;
     poolsConfig?: PoolConfigParams[];
     vault?: PublicKey;
+    nftsVault?: PublicKey;
     maxNftsCap?: number;
     maxTokensCap?: number | BN;
     defaultYieldRate?: number | BN;
@@ -148,6 +150,7 @@ export class BertStakingSDK {
       mint,
       collection,
       vault,
+      nftsVault,
       poolsConfig,
       defaultYieldRate,
       maxNftsCap,
@@ -243,8 +246,7 @@ export class BertStakingSDK {
     mint,
     collection,
     asset,
-    updateAuthority,
-    payer,
+    nftsVault,
   }: {
     owner: PublicKey;
     authority: PublicKey;
@@ -253,8 +255,7 @@ export class BertStakingSDK {
     mint: PublicKey;
     collection: PublicKey;
     asset: PublicKey;
-    updateAuthority: PublicKey;
-    payer: PublicKey;
+    nftsVault?: PublicKey;
   }): Promise<TransactionInstruction> {
     return stakeNftInstruction({
       program: this.program,
@@ -266,8 +267,7 @@ export class BertStakingSDK {
       mint,
       collection,
       asset,
-      updateAuthority,
-      payer,
+      nftsVault,
     });
   }
 
@@ -282,8 +282,7 @@ export class BertStakingSDK {
     mint,
     collection,
     asset,
-    updateAuthority,
-    payer,
+    nftsVault,
   }: {
     owner: PublicKey;
     authority: PublicKey;
@@ -292,8 +291,7 @@ export class BertStakingSDK {
     mint: PublicKey;
     collection: PublicKey;
     asset: PublicKey;
-    updateAuthority: PublicKey;
-    payer: PublicKey;
+    nftsVault?: PublicKey;
   }): Promise<string> {
     let ix = await stakeNftInstruction({
       program: this.program,
@@ -305,8 +303,7 @@ export class BertStakingSDK {
       mint,
       collection,
       asset,
-      updateAuthority,
-      payer,
+      nftsVault,
     });
 
     const tx = new Transaction();
@@ -624,9 +621,19 @@ export class BertStakingSDK {
 
   /**
    * Fetches a position account for a given owner and mint
+   * @param owner The owner public key
+   * @param id For token positions, the position ID
+   * @param mint The token mint public key
+   * @param asset For NFT positions, the asset public key
+   * @returns The position account if found, null otherwise
    */
-  async fetchPosition(owner: PublicKey, id: number, mint: PublicKey) {
-    return fetchPositionRpc(owner, mint, id, this.program);
+  async fetchPosition(
+    owner: PublicKey, 
+    id: number, 
+    mint: PublicKey,
+    asset?: PublicKey
+  ) {
+    return fetchPositionRpc(owner, mint, id, asset || null, this.program);
   }
 
   /**
