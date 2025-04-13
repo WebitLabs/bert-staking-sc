@@ -95,12 +95,15 @@ export function createPoolConfigIdl(
   const maxTokensCapBN =
     typeof maxTokensCap === "number" ? new BN(maxTokensCap) : maxTokensCap;
 
+  // Create a static array of 64 zeros for padding
+  const paddingArray = new Array(64).fill(0);
+
   return {
     lockPeriod: getLockPeriodFromIdl(lockPeriod),
     yieldRate: yieldRateBN,
     maxNftsCap: maxNftsCap,
     maxTokensCap: maxTokensCapBN,
-    padding: [0],
+    padding: paddingArray,
   };
 }
 
@@ -148,6 +151,7 @@ export function createDefaultLockPeriodYields(
  * Configuration parameters for a single pool
  */
 export interface PoolConfigParams {
+  lockPeriod: LockPeriod;
   yieldRate: number | BN;
   maxNfts: number;
   maxTokens: number | BN;
@@ -155,31 +159,34 @@ export interface PoolConfigParams {
 
 /**
  * Create a pools configuration array with custom settings for each lock period
- * @param poolsConfig Map of lock periods to pool configuration objects
+ * @param poolsConfig Array of pool configuration objects
  * @returns Array of PoolConfig objects required by the program
  */
 export function createPoolsConfig(
-  poolsConfig: Map<LockPeriod, PoolConfigParams>
+  poolsConfig: PoolConfigParams[]
 ): PoolsConfigType[] {
-  const allPeriods = getAllLockPeriods();
-  return allPeriods.map((period) => {
-    // Default values if the period is not specified in the map
-    const defaultConfig: PoolConfigParams = {
-      yieldRate: 500, // 5%
-      maxNfts: 1000,
-      maxTokens: 1000000000
-    };
-    
-    // Get the configuration for this period or use default
-    const config = poolsConfig.get(period) || defaultConfig;
-    
-    return createPoolConfigIdl(
-      period, 
-      config.yieldRate, 
-      config.maxNfts, 
-      config.maxTokens
+  if (!poolsConfig || poolsConfig.length === 0) {
+    const allPeriods = getAllLockPeriods();
+    // If no config provided, create default configs for all periods
+    return allPeriods.map((period) =>
+      createPoolConfigIdl(
+        period,
+        500, // Default 5% yield
+        1000, // Default 1000 NFTs per pool
+        1000000000 // Default 1B tokens per pool
+      )
     );
-  });
+  }
+
+  // Use the provided configurations
+  return poolsConfig.map((config) =>
+    createPoolConfigIdl(
+      config.lockPeriod,
+      config.yieldRate,
+      config.maxNfts,
+      config.maxTokens
+    )
+  );
 }
 
 /**

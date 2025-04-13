@@ -12,6 +12,7 @@ import {
   createPoolsConfig,
   PoolConfigParams,
 } from "../utils";
+import { config } from "chai";
 
 export type InitializeParams = {
   program: Program<BertStakingSc>;
@@ -21,10 +22,10 @@ export type InitializeParams = {
   collection: web3.PublicKey;
   vault?: web3.PublicKey;
   id?: number; // Optional ID for the config
-  poolsConfig?: Map<LockPeriod, PoolConfigParams>; // Map of lock periods to pool configs
-  defaultYieldRate?: number | BN; // Default yield rate for all periods if specific configs not provided
-  maxNftsCap?: number; // Default maximum NFTs per pool
-  maxTokensCap?: number | BN; // Default maximum tokens per pool
+  poolsConfig?: PoolConfigParams[]; // Array of pool configurations
+  defaultYieldRate?: number | BN; // Default yield rate if no poolsConfig provided
+  maxNftsCap?: number; // Default maximum NFTs per pool if no poolsConfig provided
+  maxTokensCap?: number | BN; // Default maximum tokens per pool if no poolsConfig provided
   maxCap: number | BN; // Maximum tokens across all pools
   nftValueInTokens: number | BN;
   nftsLimitPerUser: number;
@@ -60,11 +61,16 @@ export async function initializeInstruction({
   const [configPda] = pda.findConfigPda(authority, id);
 
   // Create pool configs array
-  // const poolsConfigArray = poolsConfig
-  //   ? createPoolsConfig(poolsConfig)
-  //   : createDefaultLockPeriodYields(defaultYieldRate, maxNftsCap, maxTokensCap);
-
-  const poolsConfigArray = createPoolsConfig(poolsConfig!);
+  let poolsConfigArray;
+  if (poolsConfig && poolsConfig.length > 0) {
+    poolsConfigArray = createPoolsConfig(poolsConfig);
+  } else {
+    poolsConfigArray = createDefaultLockPeriodYields(
+      defaultYieldRate,
+      maxNftsCap,
+      maxTokensCap
+    );
+  }
 
   // Get token accounts
   const vaultTA = vault || getAssociatedTokenAddressSync(mint, configPda, true);

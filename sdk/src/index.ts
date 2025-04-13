@@ -86,7 +86,7 @@ export class BertStakingSDK {
     mint: PublicKey;
     collection: PublicKey;
     vault?: PublicKey;
-    poolsConfig?: Map<LockPeriod, PoolConfigParams>;
+    poolsConfig?: PoolConfigParams[];
     maxNftsCap?: number;
     maxTokensCap?: number | BN;
     defaultYieldRate?: number | BN;
@@ -132,7 +132,7 @@ export class BertStakingSDK {
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
-    poolsConfig?: Map<LockPeriod, PoolConfigParams>;
+    poolsConfig?: PoolConfigParams[];
     vault?: PublicKey;
     maxNftsCap?: number;
     maxTokensCap?: number | BN;
