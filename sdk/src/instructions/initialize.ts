@@ -8,8 +8,9 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
-  createCustomLockPeriodYields,
   createDefaultLockPeriodYields,
+  createPoolsConfig,
+  PoolConfigParams,
 } from "../utils";
 
 export type InitializeParams = {
@@ -19,12 +20,12 @@ export type InitializeParams = {
   mint: web3.PublicKey;
   collection: web3.PublicKey;
   vault?: web3.PublicKey;
-  nftsVault?: web3.PublicKey;
-  authorityVault?: web3.PublicKey;
   id?: number; // Optional ID for the config
-  lockPeriodYields?: Map<LockPeriod, number | BN>; // Map of lock periods to yield rates
-  defaultYieldRate?: number | BN; // Default yield rate for all periods if lockPeriodYields not provided
-  maxCap: number | BN;
+  poolsConfig?: Map<LockPeriod, PoolConfigParams>; // Map of lock periods to pool configs
+  defaultYieldRate?: number | BN; // Default yield rate for all periods if specific configs not provided
+  maxNftsCap?: number; // Default maximum NFTs per pool
+  maxTokensCap?: number | BN; // Default maximum tokens per pool
+  maxCap: number | BN; // Maximum tokens across all pools
   nftValueInTokens: number | BN;
   nftsLimitPerUser: number;
 };
@@ -32,18 +33,18 @@ export type InitializeParams = {
 /**
  * Create an instruction to initialize the staking program
  */
-export function initializeInstruction({
+export async function initializeInstruction({
   program,
   pda,
   authority,
   mint,
   collection,
   vault,
-  nftsVault,
-  authorityVault,
   id = 0, // Default ID to 0 if not provided
-  lockPeriodYields,
+  poolsConfig,
   defaultYieldRate = 500, // Default to 5% if not specified
+  maxNftsCap = 1000, // Default max NFTs per pool
+  maxTokensCap = 1000000000, // Default max tokens per pool
   maxCap,
   nftValueInTokens,
   nftsLimitPerUser,
@@ -58,38 +59,30 @@ export function initializeInstruction({
   // Find Config PDA with the provided ID
   const [configPda] = pda.findConfigPda(authority, id);
 
-  // Create lock period yields mapping
-  const lockPeriodYieldsArray = lockPeriodYields
-    ? createCustomLockPeriodYields(lockPeriodYields)
-    : createDefaultLockPeriodYields(defaultYieldRate);
+  // Create pool configs array
+  // const poolsConfigArray = poolsConfig
+  //   ? createPoolsConfig(poolsConfig)
+  //   : createDefaultLockPeriodYields(defaultYieldRate, maxNftsCap, maxTokensCap);
+
+  const poolsConfigArray = createPoolsConfig(poolsConfig!);
 
   // Get token accounts
   const vaultTA = vault || getAssociatedTokenAddressSync(mint, configPda, true);
-  const nftsVaultTA =
-    nftsVault ||
-    web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("nfts_vault"), configPda.toBuffer()],
-      program.programId
-    )[0];
-  const authorityVaultTA =
-    authorityVault || pda.findAuthorityVaultPda(mint, configPda)[0];
 
   return program.methods
     .initialize(
       new BN(id),
-      lockPeriodYieldsArray,
+      poolsConfigArray,
       maxCapBN,
       nftValueInTokensBN,
       nftsLimitPerUser
     )
     .accountsStrict({
       authority,
+      config: configPda,
       mint,
       collection,
       vault: vaultTA,
-      nftsVault: nftsVaultTA,
-      //authorityVault: authorityVaultTA,
-      config: configPda,
       systemProgram: web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,

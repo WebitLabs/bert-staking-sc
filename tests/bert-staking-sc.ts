@@ -9,6 +9,7 @@ import {
 import {
   BertStakingSDK,
   Config,
+  ConfigIdl,
   LockPeriod,
   Position,
   PositionIdl,
@@ -30,16 +31,32 @@ import {
   toWeb3JsKeypair,
   toWeb3JsPublicKey,
 } from "@metaplex-foundation/umi-web3js-adapters";
+import { PoolConfigParams } from "@bert-staking/sdk/src/utils";
 
 const addedPrograms: AddedProgram[] = [
   { name: "mpl_core", programId: new PublicKey(MPL_CORE_ADDRESS) },
 ];
 
-const lockPeriodYields = new Map<LockPeriod, number>([
-  [LockPeriod.OneDay, 300], // 3% for 1 day
-  [LockPeriod.ThreeDays, 500], // 5% for 3 days
-  [LockPeriod.SevenDays, 800], // 8% for 7 days
-  [LockPeriod.ThirtyDays, 1200], // 12% for 30 days
+const maxNftsCap = 1000;
+const maxTokensCap = 1_000_000_000_000_000; // 1 Bilion with 6 decimals
+
+const poolsConfig = new Map<LockPeriod, PoolConfigParams>([
+  [
+    LockPeriod.OneDay,
+    { yieldRate: 300, maxNfts: maxNftsCap, maxTokens: maxTokensCap },
+  ], // 3% for 1 day
+  [
+    LockPeriod.ThreeDays,
+    { yieldRate: 500, maxNfts: maxNftsCap, maxTokens: maxTokensCap },
+  ], // 3% for 1 day
+  [
+    LockPeriod.SevenDays,
+    { yieldRate: 800, maxNfts: maxNftsCap, maxTokens: maxTokensCap },
+  ], // 3% for 1 day
+  [
+    LockPeriod.ThirtyDays,
+    { yieldRate: 1200, maxNfts: maxNftsCap, maxTokens: maxTokensCap },
+  ], // 3% for 1 day
 ]);
 
 describe("bert-staking-sc", () => {
@@ -125,13 +142,13 @@ describe("bert-staking-sc", () => {
       mint: tokenMint,
       collection: toWeb3JsPublicKey(collectionSigner.publicKey),
       id: configId,
-      lockPeriodYields, // Pass the map of lock periods to yield rates
+      poolsConfig,
       maxCap,
       nftValueInTokens,
       nftsLimitPerUser,
     });
 
-    let configAccount: Config;
+    let configAccount: ConfigIdl;
     try {
       // Create and process the transaction
       await createAndProcessTransaction(client, authority, [initializeIx]);
@@ -149,20 +166,12 @@ describe("bert-staking-sc", () => {
     expect(configAccount.id.toNumber()).to.deep.equal(configId);
 
     // Verify the lock period yields were set correctly
-    expect(configAccount.lockPeriodYields.length).to.equal(4);
+    expect(configAccount.poolsConfig.length).to.equal(4);
 
-    expect(configAccount.lockPeriodYields[0].yieldRate.toNumber()).to.equal(
-      300
-    );
-    expect(configAccount.lockPeriodYields[1].yieldRate.toNumber()).to.equal(
-      500
-    );
-    expect(configAccount.lockPeriodYields[2].yieldRate.toNumber()).to.equal(
-      800
-    );
-    expect(configAccount.lockPeriodYields[3].yieldRate.toNumber()).to.equal(
-      1200
-    );
+    expect(configAccount.poolsConfig[0].yieldRate.toNumber()).to.equal(300);
+    expect(configAccount.poolsConfig[1].yieldRate.toNumber()).to.equal(500);
+    expect(configAccount.poolsConfig[2].yieldRate.toNumber()).to.equal(800);
+    expect(configAccount.poolsConfig[3].yieldRate.toNumber()).to.equal(1200);
 
     expect(configAccount.maxCap.toString()).to.equal(maxCap.toString());
     expect(configAccount.nftValueInTokens.toString()).to.equal(
@@ -175,13 +184,13 @@ describe("bert-staking-sc", () => {
       "Config initialized successfully with the following parameters:"
     );
     console.log("Lock Period Yields:");
-    configAccount.lockPeriodYields.forEach((lpy) => {
-      console.log(
-        `- ${LockPeriod[lpy.lockPeriod]} days: ${
-          lpy.yieldRate.toNumber() / 100
-        }%`
-      );
-    });
+    // configAccount.poolsConfig.forEach((pool) => {
+    //   console.log(
+    //     `- ${LockPeriod[pool.lockPeriod]} days: ${
+    //       pool.yieldRate.toNumber() / 100
+    //     }%`
+    //   );
+    // });
     console.log("Max Cap:", configAccount.maxCap.toString());
     console.log(
       "NFT Value in Tokens:",
@@ -414,7 +423,7 @@ describe("bert-staking-sc", () => {
       console.log("User balance before:", userBalanceBefore);
 
       // Create and send the claim position instruction
-      const claimPositionIx = await sdk.claimPosition({
+      const claimPositionIx = await sdk.claimTokenPosition({
         authority: payer.publicKey, // The authority who initialized the config
         owner: payer.publicKey, // The owner of the position
         positionPda, // The position PDA to claim

@@ -812,9 +812,6 @@ export type BertStakingSc = {
           }
         },
         {
-          "name": "nftsVault"
-        },
-        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         },

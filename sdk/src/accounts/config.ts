@@ -1,6 +1,6 @@
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { Config } from "../types";
+import { Config, ConfigIdl } from "../types";
 import { BertStakingSc } from "../idl";
 
 /**
@@ -9,7 +9,7 @@ import { BertStakingSc } from "../idl";
 export async function fetchConfigRpc(
   authority: PublicKey,
   program: Program<BertStakingSc>
-): Promise<Config | null> {
+): Promise<ConfigIdl | null> {
   try {
     // Find Config PDA
     const [configPda] = PublicKey.findProgramAddressSync(
@@ -24,7 +24,7 @@ export async function fetchConfigRpc(
       return null;
     }
 
-    return config as unknown as Config;
+    return config;
   } catch (error) {
     console.error("Error fetching config account:", error);
     return null;
@@ -37,7 +37,7 @@ export async function fetchConfigRpc(
 export async function fetchConfigByAddressRpc(
   configAddress: PublicKey,
   program: Program<BertStakingSc>
-): Promise<Config | null> {
+): Promise<ConfigIdl | null> {
   try {
     // Fetch the account
     const config = await program.account.config.fetchNullable(configAddress);
@@ -46,10 +46,9 @@ export async function fetchConfigByAddressRpc(
       return null;
     }
 
-    return config as unknown as Config;
+    return config;
   } catch (error) {
     console.error("Error fetching config account:", error);
     return null;
   }
 }
-

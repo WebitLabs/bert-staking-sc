@@ -31,7 +31,11 @@ import {
   fetchPositionsByOwnerRpc,
 } from "./accounts";
 import { LockPeriod, PositionType } from "./types";
-import { getAllLockPeriods, getLockPeriodFromIdl } from "./utils";
+import {
+  getAllLockPeriods,
+  getLockPeriodFromIdl,
+  PoolConfigParams,
+} from "./utils";
 
 // Export types
 export * from "./types";
@@ -67,8 +71,10 @@ export class BertStakingSDK {
     authority,
     mint,
     collection,
-    lockPeriodYields,
-    nftsVault,
+    poolsConfig,
+    vault,
+    maxNftsCap,
+    maxTokensCap,
     maxCap,
     nftValueInTokens,
     nftsLimitPerUser,
@@ -77,8 +83,11 @@ export class BertStakingSDK {
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
-    nftsVault?: PublicKey;
-    lockPeriodYields: Map<LockPeriod, BN | number>;
+    vault?: PublicKey;
+    poolsConfig?: Map<LockPeriod, PoolConfigParams>;
+    maxNftsCap?: number;
+    maxTokensCap?: number | BN;
+    defaultYieldRate?: number | BN;
     maxCap: number | BN;
     nftValueInTokens: number | BN;
     nftsLimitPerUser: number;
@@ -90,8 +99,10 @@ export class BertStakingSDK {
       authority,
       mint,
       collection,
-      nftsVault,
-      lockPeriodYields,
+      vault,
+      poolsConfig,
+      maxNftsCap,
+      maxTokensCap,
       maxCap,
       nftValueInTokens,
       nftsLimitPerUser,
@@ -106,32 +117,40 @@ export class BertStakingSDK {
     authority,
     mint,
     collection,
-    lockPeriodYields,
-    nftsVault,
+    poolsConfig,
+    vault,
+    maxNftsCap,
+    maxTokensCap,
     maxCap,
     nftValueInTokens,
     nftsLimitPerUser,
+    defaultYieldRate,
   }: {
     id: number;
     authority: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
-    lockPeriodYields?: Map<LockPeriod, number | BN>;
-    nftsVault?: PublicKey; // Added optional nftsVault
-    yieldRate: number | BN;
+    poolsConfig?: Map<LockPeriod, PoolConfigParams>;
+    vault?: PublicKey;
+    maxNftsCap?: number;
+    maxTokensCap?: number | BN;
+    defaultYieldRate?: number | BN;
     maxCap: number | BN;
     nftValueInTokens: number | BN;
     nftsLimitPerUser: number;
   }): Promise<string> {
     let ix = await initializeInstruction({
-      id,
       program: this.program,
       pda: this.pda,
+      id,
       authority,
       mint,
       collection,
-      nftsVault,
-      lockPeriodYields, // Changed from lockPeriod to lockPeriods
+      vault,
+      poolsConfig,
+      defaultYieldRate,
+      maxNftsCap,
+      maxTokensCap,
       maxCap,
       nftValueInTokens,
       nftsLimitPerUser,
