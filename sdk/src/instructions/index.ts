@@ -1,6 +1,7 @@
 export * from "./initialize";
-export * from "./initializePosition";
+export * from "./initializeUser";
 export * from "./stakeNft";
 export * from "./stakeToken";
 export * from "./claimTokenPosition";
 export * from "./claimNftPosition";
+

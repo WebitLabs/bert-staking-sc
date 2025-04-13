@@ -15,7 +15,7 @@ import { BertStakingPda } from "./pda";
 // Import instruction creators
 import {
   initializeInstruction,
-  initializePositionInstruction,
+  initializeUserInstruction,
   stakeNftInstruction,
   stakeTokenInstruction,
   claimTokenPositionInstruction,
@@ -29,6 +29,8 @@ import {
   fetchPositionRpc,
   fetchPositionByAddressRpc,
   fetchPositionsByOwnerRpc,
+  fetchUserAccountRpc,
+  fetchUserAccountByAddressRpc,
 } from "./accounts";
 import { LockPeriod, PositionType } from "./types";
 import {
@@ -171,68 +173,50 @@ export class BertStakingSDK {
   }
 
   /**
-   * Creates an instruction to initialize a user position
+   * Creates an instruction to initialize a user account
    */
-  async initializePosition({
+  async initializeUser({
+    owner,
     authority,
     configId,
-    positionId,
-    owner,
-    tokenMint,
-    lockPeriodYieldIndex,
-    positionType,
+    mint,
   }: {
-    authority: PublicKey;
-    configId?: number;
-    positionId: number;
     owner: PublicKey;
-    tokenMint: PublicKey;
-    lockPeriodYieldIndex: number;
-    positionType: PositionType;
+    authority?: PublicKey;
+    configId?: number;
+    mint: PublicKey;
   }): Promise<TransactionInstruction> {
-    return initializePositionInstruction({
+    return initializeUserInstruction({
       program: this.program,
       pda: this.pda,
       owner,
       authority,
       configId,
-      positionId,
-      tokenMint,
-      lockPeriodYieldIndex,
-      positionType,
+      mint,
     });
   }
 
   /**
-   * Creates an RPC call to initialize a user position
+   * Creates an RPC call to initialize a user account
    */
-  async initializePositionRpc({
-    authority,
+  async initializeUserRpc({
     owner,
-    positionId,
+    authority,
     configId,
-    tokenMint,
-    lockPeriodYieldIndex,
-    positionType,
+    mint,
   }: {
-    authority: PublicKey;
-    configId?: number;
-    positionId?: number;
     owner: PublicKey;
-    tokenMint: PublicKey;
-    lockPeriodYieldIndex: number;
-    positionType: PositionType;
+    authority?: PublicKey;
+    configId?: number;
+    mint: PublicKey;
   }): Promise<string> {
-    let ix = await initializePositionInstruction({
+    const ix = await initializeUserInstruction({
       program: this.program,
       pda: this.pda,
       owner,
-      configId,
-      positionId,
       authority,
-      tokenMint,
-      lockPeriodYieldIndex,
-      positionType,
+      configId,
+      mint,
     });
 
     const tx = new Transaction();
@@ -256,7 +240,7 @@ export class BertStakingSDK {
     owner,
     authority,
     configId,
-    positionId,
+    poolIndex,
     mint,
     collection,
     asset,
@@ -265,8 +249,8 @@ export class BertStakingSDK {
   }: {
     owner: PublicKey;
     authority: PublicKey;
-    configId: number;
-    positionId: number;
+    configId?: number;
+    poolIndex: number;
     mint: PublicKey;
     collection: PublicKey;
     asset: PublicKey;
@@ -278,7 +262,7 @@ export class BertStakingSDK {
       pda: this.pda,
       owner,
       configId,
-      positionId,
+      poolIndex,
       authority,
       mint,
       collection,
@@ -294,6 +278,8 @@ export class BertStakingSDK {
   async stakeNftRpc({
     owner,
     authority,
+    configId,
+    poolIndex,
     mint,
     collection,
     asset,
@@ -302,6 +288,8 @@ export class BertStakingSDK {
   }: {
     owner: PublicKey;
     authority: PublicKey;
+    configId?: number;
+    poolIndex: number;
     mint: PublicKey;
     collection: PublicKey;
     asset: PublicKey;
@@ -313,6 +301,8 @@ export class BertStakingSDK {
       pda: this.pda,
       owner,
       authority,
+      configId,
+      poolIndex,
       mint,
       collection,
       asset,
@@ -344,15 +334,17 @@ export class BertStakingSDK {
     owner,
     tokenMint,
     amount,
+    poolIndex,
     tokenAccount,
     vault,
   }: {
     owner: PublicKey;
     authority: PublicKey;
     configId?: number;
-    positionId: number;
+    positionId?: number;
     tokenMint: PublicKey;
     amount: number | BN;
+    poolIndex: number;
     tokenAccount?: PublicKey;
     vault?: PublicKey;
   }): Promise<TransactionInstruction> {
@@ -365,6 +357,7 @@ export class BertStakingSDK {
       authority,
       tokenMint,
       amount,
+      poolIndex,
       tokenAccount,
       vault,
     });
@@ -380,6 +373,7 @@ export class BertStakingSDK {
     positionId,
     tokenMint,
     amount,
+    poolIndex,
     tokenAccount,
     vault,
   }: {
@@ -387,8 +381,9 @@ export class BertStakingSDK {
     authority: PublicKey;
     tokenMint: PublicKey;
     configId?: number;
-    positionId: number;
+    positionId?: number;
     amount: number | BN;
+    poolIndex: number;
     tokenAccount?: PublicKey;
     vault?: PublicKey;
   }): Promise<string> {
@@ -401,6 +396,7 @@ export class BertStakingSDK {
       configId,
       positionId,
       amount,
+      poolIndex,
       tokenAccount,
       vault,
     });
@@ -646,6 +642,20 @@ export class BertStakingSDK {
    */
   async fetchPositionsByOwner(owner: PublicKey) {
     return fetchPositionsByOwnerRpc(owner, this.program);
+  }
+
+  /**
+   * Fetches a user account for a given owner and config
+   */
+  async fetchUserAccount(owner: PublicKey, config: PublicKey) {
+    return fetchUserAccountRpc(owner, config, this.program);
+  }
+
+  /**
+   * Fetches a user account by address
+   */
+  async fetchUserAccountByAddress(userAccountAddress: PublicKey) {
+    return fetchUserAccountByAddressRpc(userAccountAddress, this.program);
   }
 
   /**

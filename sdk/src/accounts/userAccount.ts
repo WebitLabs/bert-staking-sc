@@ -1,18 +1,16 @@
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-// import { Position } from "../types";
 import { BertStakingSc } from "../idl";
-import { BN } from "@coral-xyz/anchor";
-import { PositionIdl, UserAccountIdl } from "../types";
+import { UserAccountIdl } from "../types";
 
 /**
- * Fetch a position account for a given owner and collection
+ * Fetch a user account for a given owner and config
  */
 export async function fetchUserAccountRpc(
   owner: PublicKey,
   config: PublicKey,
   program: Program<BertStakingSc>
-): Promise<PositionIdl | null> {
+): Promise<UserAccountIdl | null> {
   try {
     const [userPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("user"), owner.toBuffer(), config.toBuffer()],
@@ -20,13 +18,15 @@ export async function fetchUserAccountRpc(
     );
 
     // Fetch the account
-    const position = await program.account.positionV2.fetchNullable(userPda);
+    const userAccount = await program.account.userAccount.fetchNullable(
+      userPda
+    );
 
-    if (!position) {
+    if (!userAccount) {
       return null;
     }
 
-    return position as PositionIdl;
+    return userAccount as UserAccountIdl;
   } catch (error) {
     console.error("Error fetching user account:", error);
     return null;

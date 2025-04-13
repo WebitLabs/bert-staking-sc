@@ -234,35 +234,13 @@ describe("bert-staking-sc", () => {
 
     // We'll use the 7-day lock period which has an 8% yield rate
     const lockPeriodYieldIndex = 2;
+    const [positionPda] = sdk.pda.findPositionPda(
+      payer.publicKey,
+      tokenMint,
+      positionId
+    );
 
-    try {
-      // Create position PDA with the specified positionId
-      const [positionPda] = sdk.pda.findPositionPda(
-        payer.publicKey,
-        tokenMint,
-        positionId
-      );
-      console.log("Position PDA:", positionPda.toString());
-
-      // Step 1: Initialize position first with the new parameters
-      console.log("Initializing position...");
-      const initPositionIx = await sdk.initializePosition({
-        authority: payer.publicKey,
-        owner: payer.publicKey,
-        tokenMint,
-        configId,
-        positionId,
-        lockPeriodYieldIndex,
-        positionType: PositionType.Token,
-      });
-
-      // Process the initialize position transaction
-      await createAndProcessTransaction(client, payer, [initPositionIx]);
-      console.log("Position initialized successfully");
-    } catch (err) {
-      console.error("Failed to initialize position or stake tokens:", err);
-      expect.fail("Position initialization or token staking failed");
-    }
+    // NOTE: You no longer need to init position.
 
     // Verify the position was created with correct initial values
     let position = await sdk.fetchPosition(
@@ -499,34 +477,36 @@ describe("bert-staking-sc", () => {
   });
 
   it("Stakes a Metaplex Core asset successfully", async () => {
-    const lockPeriodYieldIndex = 3;
+    const poolIndex = 3;
 
     // Get the Config PDA and account data with our configId
     const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
     const configAccount = await sdk.fetchConfigByAddress(configPda);
 
-    try {
-      // Use a distinct position ID for the NFT stake
+    // NOTE: You no longer need to init position.
 
-      // First, initialize the position for the NFT
-      console.log("Initializing position for NFT staking...");
-      const initPositionIx = await sdk.initializePosition({
-        authority: payer.publicKey,
-        owner: payer.publicKey,
-        tokenMint,
-        configId,
-        positionId: nftPositionId,
-        lockPeriodYieldIndex,
-        positionType: PositionType.NFT,
-      });
-
-      // Process the initialize position transaction
-      await createAndProcessTransaction(client, payer, [initPositionIx]);
-      console.log("NFT position initialized successfully");
-    } catch (err) {
-      console.error("Failed to stake NFT:", err);
-      expect.fail(`NFT staking failed: ${err}`);
-    }
+    // try {
+    //   // Use a distinct position ID for the NFT stake
+    //
+    //   // First, initialize the position for the NFT
+    //   console.log("Initializing position for NFT staking...");
+    //   const initPositionIx = await sdk.initializePosition({
+    //     authority: payer.publicKey,
+    //     owner: payer.publicKey,
+    //     tokenMint,
+    //     configId,
+    //     positionId: nftPositionId,
+    //     lockPeriodYieldIndex,
+    //     positionType: PositionType.NFT,
+    //   });
+    //
+    //   // Process the initialize position transaction
+    //   await createAndProcessTransaction(client, payer, [initPositionIx]);
+    //   console.log("NFT position initialized successfully");
+    // } catch (err) {
+    //   console.error("Failed to stake NFT:", err);
+    //   expect.fail(`NFT staking failed: ${err}`);
+    // }
 
     console.log("Staking a single Metaplex Core asset...");
     console.log("Owner:", payer.publicKey.toString());
@@ -551,7 +531,7 @@ describe("bert-staking-sc", () => {
       updateAuthority: payer.publicKey,
       payer: payer.publicKey,
       configId,
-      positionId: nftPositionId,
+      poolIndex,
     });
 
     // Process the transaction
@@ -574,7 +554,7 @@ describe("bert-staking-sc", () => {
     expect(position.owner.toString()).to.equal(payer.publicKey.toString());
     expect(position.positionType).to.deep.equal({ nft: {} });
     expect(position.amount.toNumber()).to.equal(nftValueInTokens);
-    expect(position.lockPeriodYieldIndex).to.equal(lockPeriodYieldIndex);
+    expect(position.lockPeriodYieldIndex).to.equal(poolIndex);
 
     // Verify the staked NFT is in the position's nft_mints array
     expect(position.nftMints[0].toString()).to.equal(

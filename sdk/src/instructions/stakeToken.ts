@@ -15,6 +15,7 @@ export type StakeTokenParams = {
   owner: web3.PublicKey;
   tokenMint: web3.PublicKey;
   amount: number | BN;
+  poolIndex: number; // Index of the pool config to use (determines lock period and yield)
   configId?: number; // ID for the config account
   positionId?: number; // ID for the position account
   tokenAccount?: web3.PublicKey;
@@ -31,6 +32,7 @@ export async function stakeTokenInstruction({
   owner,
   tokenMint,
   amount,
+  poolIndex,
   configId = 0,
   positionId = 0,
   tokenAccount,
@@ -39,26 +41,45 @@ export async function stakeTokenInstruction({
   // Convert amount to BN if needed
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
 
+  // Find Config PDA with the provided ID
   const [configPda] = pda.findConfigPda(authority, configId);
-  const [positionPda] = pda.findPositionPda(owner, tokenMint, positionId);
+
+  // Find User Account PDA
+  const [userAccountPda] = pda.findUserAccountPda(owner, configPda);
+
+  // Find Position PDA with the positionId
+  const positionIdBuffer = new BN(positionId).toArrayLike(Buffer, "le", 8);
+  const [positionPda] = web3.PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("position"),
+      owner.toBuffer(),
+      tokenMint.toBuffer(),
+      positionIdBuffer,
+    ],
+    program.programId
+  );
 
   // Derive the token account if not provided
   const userTokenAccount =
     tokenAccount ||
-    web3.PublicKey.findProgramAddressSync(
-      [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), tokenMint.toBuffer()],
+    getAssociatedTokenAddressSync(
+      tokenMint,
+      owner,
+      true,
+      TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
-    )[0];
+    );
 
   // Get vault address
   const vaultAta =
     vault || getAssociatedTokenAddressSync(tokenMint, configPda, true);
 
   return program.methods
-    .stakeToken(amountBN)
+    .stakeToken(poolIndex, amountBN)
     .accountsStrict({
       owner,
       config: configPda,
+      userAccount: userAccountPda,
       position: positionPda,
       mint: tokenMint,
       tokenAccount: userTokenAccount,
