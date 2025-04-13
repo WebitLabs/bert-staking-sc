@@ -1,6 +1,6 @@
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
-import { Config, ConfigIdl } from "../types";
+import { ConfigIdl } from "../types";
 import { BertStakingSc } from "../idl";
 
 /**

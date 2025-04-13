@@ -1,10 +1,5 @@
 import { BN, IdlTypes } from "@coral-xyz/anchor";
-import {
-  LockPeriod,
-  LockPeriodYield,
-  PositionIdl,
-  PositionType,
-} from "./types";
+import { PositionType } from "./types";
 import { BertStakingSc } from "./idl";
 import { PublicKey } from "@solana/web3.js";
 
@@ -52,40 +47,14 @@ export function calculateUnlockTime(
   return currentTimestamp + daysToSeconds(lockDays);
 }
 
-type LockPeriodIdlType = IdlTypes<BertStakingSc>["lockPeriod"];
 type PositionTypeIdlType = IdlTypes<BertStakingSc>["positionType"];
 type PoolsConfigType = IdlTypes<BertStakingSc>["poolConfig"];
-
-/**
- * Converts a LockPeriod enum value to its IDL representation
- */
-export function getLockPeriodFromIdl(p: LockPeriod): LockPeriodIdlType {
-  switch (p) {
-    case LockPeriod.OneDay:
-      return { oneDay: {} };
-    case LockPeriod.ThreeDays:
-      return { threeDays: {} };
-    case LockPeriod.SevenDays:
-      return { sevenDays: {} };
-    case LockPeriod.ThirtyDays:
-      return { thirtyDays: {} };
-    default:
-      throw new Error(`Invalid lock period: ${p}`);
-  }
-}
-
-/**
- * Convert an array of lock periods to their IDL representation
- */
-export function getLockPeriodsArrayFromIdl(periods: LockPeriod[]) {
-  return periods.map((period) => getLockPeriodFromIdl(period));
-}
 
 /**
  * Create a PoolConfig IDL object
  */
 export function createPoolConfigIdl(
-  lockPeriod: LockPeriod,
+  lockPeriodDays: number,
   yieldRate: number | BN,
   maxNftsCap: number = 1000,
   maxTokensCap: number | BN = 1000000000
@@ -99,7 +68,7 @@ export function createPoolConfigIdl(
   const paddingArray = new Array(64).fill(0);
 
   return {
-    lockPeriod: getLockPeriodFromIdl(lockPeriod),
+    lockPeriodDays,
     yieldRate: yieldRateBN,
     maxNftsCap: maxNftsCap,
     maxTokensCap: maxTokensCapBN,
@@ -108,7 +77,7 @@ export function createPoolConfigIdl(
 }
 
 /**
- * Create an array of PoolConfig objects for all lock periods
+ * Create an array of PoolConfig objects for standard lock periods
  * @param defaultYieldRate Default yield rate to use for all periods
  * @param maxNftsCap Default max NFTs cap for all periods
  * @param maxTokensCap Default max tokens cap for all periods
@@ -119,27 +88,28 @@ export function createDefaultLockPeriodYields(
   maxNftsCap: number = 1000,
   maxTokensCap: number | BN = 1000000000
 ): PoolsConfigType[] {
+  // Use the standard lock periods (1, 3, 7, 30 days)
   return [
     createPoolConfigIdl(
-      LockPeriod.OneDay,
+      1, // 1 day
       defaultYieldRate,
       maxNftsCap,
       maxTokensCap
     ),
     createPoolConfigIdl(
-      LockPeriod.ThreeDays,
+      3, // 3 days
       defaultYieldRate,
       maxNftsCap,
       maxTokensCap
     ),
     createPoolConfigIdl(
-      LockPeriod.SevenDays,
+      7, // 7 days
       defaultYieldRate,
       maxNftsCap,
       maxTokensCap
     ),
     createPoolConfigIdl(
-      LockPeriod.ThirtyDays,
+      30, // 30 days
       defaultYieldRate,
       maxNftsCap,
       maxTokensCap
@@ -151,7 +121,7 @@ export function createDefaultLockPeriodYields(
  * Configuration parameters for a single pool
  */
 export interface PoolConfigParams {
-  lockPeriod: LockPeriod;
+  lockPeriodDays: number;
   yieldRate: number | BN;
   maxNfts: number;
   maxTokens: number | BN;
@@ -166,22 +136,14 @@ export function createPoolsConfig(
   poolsConfig: PoolConfigParams[]
 ): PoolsConfigType[] {
   if (!poolsConfig || poolsConfig.length === 0) {
-    const allPeriods = getAllLockPeriods();
-    // If no config provided, create default configs for all periods
-    return allPeriods.map((period) =>
-      createPoolConfigIdl(
-        period,
-        500, // Default 5% yield
-        1000, // Default 1000 NFTs per pool
-        1000000000 // Default 1B tokens per pool
-      )
-    );
+    // If no config provided, create default configs for standard periods
+    return createDefaultLockPeriodYields();
   }
 
   // Use the provided configurations
   return poolsConfig.map((config) =>
     createPoolConfigIdl(
-      config.lockPeriod,
+      config.lockPeriodDays,
       config.yieldRate,
       config.maxNfts,
       config.maxTokens
@@ -190,36 +152,11 @@ export function createPoolsConfig(
 }
 
 /**
- * Create a custom array of PoolConfig objects with specific yield rates and caps
- * @param yields Map of lock periods to yield rates
- * @param maxNftsCap Default max NFTs cap for all periods
- * @param maxTokensCap Default max tokens cap for all periods
- * @returns Array of PoolConfig objects
- * @deprecated Use createPoolsConfig instead for more granular control
+ * Get the standard lock period days
+ * @returns Array of standard lock period days (1, 3, 7, 30)
  */
-export function createCustomLockPeriodYields(
-  yields: Map<LockPeriod, number | BN>,
-  maxNftsCap: number = 1000,
-  maxTokensCap: number | BN = 1000000000
-): PoolsConfigType[] {
-  const allPeriods = getAllLockPeriods();
-  return allPeriods.map((period) => {
-    const yieldRate = yields.get(period) || 500; // Default to 5% if not specified
-    return createPoolConfigIdl(period, yieldRate, maxNftsCap, maxTokensCap);
-  });
-}
-
-/**
- * Create a default array of all lock periods
- * @returns Array of all available lock periods
- */
-export function getAllLockPeriods(): LockPeriod[] {
-  return [
-    LockPeriod.OneDay,
-    LockPeriod.ThreeDays,
-    LockPeriod.SevenDays,
-    LockPeriod.ThirtyDays,
-  ];
+export function getStandardLockPeriodDays(): number[] {
+  return [1, 3, 7, 30];
 }
 
 export function getPositionTypeIdl(p: PositionType): PositionTypeIdlType {
@@ -228,6 +165,6 @@ export function getPositionTypeIdl(p: PositionType): PositionTypeIdlType {
   } else if (p == PositionType.NFT) {
     return { nft: {} };
   } else {
-    throw Error("Invalid lock period");
+    throw Error("Invalid position type");
   }
 }

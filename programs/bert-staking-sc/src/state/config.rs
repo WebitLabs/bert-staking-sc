@@ -1,19 +1,11 @@
 use anchor_lang::prelude::*;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, InitSpace, Debug)]
-pub enum LockPeriod {
-    OneDay = 1,
-    ThreeDays = 3,
-    SevenDays = 7,
-    ThirtyDays = 30,
-}
-
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]
 pub struct PoolConfig {
-    pub lock_period: LockPeriod, // The lock period
-    pub yield_rate: u64,         // Yield rate in basis points (e.g., 500 = 5%)
-    pub max_nfts_cap: u32,       // Maximum amount of NFTs that can be staked for this pool
-    pub max_tokens_cap: u64,     // Maximum amount of tokens that can be staked for this pool
+    pub lock_period_days: u16, // The lock period in days
+    pub yield_rate: u64,       // Yield rate in basis points (e.g., 500 = 5%)
+    pub max_nfts_cap: u32,     // Maximum amount of NFTs that can be staked for this pool
+    pub max_tokens_cap: u64,   // Maximum amount of tokens that can be staked for this pool
 
     /// Padding
     pub _padding: [u8; 64],
@@ -21,7 +13,7 @@ pub struct PoolConfig {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]
 pub struct PoolStats {
-    pub lock_period: LockPeriod, // The lock period
+    pub lock_period_days: u16, // The lock period in days
 
     pub total_nfts_staked: u32,
     pub total_tokens_staked: u64,

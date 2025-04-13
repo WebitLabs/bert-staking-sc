@@ -61,7 +61,7 @@ impl<'info> Initialize<'info> {
         let config = &mut self.config;
 
         let pools_stats = pools_config.map(|pool| PoolStats {
-            lock_period: pool.lock_period,
+            lock_period_days: pool.lock_period_days,
 
             total_nfts_staked: 0,
             total_tokens_staked: 0,

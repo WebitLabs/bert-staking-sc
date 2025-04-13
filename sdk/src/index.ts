@@ -32,10 +32,9 @@ import {
   fetchUserAccountRpc,
   fetchUserAccountByAddressRpc,
 } from "./accounts";
-import { LockPeriod, PositionType } from "./types";
+import { PositionType } from "./types";
 import {
-  getAllLockPeriods,
-  getLockPeriodFromIdl,
+  getStandardLockPeriodDays,
   PoolConfigParams,
 } from "./utils";
 
@@ -678,11 +677,7 @@ export class BertStakingSDK {
     return new BertStakingSDK(provider, programId);
   }
 
-  static getSupportedLockPeriods() {
-    return getAllLockPeriods();
-  }
-
-  static getLockPeriodFromIdl(p: LockPeriod) {
-    return getLockPeriodFromIdl(p);
+  static getSupportedLockPeriodDays() {
+    return getStandardLockPeriodDays();
   }
 }

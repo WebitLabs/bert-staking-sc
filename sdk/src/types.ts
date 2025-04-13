@@ -34,18 +34,7 @@ export enum StakingError {
   AlreadyStaked = 6009,
 }
 
-/**
- * Lock period enum for staking
- */
-export enum LockPeriod {
-  OneDay = 1,
-  ThreeDays = 3,
-  SevenDays = 7,
-  ThirtyDays = 30,
-}
-
 // IDL types
-export type LockPeriodIdl = IdlTypes<BertStakingSc>["lockPeriod"];
 export type ConfigIdl = IdlAccounts<BertStakingSc>["config"];
 export type UserAccountIdl = IdlAccounts<BertStakingSc>["userAccount"];
 export type PositionIdl = IdlAccounts<BertStakingSc>["positionV2"];
@@ -54,28 +43,8 @@ export type PositionIdl = IdlAccounts<BertStakingSc>["positionV2"];
  * Lock period yield mapping structure
  */
 export interface LockPeriodYield {
-  lockPeriod: LockPeriod;
+  lockPeriodDays: number;
   yieldRate: BN;
-}
-
-/**
- * Config account data structure
- */
-export interface Config {
-  authority: PublicKey;
-  mint: PublicKey;
-  collection: PublicKey;
-  vault: PublicKey;
-  nftsVault: PublicKey;
-  authorityVault: PublicKey;
-  lockPeriodYields: LockPeriodYield[];
-  id: BN;
-  maxCap: BN;
-  nftValueInTokens: BN;
-  nftsLimitPerUser: number;
-  totalStakedAmount: BN;
-  bump: number;
-  authorityVaultBump: number;
 }
 
 /**

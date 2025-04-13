@@ -1,7 +1,6 @@
 import { Program, web3, BN } from "@coral-xyz/anchor";
 import { BertStakingSc } from "../idl";
 import { BertStakingPda } from "../pda";
-import { LockPeriod } from "../types";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   getAssociatedTokenAddressSync,
@@ -12,7 +11,6 @@ import {
   createPoolsConfig,
   PoolConfigParams,
 } from "../utils";
-import { config } from "chai";
 
 export type InitializeParams = {
   program: Program<BertStakingSc>;
@@ -65,6 +63,7 @@ export async function initializeInstruction({
   if (poolsConfig && poolsConfig.length > 0) {
     poolsConfigArray = createPoolsConfig(poolsConfig);
   } else {
+    // TODO: Remove
     poolsConfigArray = createDefaultLockPeriodYields(
       defaultYieldRate,
       maxNftsCap,

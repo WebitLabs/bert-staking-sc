@@ -1758,37 +1758,13 @@
       }
     },
     {
-      "name": "LockPeriod",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "OneDay"
-          },
-          {
-            "name": "ThreeDays"
-          },
-          {
-            "name": "SevenDays"
-          },
-          {
-            "name": "ThirtyDays"
-          }
-        ]
-      }
-    },
-    {
       "name": "PoolConfig",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "lock_period",
-            "type": {
-              "defined": {
-                "name": "LockPeriod"
-              }
-            }
+            "name": "lock_period_days",
+            "type": "u16"
           },
           {
             "name": "yield_rate",
@@ -1823,12 +1799,8 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "lock_period",
-            "type": {
-              "defined": {
-                "name": "LockPeriod"
-              }
-            }
+            "name": "lock_period_days",
+            "type": "u16"
           },
           {
             "name": "total_nfts_staked",

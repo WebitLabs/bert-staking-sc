@@ -104,13 +104,9 @@ impl<'info> StakeToken<'info> {
         position.lock_period_yield_index = pool_index;
 
         // Caclulate unlock time (curremt time + lock_time in seconds)
-        let lock_days = match pool_config.lock_period {
-            LockPeriod::OneDay => 1,
-            LockPeriod::ThreeDays => 3,
-            LockPeriod::SevenDays => 7,
-            LockPeriod::ThirtyDays => 30,
-        };
-        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days * 24 * 60 * 60);
+        // Use the days value directly from the pool config
+        let lock_days = pool_config.lock_period_days;
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 24 * 60 * 60);
         position.status = PositionStatus::Unclaimed;
 
         // Transfer tokens from user to program

@@ -8,9 +8,7 @@ import {
 } from "./helpers/bankrun";
 import {
   BertStakingSDK,
-  Config,
   ConfigIdl,
-  LockPeriod,
   Position,
   PositionIdl,
   PositionType,
@@ -42,25 +40,25 @@ const maxTokensCap = 1_000_000_000_000_000; // 1 Bilion with 6 decimals
 
 const poolsConfig = [
   {
-    lockPeriod: LockPeriod.OneDay,
+    lockPeriodDays: 1,
     yieldRate: 300,
     maxNfts: maxNftsCap,
     maxTokens: maxTokensCap,
   },
   {
-    lockPeriod: LockPeriod.ThreeDays,
+    lockPeriodDays: 3,
     yieldRate: 500,
     maxNfts: maxNftsCap,
     maxTokens: maxTokensCap,
   },
   {
-    lockPeriod: LockPeriod.SevenDays,
+    lockPeriodDays: 7,
     yieldRate: 800,
     maxNfts: maxNftsCap,
     maxTokens: maxTokensCap,
   },
   {
-    lockPeriod: LockPeriod.ThirtyDays,
+    lockPeriodDays: 30,
     yieldRate: 1200,
     maxNfts: maxNftsCap,
     maxTokens: maxTokensCap,
@@ -186,18 +184,10 @@ describe("bert-staking-sc", () => {
     }
 
     // Verify lock periods are correctly set
-    expect(configAccount.poolsConfig[0].lockPeriod).to.deep.equal({
-      oneDay: {},
-    });
-    expect(configAccount.poolsConfig[1].lockPeriod).to.deep.equal({
-      threeDays: {},
-    });
-    expect(configAccount.poolsConfig[2].lockPeriod).to.deep.equal({
-      sevenDays: {},
-    });
-    expect(configAccount.poolsConfig[3].lockPeriod).to.deep.equal({
-      thirtyDays: {},
-    });
+    expect(configAccount.poolsConfig[0].lockPeriodDays).to.equal(1);
+    expect(configAccount.poolsConfig[1].lockPeriodDays).to.equal(3);
+    expect(configAccount.poolsConfig[2].lockPeriodDays).to.equal(7);
+    expect(configAccount.poolsConfig[3].lockPeriodDays).to.equal(30);
 
     // Verify pool stats are initialized correctly
     for (let i = 0; i < 4; i++) {
@@ -214,8 +204,8 @@ describe("bert-staking-sc", () => {
       ).to.equal("0");
 
       // Verify lock periods in stats match the config
-      expect(configAccount.poolsStats[i].lockPeriod).to.deep.equal(
-        configAccount.poolsConfig[i].lockPeriod
+      expect(configAccount.poolsStats[i].lockPeriodDays).to.equal(
+        configAccount.poolsConfig[i].lockPeriodDays
       );
     }
 
@@ -231,13 +221,7 @@ describe("bert-staking-sc", () => {
     console.log("Config initialized successfully with all pool configurations");
     console.log("Pool Configurations:");
     configAccount.poolsConfig.forEach((pool, index) => {
-      let lockPeriodName = "";
-      if ("oneDay" in pool.lockPeriod) lockPeriodName = "1 Day";
-      else if ("threeDays" in pool.lockPeriod) lockPeriodName = "3 Days";
-      else if ("sevenDays" in pool.lockPeriod) lockPeriodName = "7 Days";
-      else if ("thirtyDays" in pool.lockPeriod) lockPeriodName = "30 Days";
-
-      console.log(`Pool ${index} (${lockPeriodName}):`);
+      console.log(`Pool ${index} (${pool.lockPeriodDays} days):`);
       console.log(`  Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
       console.log(`  Max NFTs: ${pool.maxNftsCap}`);
       console.log(`  Max Tokens: ${pool.maxTokensCap.toString()}`);
