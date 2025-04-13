@@ -1408,6 +1408,10 @@
       ],
       "args": [
         {
+          "name": "id",
+          "type": "u64"
+        },
+        {
           "name": "pool_index",
           "type": "u8"
         },

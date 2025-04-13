@@ -52,13 +52,13 @@ export class BertStakingPda {
    * Find the Position PDA for a given owner, mint, and ID
    * @param owner The owner public key
    * @param mint The token mint public key
-   * @param id Optional ID for the position (defaults to 0)
+   * @param id ID for the position (defaults to 0)
    * @returns The Position PDA and bump
    */
   findPositionPda(
     owner: PublicKey,
     mint: PublicKey,
-    id: number = 0
+    id: number
   ): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [

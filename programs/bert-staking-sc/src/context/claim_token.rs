@@ -109,7 +109,7 @@ impl<'info> ClaimPositionToken<'info> {
         // 1. yield from authority vault
         // 2. principal from vault
 
-        // For tokens, transfer the original amount plus yield
+        // Transfer the original amount plus yield
         anchor_spl::token::transfer(
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
@@ -128,7 +128,7 @@ impl<'info> ClaimPositionToken<'info> {
         position.status = PositionStatus::Claimed;
 
         let config = &mut self.config;
-        let mut pool_stats = config.pools_stats[pool_index as usize];
+        // let mut pool_stats = config.pools_stats[pool_index as usize];
 
         // Update config's total staked amount
         config.total_staked_amount = config
@@ -136,23 +136,29 @@ impl<'info> ClaimPositionToken<'info> {
             .checked_sub(position_amount)
             .ok_or(ProgramError::ArithmeticOverflow)?;
 
-        // Update pool config
-        pool_stats.total_tokens_staked = pool_stats
-            .total_tokens_staked
-            .checked_sub(position_amount)
-            .ok_or(StakingError::ArithmeticOverflow)?;
-        pool_stats.lifetime_claimed_yield = pool_stats
-            .lifetime_claimed_yield
-            .checked_add(yield_value)
-            .ok_or(StakingError::ArithmeticOverflow)?;
+        // Update pool stats directly in the array
+        {
+            // Create a scoped mutable reference to the pool stats
+            let pool_stats = &mut config.pools_stats[pool_index as usize];
+
+            // Update pool config
+            pool_stats.total_tokens_staked = pool_stats
+                .total_tokens_staked
+                .checked_sub(position_amount)
+                .ok_or(StakingError::ArithmeticOverflow)?;
+            pool_stats.lifetime_claimed_yield = pool_stats
+                .lifetime_claimed_yield
+                .checked_add(yield_value)
+                .ok_or(StakingError::ArithmeticOverflow)?;
+        } // The mutable borrow of pool_stats ends here
 
         // Update user stats
         let user_account = &mut self.user_account;
-        user_account
+        user_account.total_staked_token_amount = user_account
             .total_staked_token_amount
             .checked_sub(position_amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
-        user_account
+        user_account.total_staked_value = user_account
             .total_staked_value
             .checked_add(position_amount)
             .ok_or(StakingError::ArithmeticOverflow)?;

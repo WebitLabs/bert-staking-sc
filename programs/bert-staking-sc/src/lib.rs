@@ -40,8 +40,13 @@ pub mod bert_staking_sc {
         ctx.accounts.stake_nft(pool_index)
     }
 
-    pub fn stake_token(ctx: Context<StakeToken>, pool_index: u8, amount: u64) -> Result<()> {
-        ctx.accounts.stake_token(pool_index, amount)
+    pub fn stake_token(
+        ctx: Context<StakeToken>,
+        id: u64,
+        pool_index: u8,
+        amount: u64,
+    ) -> Result<()> {
+        ctx.accounts.stake_token(id, pool_index, amount, &ctx.bumps)
     }
 
     pub fn claim_position_nft(ctx: Context<ClaimPositionNft>) -> Result<()> {

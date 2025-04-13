@@ -58,7 +58,13 @@ pub struct StakeToken<'info> {
 }
 
 impl<'info> StakeToken<'info> {
-    pub fn stake_token(&mut self, pool_index: u8, amount: u64) -> Result<()> {
+    pub fn stake_token(
+        &mut self,
+        id: u64,
+        pool_index: u8,
+        amount: u64,
+        bumps: &StakeTokenBumps,
+    ) -> Result<()> {
         // Check if amount is valid
         if amount == 0 {
             return Err(StakingError::InvalidAmount.into());
@@ -70,19 +76,22 @@ impl<'info> StakeToken<'info> {
             StakingError::InvalidLockPeriodAndYield
         );
 
+        // Get a mutable reference to the config
         let config = &mut self.config;
+
+        // Create a copy of the pool config for reading
         let pool_config = config.pools_config[pool_index as usize];
-        let mut pool_stats = config.pools_stats[pool_index as usize];
 
         // Check if staking would exceed the max cap / user / pool
-        let new_pool_total_staked = pool_stats
-            .total_tokens_staked
+        let new_user_total_value = self
+            .user_account
+            .total_staked_value
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
         // Check user has not exceed its caps
         require!(
-            new_pool_total_staked > pool_config.max_tokens_cap,
+            new_user_total_value < pool_config.max_tokens_cap,
             StakingError::UserTokensLimitCapReached
         );
 
@@ -92,16 +101,19 @@ impl<'info> StakeToken<'info> {
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        if new_total > config.max_cap {
-            return Err(StakingError::MaxCapReached.into());
-        }
+        // if new_total > config.max_cap {
+        //     return Err(StakingError::MaxCapReached.into());
+        // }
 
         // Create a position for the staked tokens
         let position = &mut self.position;
+        position.owner = self.owner.key();
         position.deposit_time = Clock::get()?.unix_timestamp;
         position.amount = position.amount.checked_add(amount).unwrap();
         position.position_type = PositionType::Token;
         position.lock_period_yield_index = pool_index;
+        position.id = id;
+        position.bump = bumps.position;
 
         // Caclulate unlock time (curremt time + lock_time in seconds)
         // Use the days value directly from the pool config
@@ -125,23 +137,32 @@ impl<'info> StakeToken<'info> {
         // Update config's total staked amount
         config.total_staked_amount = new_total;
 
-        // Update pool config
-        pool_stats.total_tokens_staked = new_pool_total_staked;
-        pool_stats.lifetime_tokens_staked = pool_stats
-            .lifetime_tokens_staked
-            .checked_add(amount)
-            .ok_or(StakingError::ArithmeticOverflow)?;
+        // Update pool stats directly in the array
+        {
+            // Create a scoped mutable reference to the pool stats
+            let pool_stats = &mut config.pools_stats[pool_index as usize];
+
+            // Update total tokens staked
+            pool_stats.total_tokens_staked = pool_stats
+                .total_tokens_staked
+                .checked_add(amount)
+                .ok_or(StakingError::ArithmeticOverflow)?;
+
+            // Update lifetime tokens staked
+            pool_stats.lifetime_tokens_staked = pool_stats
+                .lifetime_tokens_staked
+                .checked_add(amount)
+                .ok_or(StakingError::ArithmeticOverflow)?;
+        } // The mutable borrow of pool_stats ends here
 
         // Update user stats
         let user_account = &mut self.user_account;
-        user_account
+        user_account.total_staked_token_amount = user_account
             .total_staked_token_amount
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
-        user_account
-            .total_staked_value
-            .checked_add(amount)
-            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        user_account.total_staked_value = new_user_total_value;
 
         Ok(())
     }

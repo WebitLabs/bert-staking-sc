@@ -48,16 +48,7 @@ export async function stakeTokenInstruction({
   const [userAccountPda] = pda.findUserAccountPda(owner, configPda);
 
   // Find Position PDA with the positionId
-  const positionIdBuffer = new BN(positionId).toArrayLike(Buffer, "le", 8);
-  const [positionPda] = web3.PublicKey.findProgramAddressSync(
-    [
-      Buffer.from("position"),
-      owner.toBuffer(),
-      tokenMint.toBuffer(),
-      positionIdBuffer,
-    ],
-    program.programId
-  );
+  const [positionPda] = pda.findPositionPda(owner, tokenMint, positionId);
 
   // Derive the token account if not provided
   const userTokenAccount =
@@ -75,7 +66,7 @@ export async function stakeTokenInstruction({
     vault || getAssociatedTokenAddressSync(tokenMint, configPda, true);
 
   return program.methods
-    .stakeToken(poolIndex, amountBN)
+    .stakeToken(new BN(positionId), poolIndex, amountBN)
     .accountsStrict({
       owner,
       config: configPda,
