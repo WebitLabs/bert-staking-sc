@@ -1,11 +1,10 @@
 import { Command } from "commander";
-import { PublicKey } from "@solana/web3.js";
-import { getSDK, getWallet } from "../utils/connection";
-import { LockPeriod } from "@bert-staking/sdk";
-
+import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { getConnection, getSDK, getWallet } from "../utils/connection";
 import ora from "ora";
 import { COLLECTION, MINT } from "../constants";
-import { createAssociatedTokenAccount } from "@solana/spl-token";
+import { createNftsVaultAccountInstruction } from "@bert-staking/sdk/src/utils";
+import { getMint } from "@solana/spl-token";
 
 /**
  * Initialize the staking program
@@ -16,6 +15,7 @@ export function initializeCommand(program: Command): void {
     .description("Initialize the BERT staking program")
     .option("-m, --mint <pubkey>", "Token mint address")
     .option("-c, --collection <pubkey>", "NFT collection address")
+    .option("-id, --config-id <number>", "Config ID", "1")
     .option(
       "-cap, --max-cap <amount>",
       "Maximum staking capacity in tokens",
@@ -23,59 +23,122 @@ export function initializeCommand(program: Command): void {
     )
     .option("-nv, --nft-value <amount>", "NFT value in tokens", "100000")
     .option("-nl, --nft-limit <number>", "NFT limit per user", "5")
+    .option(
+      "-p1, --pool1-yield <number>",
+      "Yield rate for 1-day pool (basis points, e.g. 300 = 3%)",
+      "500"
+    )
+    .option(
+      "-p3, --pool3-yield <number>",
+      "Yield rate for 3-day pool (basis points)",
+      "800"
+    )
+    .option(
+      "-p7, --pool7-yield <number>",
+      "Yield rate for 7-day pool (basis points)",
+      "1200"
+    )
+    .option(
+      "-p30, --pool30-yield <number>",
+      "Yield rate for 30-day pool (basis points)",
+      "1800"
+    )
+    .option("-mn, --max-nfts <number>", "Maximum NFTs per pool", "1000")
+    .option(
+      "-mt, --max-tokens <number>",
+      "Maximum tokens per pool",
+      "1000000000"
+    )
     .action(async (options) => {
       try {
         const spinner = ora("Initializing BERT staking program...").start();
 
         const sdk = getSDK();
         const wallet = getWallet();
+        const connection = getConnection();
 
-        let mint = new PublicKey(MINT);
-        let collection = new PublicKey(COLLECTION);
+        // Parse mint and collection addresses
+        let mint = options.mint
+          ? new PublicKey(options.mint)
+          : new PublicKey(MINT);
+        let collection = options.collection
+          ? new PublicKey(options.collection)
+          : new PublicKey(COLLECTION);
 
-        // Validate mint address
-        if (!options.mint) {
-          // spinner.fail("Token mint address is required");
-          mint = new PublicKey(MINT);
-        }
+        const decimals = (await getMint(connection, mint)).decimals;
 
-        // Validate collection address
-        if (!options.collection) {
-          // spinner.fail("NFT collection address is required");
-          collection = new PublicKey(COLLECTION);
-        }
+        // Parse config ID
+        const configId = parseInt(options.configId);
+        spinner.text = `Initializing with config ID: ${configId}`;
 
-        const configId = 2; // Using 1 instead of 0 to test non-default ID
+        // Find the config PDA
         const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        spinner.text = `Config PDA: ${configPda.toString()}`;
 
-        // Define lock period yields with increasing rates for longer periods
-        const lockPeriodYields = new Map<LockPeriod, number>([
-          [LockPeriod.OneDay, 500], // 3% for 1 day
-          [LockPeriod.ThreeDays, 800], // 5% for 3 days
-          [LockPeriod.SevenDays, 1200],
-          [LockPeriod.ThirtyDays, 1800], // 12% for 30 days
-        ]);
+        // Find the NFTs vault PDA
+        const [nftsVaultPda] = sdk.pda.findNftsVaultPda(configPda, mint);
+        spinner.text = `NFTs Vault PDA: ${nftsVaultPda.toString()}`;
 
-        // create token vault
-        const [vaultTA] = sdk.pda.findAuthorityVaultPda(mint, configPda);
+        // Create pool configurations with custom yield rates
+        const poolsConfig = [
+          {
+            lockPeriodDays: 1,
+            yieldRate: parseInt(options.pool1Yield),
+            maxNfts: parseInt(options.maxNfts),
+            maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
+          },
+          {
+            lockPeriodDays: 3,
+            yieldRate: parseInt(options.pool3Yield),
+            maxNfts: parseInt(options.maxNfts),
+            maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
+          },
+          {
+            lockPeriodDays: 7,
+            yieldRate: parseInt(options.pool7Yield),
+            maxNfts: parseInt(options.maxNfts),
+            maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
+          },
+          {
+            lockPeriodDays: 30,
+            yieldRate: parseInt(options.pool30Yield),
+            maxNfts: parseInt(options.maxNfts),
+            maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
+          },
+        ];
 
-        const result = await sdk.initializeRpc({
-          authority: wallet.publicKey,
-          mint,
-          collection,
-          id: configId,
-          yieldRate: parseInt(options.yieldRate),
-          lockPeriodYields,
-          maxCap: parseInt(options.maxCap),
-          nftValueInTokens: parseInt(options.nftValue),
-          nftsLimitPerUser: parseInt(options.nftLimit),
-        });
+        // Create initialize instruction
+        spinner.text = "Creating initialize instruction...";
 
-        spinner.succeed(`Program initialized successfully. Tx: ${result}`);
+        const maxCap = parseInt(options.maxCap) * 10 ** decimals;
+        const nftValueInTokens = parseInt(options.nftValue) * 10 ** decimals;
+
+        let txId;
+        try {
+          txId = await sdk.initializeRpc({
+            authority: wallet.publicKey,
+            mint,
+            collection,
+            id: configId,
+            poolsConfig,
+            nftsVault: nftsVaultPda,
+            maxCap,
+            nftValueInTokens,
+            nftsLimitPerUser: parseInt(options.nftLimit),
+          });
+        } catch (err) {
+          spinner.fail(`Program failed to initialize. Tx: ${txId}`);
+          return;
+        }
+
+        spinner.succeed(`Program initialized successfully. Tx: ${txId}`);
 
         // Fetch and display config
         spinner.text = "Fetching program config...";
         spinner.start();
+
+        // Short delay to ensure config is available
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
         const config = await sdk.fetchConfigByAddress(configPda);
         if (!config) {
@@ -88,13 +151,25 @@ export function initializeCommand(program: Command): void {
         console.log(`- Authority: ${config.authority.toString()}`);
         console.log(`- Token Mint: ${config.mint.toString()}`);
         console.log(`- Collection: ${config.collection.toString()}`);
+        console.log(`- Vault: ${config.vault.toString()}`);
+        console.log(`- NFTs Vault: ${config.nftsVault.toString()}`);
         console.log(`- Max Cap: ${config.maxCap.toString()} tokens`);
         console.log(
           `- NFT Value: ${config.nftValueInTokens.toString()} tokens`
         );
         console.log(`- NFT Limit Per User: ${config.nftsLimitPerUser}`);
+
+        // Display pool configurations
+        console.log("\nPool Configurations:");
+        config.poolsConfig.forEach((pool, index) => {
+          console.log(`- Pool ${index + 1} (${pool.lockPeriodDays} days):`);
+          console.log(`  - Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
+          console.log(`  - Max NFTs: ${pool.maxNftsCap}`);
+          console.log(`  - Max Tokens: ${pool.maxTokensCap.toString()}`);
+        });
       } catch (error) {
         ora().fail(`Failed to initialize program: ${error}`);
+        console.error(error);
       }
     });
 }

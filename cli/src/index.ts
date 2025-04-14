@@ -34,10 +34,10 @@ program
 // createTokenCommand(program);
 // createCoreNftCommand(program);
 initializeCommand(program);
-initializePositionCommand(program);
-stakeTokenCommand(program);
-fetchConfigCommand(program);
-fetchPositionCommand(program);
+// initializePositionCommand(program);
+// stakeTokenCommand(program);
+// fetchConfigCommand(program);
+// fetchPositionCommand(program);
 
 // Parse command line arguments
 program.parse(process.argv);
