@@ -127,8 +127,7 @@
           ]
         },
         {
-          "name": "update_authority",
-          "signer": true
+          "name": "update_authority"
         },
         {
           "name": "asset",

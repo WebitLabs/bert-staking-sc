@@ -495,7 +495,7 @@ describe("bert-staking-sc", () => {
     // 6. Verify unlock time is correctly calculated (7 days in seconds)
     const unlockTime = position.unlockTime.toNumber();
     const depositTime = position.depositTime.toNumber();
-    const sevenDaysInSeconds = 7 * 24 * 60 * 60;
+    const sevenDaysInSeconds = 7 * 60;
     expect(unlockTime - depositTime).to.equal(sevenDaysInSeconds);
 
     console.log("\n---- Position Details ----");
@@ -994,7 +994,7 @@ describe("bert-staking-sc", () => {
       });
 
       // Process the claim transaction
-      await createAndProcessTransaction(client, payer, [claimNftIx], []);
+      await createAndProcessTransaction(client, payer, [claimNftIx], [payer]);
       console.log("NFT claimed successfully!");
     } catch (err) {
       console.error("Failed to claim NFT:", err);

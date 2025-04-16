@@ -133,8 +133,7 @@ export type BertStakingSc = {
           ]
         },
         {
-          "name": "updateAuthority",
-          "signer": true
+          "name": "updateAuthority"
         },
         {
           "name": "asset",
