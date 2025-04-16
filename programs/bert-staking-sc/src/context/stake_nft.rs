@@ -56,8 +56,8 @@ pub struct StakeNFT<'info> {
     )]
     pub asset: Account<'info, BaseAssetV1>,
 
-    ///CHECK:
-    #[account(mut)]
+    ///CHECK: UNUSED!
+    // #[account(mut)]
     pub nft_vault_owner: UncheckedAccount<'info>,
 
     #[account(mut)]
@@ -87,29 +87,47 @@ impl<'info> StakeNFT<'info> {
         let config = &mut self.config;
         let pool_config = config.pools_config[pool_index as usize];
 
-        // Check if staking would exceed the max cap / user / pool
+        // Check if pool_index is out of bounds for user pool stats
+        require!(
+            pool_index < self.user_account.pool_stats.len() as u8,
+            StakingError::InvalidLockPeriodAndYield
+        );
+
+        // Calculate new per-pool NFT count
+        let new_pool_nfts_staked = self.user_account.pool_stats[pool_index as usize]
+            .nfts_staked
+            .checked_add(1)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Calculate new per-pool total value
+        let new_pool_total_value = self.user_account.pool_stats[pool_index as usize]
+            .total_value
+            .checked_add(config.nft_value_in_tokens)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Calculate new total staked value across all pools
         let new_user_total_value = self
             .user_account
             .total_staked_value
             .checked_add(config.nft_value_in_tokens)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        // Check user has not exceed its caps
+        // Check user has not exceed the pool's token value cap
         require!(
-            new_user_total_value < pool_config.max_tokens_cap,
+            new_pool_total_value <= pool_config.max_tokens_cap,
             StakingError::UserTokensLimitCapReached
         );
 
-        // Check if staking would exceed the max cap / user / pool
+        // Calculate total NFTs staked across all pools
         let new_user_nfts_staked = self
             .user_account
             .total_staked_nfts
             .checked_add(1)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        // Check user has not exceed its caps
+        // Check user has not exceed the pool's NFT cap
         require!(
-            new_user_nfts_staked < pool_config.max_nfts_cap,
+            new_pool_nfts_staked <= pool_config.max_nfts_cap,
             StakingError::NftLimitReached
         );
 
@@ -130,13 +148,19 @@ impl<'info> StakeNFT<'info> {
         position.amount = config.nft_value_in_tokens;
         position.position_type = PositionType::NFT;
         position.lock_period_yield_index = pool_index;
-        position.lock_period_yield_index = pool_index;
+        position.asset = self.asset.key();
         position.bump = bumps.position;
 
         // Caclulate unlock time (curremt time + lock_time in seconds)
         // Use the days value directly from the pool config
         let lock_days = pool_config.lock_period_days;
-        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 24 * 60 * 60);
+        // IMPORTANT
+        // lock_days
+        // will
+        // be
+        // rerpesented in minutes
+
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 60);
         position.status = PositionStatus::Unclaimed;
 
         // self.stake()?;
@@ -243,20 +267,46 @@ impl<'info> StakeNFT<'info> {
                 .lifetime_nfts_staked
                 .checked_add(1)
                 .ok_or(StakingError::ArithmeticOverflow)?;
-        }
 
-        msg!("pool_stats: {:?}", config.pools_stats[pool_index as usize]);
+            msg!(
+                "pool_stats: lpd: {:?} | tns: {:?} | tss: {:?} | lns: {:?} | lts: {:?}",
+                pool_stats.lock_period_days,
+                pool_stats.total_nfts_staked,
+                pool_stats.total_tokens_staked,
+                pool_stats.lifetime_nfts_staked,
+                pool_stats.lifetime_tokens_staked
+            );
+        }
 
         // Update user stats
         let user_account = &mut self.user_account;
-        user_account.total_staked_nfts = user_account
-            .total_staked_nfts
-            .checked_add(1)
-            .ok_or(StakingError::ArithmeticOverflow)?;
-        user_account.total_staked_value = user_account
-            .total_staked_value
-            .checked_add(config.nft_value_in_tokens)
-            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Update per-pool stats
+        {
+            // Create a scoped mutable reference to the user's pool stats
+            let user_pool_stats = &mut user_account.pool_stats[pool_index as usize];
+
+            // Update NFTs staked in this pool
+            user_pool_stats.nfts_staked = new_pool_nfts_staked;
+
+            // Update total value in this pool
+            user_pool_stats.total_value = new_pool_total_value;
+
+            // Ensure lock period days is set correctly
+            user_pool_stats.lock_period_days = pool_config.lock_period_days;
+        }
+
+        // Update global user stats
+        user_account.total_staked_nfts = new_user_nfts_staked;
+        user_account.total_staked_value = new_user_total_value;
+
+        msg!(
+            "user_account: tsv: {:?} | tsn: {:?} | pool[{}].nfts_staked: {:?}",
+            user_account.total_staked_value,
+            user_account.total_staked_nfts,
+            pool_index,
+            user_account.pool_stats[pool_index as usize].nfts_staked
+        );
 
         Ok(())
     }

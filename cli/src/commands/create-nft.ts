@@ -3,9 +3,11 @@ import { Command } from "commander";
 import { getWallet } from "../utils/connection";
 import ora from "ora";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
+import { base58 } from "@metaplex-foundation/umi/serializers";
 import {
   createSignerFromKeypair,
   generateSigner,
+  KeypairSigner,
   publicKey,
   signerIdentity,
   TransactionBuilderSendAndConfirmOptions,
@@ -15,7 +17,10 @@ import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
 import {
   createCollectionV1,
   createV1,
+  getAssetV1GpaBuilder,
   mplCore,
+  Key,
+  updateAuthority,
 } from "@metaplex-foundation/mpl-core";
 
 const RPC = process.env.ENDPOINT || "https://api.devnet.solana.com";
@@ -34,7 +39,7 @@ export function createCoreNftCommand(program: Command): void {
 
     .action(async (options) => {
       try {
-        const spinner = ora("Creating new token mint...").start();
+        //const spinner = ora("Creating new token mint...").start();
 
         // const connection = getConnection();
         const wallet = getWallet();
@@ -57,47 +62,95 @@ export function createCoreNftCommand(program: Command): void {
           confirm: { commitment: "confirmed" },
         };
 
+        // 4. Fetch assets by owner
+        const assetsByOwner = await getAssetV1GpaBuilder(umi)
+          .whereField("key", Key.AssetV1)
+          .whereField("owner", userWalletSigner.publicKey)
+          .getDeserialized();
+
+        console.log("assets by owner:");
+        assetsByOwner.map((a) => console.log(a));
+
         // Create the NFT + Collection (if required)
         try {
-          let collectionPubkey = options.collection
-            ? publicKey(options.collection)
-            : publicKey("Sysvar1111111111111111111111111111111111111");
-          if (!options.collection) {
-            // Create a collection
-            const collection = generateSigner(umi);
-            collectionPubkey = collection.publicKey;
-            await createCollectionV1(umi, {
-              name: `${options.name} Collection`,
-              uri: "https://example.com/collection.json",
-              collection: collection,
-            }).sendAndConfirm(umi, txConfig);
-          }
+          // Create a collection
+          const collection = generateSigner(umi);
 
-          const random = Math.floor(Math.random() * 100);
-          console.log("======= random: ", random);
+          console.log("Creating Collection:", collection.publicKey.toString());
+          console.log(
+            "Coolection Update Authority:",
+            userWalletSigner.publicKey.toString()
+          );
 
-          const asset = generateSigner(umi);
-          await createV1(umi, {
-            name: `${options.name} #${random}`,
-            uri: "https://your.domain.com/asset-id.json",
-            asset: asset,
-            collection: collectionPubkey,
-            authority: userWalletSigner,
-            // owner: options.owner
-            //   ? publicKey(options.owner)
-            //   : userWalletSigner.publicKey,
+          await createCollectionV1(umi, {
+            name: `${options.name} Collection`,
+            uri: "https://example.com/collection.json",
+            collection: collection,
+            updateAuthority: userWalletSigner.publicKey,
           }).sendAndConfirm(umi, txConfig);
 
-          spinner.succeed(`NFT created: ${asset.publicKey.toString()}`);
+          console.log("✅ 1");
+
+          let asset: KeypairSigner;
+          await Promise.all(
+            Array(50)
+              .fill(1)
+              .map(async () => {
+                console.log("✅ 2");
+
+                const random = Math.floor(Math.random() * 100);
+                asset = generateSigner(umi);
+
+                console.log("✅ 3");
+
+                console.log("minting with asset: ", asset.publicKey.toString());
+                console.log(
+                  "minting with collection: ",
+                  collection.publicKey.toString()
+                );
+                console.log(
+                  "minting with payer: ",
+                  userWalletSigner.publicKey.toString()
+                );
+
+                console.log("✅ 4");
+
+                const result = await createV1(umi, {
+                  name: `${options.name} #${random}`,
+                  uri: "https://your.domain.com/asset-id.json",
+                  asset: asset,
+                  collection: collection.publicKey,
+                  authority: userWalletSigner,
+                  payer: userWalletSigner,
+                }).sendAndConfirm(umi, txConfig);
+
+                console.log("✅ 6");
+
+                if (result.result.value.err) {
+                  console.log(
+                    "❌ to mint asset with er",
+                    result.result.value.err
+                  );
+                  throw result.result.value.err;
+                }
+
+                console.log(
+                  "done minting with result:",
+                  base58.deserialize(result.signature)[0]
+                );
+              })
+          );
+
+          //spinner.succeed(`NFT created: ${asset!.publicKey.toString()}`);
 
           // Token information summary
           console.log("\nMPL Core NFT Created Successfully:");
-          console.log(`- Mint Address: ${asset.publicKey.toString()}`);
-          console.log(`- Name: ${options.name} #${random}`);
+          console.log(`- Mint Address: ${asset!.publicKey.toString()}`);
+          //console.log(`- Name: ${options.name} #${random}`);
           console.log(`- Authority: ${payer.publicKey.toString()}`);
         } catch (error) {
           console.error("Failed to MPL Core NFT asset:", error);
-          spinner.fail(`Failed to MPL Core NFT asset: ${error}`);
+          // spinner.fail(`Failed to MPL Core NFT asset: ${error}`);
         }
       } catch (error) {
         ora().fail(`Failed to create MPL Conre NFT assset: ${error}`);

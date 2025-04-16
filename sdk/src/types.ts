@@ -32,12 +32,19 @@ export enum StakingError {
   InvalidPositionType = 6007,
   InvalidNftMint = 6008,
   AlreadyStaked = 6009,
+  UserTokensLimitCapReached = 6010,
+  InvalidLockPeriodAndYield = 6011,
+  StakingNotInitialized = 6012,
+  AssetNotStaked = 6013,
+  AttributesNotInitialized = 6014,
+  InvalidTimestamp = 6015,
 }
 
 // IDL types
 export type ConfigIdl = IdlAccounts<BertStakingSc>["config"];
 export type UserAccountIdl = IdlAccounts<BertStakingSc>["userAccount"];
 export type PositionIdl = IdlAccounts<BertStakingSc>["positionV2"];
+export type UserPoolStatsIdl = IdlTypes<BertStakingSc>["userPoolStats"];
 
 /**
  * Lock period yield mapping structure

@@ -48,7 +48,8 @@ export async function getMplCoreCollection(
 export async function createCollectionAndMintAsset(
   authority: Keypair,
   client: BanksClient,
-  name: string
+  name: string,
+  numNfts = 1
 ) {
   const umi = createUmi(clusterApiUrl("devnet"));
   const signerWallet = createSignerFromKeypair(
@@ -76,26 +77,39 @@ export async function createCollectionAndMintAsset(
       toWeb3JsKeypair(collection),
     ]);
 
-    const n = Math.random() % 100;
-    const asset = generateSigner(umi);
-    let createIxs = createV1(umi, {
-      name: `${name} #${n}`,
-      uri: "https://your.domain.com/asset-id.json",
-      asset: asset,
-      collection: collection.publicKey,
-      authority: signerWallet,
-      owner: fromWeb3JsPublicKey(authority.publicKey),
-    }).getInstructions();
+    const createdAssets = await Promise.all(
+      Array(numNfts)
+        .fill(0)
+        .map(async () => {
+          const n = Math.random() % 100;
+          const asset = generateSigner(umi);
+          let createIxs = createV1(umi, {
+            name: `${name} #${n}`,
+            uri: "https://your.domain.com/asset-id.json",
+            asset: asset,
+            collection: collection.publicKey,
+            authority: signerWallet,
+            owner: fromWeb3JsPublicKey(authority.publicKey),
+          }).getInstructions();
 
-    let web3Createixs = createIxs.map((ix) => toWeb3JsInstruction(ix));
+          console.log("doing asset", asset.publicKey.toString());
 
-    await createAndProcessTransaction(client, authority, web3Createixs, [
-      toWeb3JsKeypair(asset),
-    ]);
+          let web3Createixs = createIxs.map((ix) => toWeb3JsInstruction(ix));
 
-    return { collection, asset };
+          await createAndProcessTransaction(client, authority, web3Createixs, [
+            toWeb3JsKeypair(asset),
+          ]);
+
+          return asset;
+        })
+    );
+
+    console.log("[createCollectionAndMintAsset] assets:", createdAssets);
+    createdAssets.map((a) => console.log(a.publicKey.toString()));
+
+    return { collection, assets: createdAssets };
   } catch (err) {
-    console.log("[createcollection] failed");
+    console.log("[createcollection] failed with err", err);
     throw err;
   }
 }

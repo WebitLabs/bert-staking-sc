@@ -150,18 +150,82 @@ impl<'info> ClaimPositionToken<'info> {
                 .lifetime_claimed_yield
                 .checked_add(yield_value)
                 .ok_or(StakingError::ArithmeticOverflow)?;
+
+            msg!(
+                "pool_stats: lpd: {:?} | tns: {:?} | tss: {:?} | lns: {:?} | lts: {:?} | lcy: {:?}",
+                pool_stats.lock_period_days,
+                pool_stats.total_nfts_staked,
+                pool_stats.total_tokens_staked,
+                pool_stats.lifetime_nfts_staked,
+                pool_stats.lifetime_tokens_staked,
+                pool_stats.lifetime_claimed_yield
+            );
         } // The mutable borrow of pool_stats ends here
 
         // Update user stats
         let user_account = &mut self.user_account;
+
+        // Check if pool_index is valid for user pool stats
+        require!(
+            pool_index < user_account.pool_stats.len() as u8,
+            StakingError::InvalidLockPeriodAndYield
+        );
+
+        // Update per-pool stats
+        {
+            // Create a scoped mutable reference to the user's pool stats
+            let user_pool_stats = &mut user_account.pool_stats[pool_index as usize];
+
+            // Update tokens staked in this pool
+            user_pool_stats.tokens_staked = user_pool_stats
+                .tokens_staked
+                .checked_sub(position_amount)
+                .ok_or(StakingError::ArithmeticOverflow)?;
+
+            // Update total value in this pool
+            user_pool_stats.total_value = user_pool_stats
+                .total_value
+                .checked_sub(position_amount)
+                .ok_or(StakingError::ArithmeticOverflow)?;
+
+            // Update claimed yield for this pool
+            user_pool_stats.claimed_yield = user_pool_stats
+                .claimed_yield
+                .checked_add(yield_value)
+                .ok_or(StakingError::ArithmeticOverflow)?;
+        }
+
+        // Update global user stats
         user_account.total_staked_token_amount = user_account
             .total_staked_token_amount
             .checked_sub(position_amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
+
         user_account.total_staked_value = user_account
             .total_staked_value
             .checked_sub(position_amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
+
+        user_account.total_claimed_yield = user_account
+            .total_claimed_yield
+            .checked_add(yield_value)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        msg!(
+            "user_account: tsta {:?} | tsv: {:?} | tsn: {:?} | tcy: {:?}",
+            user_account.total_staked_token_amount,
+            user_account.total_staked_value,
+            user_account.total_staked_nfts,
+            user_account.total_claimed_yield
+        );
+
+        msg!(
+            "user_pool_stats[{}]: tokens: {:?} | value: {:?} | yield: {:?}",
+            pool_index,
+            user_account.pool_stats[pool_index as usize].tokens_staked,
+            user_account.pool_stats[pool_index as usize].total_value,
+            user_account.pool_stats[pool_index as usize].claimed_yield
+        );
 
         Ok(())
     }

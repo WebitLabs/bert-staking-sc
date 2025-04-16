@@ -82,28 +82,36 @@ impl<'info> StakeToken<'info> {
         // Create a copy of the pool config for reading
         let pool_config = config.pools_config[pool_index as usize];
 
-        // Check if staking would exceed the max cap / user / pool
+        // Check if pool_index is out of bounds for user pool stats
+        require!(
+            pool_index < self.user_account.pool_stats.len() as u8,
+            StakingError::InvalidLockPeriodAndYield
+        );
+
+        // Calculate new per-pool token staked amount
+        let new_pool_tokens_staked = self.user_account.pool_stats[pool_index as usize]
+            .tokens_staked
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Calculate new per-pool total value
+        let new_pool_total_value = self.user_account.pool_stats[pool_index as usize]
+            .total_value
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Calculate new total staked value across all pools
         let new_user_total_value = self
             .user_account
             .total_staked_value
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        // Check user has not exceed its caps
+        // Check user has not exceeded the pool's max token cap
         require!(
-            new_user_total_value < pool_config.max_tokens_cap,
+            new_pool_tokens_staked <= pool_config.max_tokens_cap,
             StakingError::UserTokensLimitCapReached
         );
-
-        // Check if staking would exceed the max cap
-        let new_total = config
-            .total_staked_amount
-            .checked_add(amount)
-            .ok_or(StakingError::ArithmeticOverflow)?;
-
-        // if new_total > config.max_cap {
-        //     return Err(StakingError::MaxCapReached.into());
-        // }
 
         // Create a position for the staked tokens
         let position = &mut self.position;
@@ -112,12 +120,19 @@ impl<'info> StakeToken<'info> {
         position.amount = position.amount.checked_add(amount).unwrap();
         position.position_type = PositionType::Token;
         position.lock_period_yield_index = pool_index;
+        position.asset = self.system_program.key();
         position.id = id;
         position.bump = bumps.position;
 
         // Caclulate unlock time (curremt time + lock_time in seconds)
         // Use the days value directly from the pool config
         let lock_days = pool_config.lock_period_days;
+        // IMPORTANT
+        // lock_days
+        // will
+        // be
+        // rerpesented in minutes
+
         position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 24 * 60 * 60);
         position.status = PositionStatus::Unclaimed;
 
@@ -135,6 +150,15 @@ impl<'info> StakeToken<'info> {
         )?;
 
         // Update config's total staked amount
+        let new_total = config
+            .total_staked_amount
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // if new_total > config.max_cap {
+        //     return Err(StakingError::MaxCapReached.into());
+        // }
+
         config.total_staked_amount = new_total;
 
         // Update pool stats directly in the array
@@ -153,16 +177,50 @@ impl<'info> StakeToken<'info> {
                 .lifetime_tokens_staked
                 .checked_add(amount)
                 .ok_or(StakingError::ArithmeticOverflow)?;
+
+            msg!(
+                "pool_stats: lpd: {:?} | tns: {:?} | tss: {:?} | lns: {:?} | lts: {:?}",
+                pool_stats.lock_period_days,
+                pool_stats.total_nfts_staked,
+                pool_stats.total_tokens_staked,
+                pool_stats.lifetime_nfts_staked,
+                pool_stats.lifetime_tokens_staked
+            );
         } // The mutable borrow of pool_stats ends here
 
         // Update user stats
         let user_account = &mut self.user_account;
+
+        // Update per-pool stats
+        {
+            // Create a scoped mutable reference to the user's pool stats
+            let user_pool_stats = &mut user_account.pool_stats[pool_index as usize];
+
+            // Update tokens staked in this pool
+            user_pool_stats.tokens_staked = new_pool_tokens_staked;
+
+            // Update total value in this pool
+            user_pool_stats.total_value = new_pool_total_value;
+
+            // Ensure lock period days is set correctly
+            // user_pool_stats.lock_period_days = pool_config.lock_period_days;
+        }
+
+        // Update global user stats
         user_account.total_staked_token_amount = user_account
             .total_staked_token_amount
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
         user_account.total_staked_value = new_user_total_value;
+
+        msg!(
+            "user_account: tsta {:?} | tsv: {:?} | pool[{}].tokens_staked: {:?}",
+            user_account.total_staked_token_amount,
+            user_account.total_staked_value,
+            pool_index,
+            user_account.pool_stats[pool_index as usize].tokens_staked
+        );
 
         Ok(())
     }

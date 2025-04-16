@@ -23,10 +23,7 @@
         {
           "name": "owner",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "asset"
-          ]
+          "signer": true
         },
         {
           "name": "payer",
@@ -1049,8 +1046,7 @@
           "writable": true
         },
         {
-          "name": "nft_vault_owner",
-          "writable": true
+          "name": "nft_vault_owner"
         },
         {
           "name": "collection",
@@ -1962,27 +1958,123 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "pool_stats",
+            "docs": [
+              "Stats for each pool (matches the pools in Config)"
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "UserPoolStats"
+                  }
+                },
+                4
+              ]
+            }
+          },
+          {
             "name": "total_staked_token_amount",
+            "docs": [
+              "Total staked token amount across all pools"
+            ],
             "type": "u64"
           },
           {
             "name": "total_staked_nfts",
+            "docs": [
+              "Total staked NFTs across all pools"
+            ],
             "type": "u32"
           },
           {
             "name": "total_staked_value",
+            "docs": [
+              "Total staked value across all pools (in tokens)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed_yield",
+            "docs": [
+              "Total claimed yield across all pools"
+            ],
             "type": "u64"
           },
           {
             "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
             "type": "u8"
           },
           {
             "name": "_padding",
+            "docs": [
+              "Padding for future extensions"
+            ],
             "type": {
               "array": [
                 "u8",
-                64
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserPoolStats",
+      "docs": [
+        "Stats for a specific pool for a user"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tokens_staked",
+            "docs": [
+              "Total amount of tokens staked by the user in this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "nfts_staked",
+            "docs": [
+              "Number of NFTs staked by the user in this pool"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "total_value",
+            "docs": [
+              "Total value staked by the user in this pool (in tokens)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "lock_period_days",
+            "docs": [
+              "Lock period in days for this pool (to easily identify which pool this is)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "claimed_yield",
+            "docs": [
+              "Claimed yield from this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "_padding",
+            "docs": [
+              "Padding for future extensions"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
               ]
             }
           }

@@ -1,7 +1,7 @@
-import { config, expect } from "chai";
+import { expect } from "chai";
+import chalk from "chalk";
 import { prelude } from "./helpers/prelude";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import * as web3 from "@solana/web3.js";
 import {
   advanceUnixTimeStamp,
   createAndProcessTransaction,
@@ -31,29 +31,6 @@ import {
   toWeb3JsKeypair,
   toWeb3JsPublicKey,
 } from "@metaplex-foundation/umi-web3js-adapters";
-import { PoolConfigParams } from "@bert-staking/sdk/src/utils";
-
-/**
- * Creates a transaction instruction to create the NFTs vault account
- * @param payer The account that will pay for the account creation
- * @param nftsVaultPda The NFTs vault PDA
- * @param programId The program ID
- * @returns Transaction instruction to create the NFTs vault account
- */
-function createNftsVaultAccountInstruction(
-  payer: PublicKey,
-  nftsVaultPda: PublicKey,
-  programId: PublicKey
-): web3.TransactionInstruction {
-  // The system account will just be a reference, no data needed
-  return web3.SystemProgram.createAccount({
-    fromPubkey: payer,
-    newAccountPubkey: nftsVaultPda,
-    lamports: 1000000, // Small amount for rent exemption
-    space: 0, // No space needed for data
-    programId, // Program that will own the account
-  });
-}
 
 const addedPrograms: AddedProgram[] = [
   { name: "mpl_core", programId: new PublicKey(MPL_CORE_ADDRESS) },
@@ -115,8 +92,9 @@ describe("bert-staking-sc", () => {
   // let asset = new PublicKey(B_545_ASSET);
   let decimals: number;
 
+  const nftsToMint = 10;
   let collectionSigner: KeypairSigner;
-  let assetSigner: KeypairSigner;
+  let assets: KeypairSigner[];
 
   let tokensInVault: number;
 
@@ -146,11 +124,12 @@ describe("bert-staking-sc", () => {
     const result = await createCollectionAndMintAsset(
       payer,
       client,
-      "B_COLLECTION"
+      "B_COLLECTION",
+      nftsToMint
     );
 
     collectionSigner = result.collection;
-    assetSigner = result.asset;
+    assets = result.assets;
   });
 
   it("Initializes the Bert staking program with custom pool configurations", async () => {
@@ -765,6 +744,8 @@ describe("bert-staking-sc", () => {
   });
 
   it("Stakes a Metaplex Core asset successfully", async () => {
+    const assetSigner = assets[0];
+
     const poolIndex = 3; // Using the 30-day lock period with 12% yield
 
     // Get the Config PDA and account data with our configId
@@ -897,6 +878,7 @@ describe("bert-staking-sc", () => {
   });
 
   it("Claims a staked Metaplex Core asset successfully", async () => {
+    const assetSigner = assets[0];
     const poolIndex = 3; // Using the 30-day lock period with 12% yield from the previous test
 
     // Get the Config PDA and account data with our configId
@@ -1097,5 +1079,398 @@ describe("bert-staking-sc", () => {
     );
 
     console.log("NFT claim test completed successfully!");
+  });
+
+  it("Enforces user token limit per pool", async () => {
+    // Choose pool 1 (3-day lock period) for this test
+    const poolIndex = 1;
+    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+
+    // Fetch config to get pool limits
+    const config = await sdk.fetchConfigByAddress(configPda);
+    const poolConfig = config.poolsConfig[poolIndex];
+
+    console.log(
+      `Testing token limits for pool ${poolIndex} (${poolConfig.lockPeriodDays} days):`
+    );
+    console.log(`- Max tokens per user: ${poolConfig.maxTokensCap.toString()}`);
+
+    // Create a much smaller limit for testing
+    const smallTokenLimit = 10_000 * 10 ** decimals; // 10,000 tokens
+
+    // We need to create a new config with a smaller token limit for this test
+    const testConfigId = configId + 100; // Use a different config ID to avoid conflicts
+    const smallPoolsConfig = [...poolsConfig]; // Clone the original config
+
+    // Modify the pool configuration to have a smaller token limit
+    smallPoolsConfig[poolIndex] = {
+      ...poolsConfig[poolIndex],
+      maxTokens: smallTokenLimit,
+    };
+
+    console.log(
+      `Creating test config with smaller token limit of ${smallTokenLimit}`
+    );
+
+    // Create the new config PDA
+    const [testConfigPda] = sdk.pda.findConfigPda(
+      payer.publicKey,
+      testConfigId
+    );
+
+    // Initialize the config with the smaller token limit
+    const initializeIx = await sdk.initialize({
+      authority: payer.publicKey,
+      mint: tokenMint,
+      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+      id: testConfigId,
+      poolsConfig: smallPoolsConfig,
+      nftsVault: SystemProgram.programId,
+      maxCap: maxCap,
+      nftValueInTokens: nftValueInTokens,
+      nftsLimitPerUser: nftsLimitPerUser,
+    });
+
+    // Execute the initialization transaction
+    try {
+      console.log("Initializing test config with smaller token limit...");
+      await createAndProcessTransaction(client, payer, [initializeIx]);
+      console.log("Test config initialized successfully");
+    } catch (err) {
+      console.error("Failed to initialize test config:", err);
+      expect.fail("Failed to initialize test config");
+    }
+
+    // Initialize user for the new config
+    const initUserIx = await sdk.initializeUser({
+      owner: payer.publicKey,
+      authority: payer.publicKey,
+      configId: testConfigId,
+      mint: tokenMint,
+    });
+
+    try {
+      console.log("Initializing user for test config...");
+      await createAndProcessTransaction(client, payer, [initUserIx]);
+      console.log("User initialized successfully for test config");
+    } catch (err) {
+      console.error("Failed to initialize user:", err);
+      expect.fail("Failed to initialize user");
+    }
+
+    // Get user token account
+    const userTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      payer.publicKey,
+      true
+    );
+
+    // Stake almost up to the limit (leave a small buffer)
+    const firstStakeAmount = smallTokenLimit - (100 * 10 ** decimals); // Just under the limit
+    console.log(`Staking ${firstStakeAmount} tokens (under the limit)...`);
+
+    // Create stake instruction with amount below the limit
+    const stakeWithinLimitIx = await sdk.stakeToken({
+      authority: payer.publicKey,
+      owner: payer.publicKey,
+      configId: testConfigId,
+      positionId: 1000, // Use a different position ID
+      tokenMint,
+      amount: firstStakeAmount,
+      poolIndex,
+      tokenAccount: userTokenAccount,
+    });
+
+    try {
+      // Execute the stake transaction
+      const res = await createAndProcessTransaction(client, payer, [stakeWithinLimitIx]);
+      
+      // Bankrun way of checking for errors
+      if (res.result) {
+        throw res.result;
+      }
+      
+      console.log(chalk.yellowBright("Successfully staked tokens within the limit"));
+    } catch (err) {
+      console.error("Failed to stake tokens within limit:", err);
+      expect.fail("Should be able to stake tokens within the limit");
+    }
+
+    // Now, attempt to stake more tokens to exceed the limit
+    const exceedingAmount = 200 * 10 ** decimals; // Amount that will exceed the limit
+    console.log(
+      `Attempting to stake additional ${exceedingAmount} tokens to exceed the limit...`
+    );
+
+    // Create stake instruction with amount that would exceed the limit
+    const stakeExceedingIx = await sdk.stakeToken({
+      authority: payer.publicKey,
+      owner: payer.publicKey,
+      configId: testConfigId,
+      positionId: 1001, // Different position ID
+      tokenMint,
+      amount: exceedingAmount,
+      poolIndex,
+      tokenAccount: userTokenAccount,
+    });
+
+    // This transaction should fail because it would exceed the user's token limit for this pool
+    try {
+      const res = await createAndProcessTransaction(client, payer, [stakeExceedingIx]);
+      
+      // Bankrun way of checking for errors
+      if (res.result) {
+        throw res.result;
+      }
+      
+      expect.fail(
+        "Should not be able to stake tokens exceeding the user limit per pool"
+      );
+    } catch (err) {
+      console.log(
+        chalk.yellowBright("Transaction correctly failed when exceeding token limit per pool")
+      );
+      // We expect an error
+      expect(err.toString()).to.include("Error");
+    }
+
+    // Try staking in a different pool - should succeed
+    const otherPoolIndex = 2; // Use a different pool
+    const stakeOtherPoolIx = await sdk.stakeToken({
+      authority: payer.publicKey,
+      owner: payer.publicKey,
+      configId: testConfigId,
+      positionId: 1002, // Different position ID
+      tokenMint,
+      amount: exceedingAmount,
+      poolIndex: otherPoolIndex,
+      tokenAccount: userTokenAccount,
+    });
+
+    try {
+      const res = await createAndProcessTransaction(client, payer, [stakeOtherPoolIx]);
+      
+      // Bankrun way of checking for errors
+      if (res.result) {
+        throw res.result;
+      }
+      
+      console.log(chalk.yellowBright("Successfully staked tokens in a different pool"));
+    } catch (err) {
+      console.error("Failed to stake tokens in different pool:", err);
+      expect.fail("Should be able to stake tokens in a different pool");
+    }
+
+    console.log("Token limit per pool test completed successfully!");
+  });
+
+  it("Enforces user NFT limit per pool", async () => {
+    const poolIndex = 0;
+    // Choose pool 0 (1-day lock period) for this test
+    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+
+    // Fetch config to get pool limits
+    const config = await sdk.fetchConfigByAddress(configPda);
+    const poolConfig = config.poolsConfig[poolIndex];
+
+    console.log(
+      `Testing NFT limits for pool ${poolIndex} (${poolConfig.lockPeriodDays} days):`
+    );
+    console.log(`- Max NFTs per user: ${poolConfig.maxNftsCap}`);
+
+    // Create a very small NFT limit for testing
+    const smallNftLimit = 3;
+
+    // Create a new config with a smaller NFT limit for this test
+    const testConfigId = configId + 201; // Use a different config ID to avoid conflicts
+    const smallPoolsConfig = [...poolsConfig]; // Clone the original config
+
+    // Modify the pool configuration to have a smaller NFT limit
+    smallPoolsConfig[poolIndex] = {
+      ...poolsConfig[poolIndex],
+      maxNfts: smallNftLimit,
+    };
+
+    console.log(
+      `Creating test config with smaller NFT limit of ${smallNftLimit}`
+    );
+
+    // Create the new config PDA
+    const [testConfigPda] = sdk.pda.findConfigPda(
+      payer.publicKey,
+      testConfigId
+    );
+
+    // Initialize the config with the smaller NFT limit
+    const initializeIx = await sdk.initialize({
+      authority: payer.publicKey,
+      mint: tokenMint,
+      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+      id: testConfigId,
+      poolsConfig: smallPoolsConfig,
+      nftsVault: SystemProgram.programId,
+      maxCap: maxCap,
+      nftValueInTokens: nftValueInTokens,
+      nftsLimitPerUser: nftsLimitPerUser,
+    });
+
+    // Execute the initialization transaction
+    try {
+      console.log("Initializing test config with smaller NFT limit...");
+      await createAndProcessTransaction(client, payer, [initializeIx]);
+      console.log("Test config initialized successfully");
+    } catch (err) {
+      console.error("Failed to initialize test config:", err);
+      expect.fail("Failed to initialize test config");
+    }
+
+    const testConfigAccount = await sdk.fetchConfigByAddress(testConfigPda);
+    console.log("== Test Config collection:", collectionSigner.publicKey);
+    expect(collectionSigner.publicKey.toString()).to.equal(
+      testConfigAccount.collection.toString()
+    );
+
+    // Initialize user for the new config
+    const initUserIx = await sdk.initializeUser({
+      owner: payer.publicKey,
+      authority: payer.publicKey,
+      configId: testConfigId,
+      mint: tokenMint,
+    });
+
+    try {
+      console.log("Initializing user for test config...");
+      await createAndProcessTransaction(client, payer, [initUserIx]);
+      console.log("User initialized successfully for test config");
+    } catch (err) {
+      console.error("Failed to initialize user:", err);
+      expect.fail("Failed to initialize user");
+    }
+
+    // Stake all `smallNftLimit` assets
+    await Promise.all(
+      Array(smallNftLimit)
+        .fill(1)
+        .map(async (value, index) => {
+          const asset = assets[index + 1];
+
+          console.log(chalk.redBright("staking nft"), index);
+
+          // Stake the first NFT (should succeed)
+          const stakeNft1Ix = await sdk.stakeNft({
+            authority: payer.publicKey,
+            owner: payer.publicKey,
+            mint: tokenMint,
+            collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+            asset: toWeb3JsPublicKey(asset.publicKey),
+            configId: testConfigId,
+            poolIndex,
+            nftsVault: SystemProgram.programId,
+          });
+
+          try {
+            console.log("Staking NFT ", asset.publicKey.toString());
+            const res = await createAndProcessTransaction(
+              client,
+              payer,
+              [stakeNft1Ix],
+              []
+            );
+
+            // Bankrun way of throwing an error
+            if (res.result) {
+              throw res.result;
+            }
+
+            console.log(
+              chalk.yellowBright(
+                "Successfully staked NFT" + asset.publicKey.toString()
+              )
+            );
+          } catch (err) {
+            console.log(
+              chalk.redBright(
+                "Failed to stake NFT: " + asset.publicKey.toString()
+              ),
+              err
+            );
+            expect.fail("Should be able to stake NFT within the limit");
+          }
+        })
+    );
+
+    const asset = assets[smallNftLimit + 2];
+
+    // Attempt to stake over the limit (should fail)
+    const stakeNft2Ix = await sdk.stakeNft({
+      authority: payer.publicKey,
+      owner: payer.publicKey,
+      mint: tokenMint,
+      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+      asset: toWeb3JsPublicKey(asset.publicKey),
+      configId: testConfigId,
+      poolIndex,
+      nftsVault: SystemProgram.programId,
+    });
+
+    // This transaction should fail because it would exceed the user's NFT limit for this pool
+    try {
+      const res = await createAndProcessTransaction(
+        client,
+        payer,
+        [stakeNft2Ix],
+        []
+      );
+
+      if (res.result) {
+        throw res.result;
+      }
+
+      expect.fail(
+        "Should not be able to stake NFTs exceeding the user limit per pool"
+      );
+    } catch (err) {
+      console.log(
+        "Transaction correctly failed when exceeding NFT limit per pool"
+      );
+      // We expect an error like "NFT limit reached" or similar constraint error
+      expect(err.toString()).to.include("Error");
+    }
+
+    const otherPoolIndex = 0;
+    // But staking it in another pool should PASS.
+    const stakeNft3Ix = await sdk.stakeNft({
+      authority: payer.publicKey,
+      owner: payer.publicKey,
+      mint: tokenMint,
+      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+      asset: toWeb3JsPublicKey(asset.publicKey),
+      configId: testConfigId,
+      poolIndex: otherPoolIndex,
+      nftsVault: SystemProgram.programId,
+    });
+
+    // This transaction should fail because it would exceed the user's NFT limit for this pool
+    try {
+      const res = await createAndProcessTransaction(
+        client,
+        payer,
+        [stakeNft3Ix],
+        []
+      );
+
+      if (res.result) {
+        throw res.result;
+      }
+
+      expect.fail("Should be able to stake NFT in other poole");
+    } catch (err) {
+      console.log(
+        "Transaction correctly failed when exceeding NFT limit per pool"
+      );
+      // We expect an error like "NFT limit reached" or similar constraint error
+      expect(err.toString()).to.include("Error");
+    }
+    console.log("NFT limit per pool test completed successfully!");
   });
 });

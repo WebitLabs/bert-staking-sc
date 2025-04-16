@@ -9,6 +9,7 @@ import { initializePositionCommand } from "./commands/initialize-position";
 import { stakeTokenCommand } from "./commands/stake-token";
 import { createTokenCommand } from "./commands/create-token";
 import { createCoreNftCommand } from "./commands/create-nft";
+import { transferCoreNftCommand } from "./commands/transfer-nft";
 
 // Create CLI program
 const program = new Command();
@@ -32,7 +33,8 @@ program
 
 // Register commands
 // createTokenCommand(program);
-// createCoreNftCommand(program);
+transferCoreNftCommand(program);
+createCoreNftCommand(program);
 initializeCommand(program);
 // initializePositionCommand(program);
 // stakeTokenCommand(program);

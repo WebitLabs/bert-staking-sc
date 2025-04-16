@@ -35,7 +35,8 @@
     "@types/commander": "^2.12.2",
     "anchor-bankrun": "^0.5.0",
     "commander": "^12.1.0",
-    "solana-bankrun": "^0.4.0"
+    "solana-bankrun": "^0.4.0",
+    "chalk": "^4.1.2"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",

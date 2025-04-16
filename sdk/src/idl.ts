@@ -29,10 +29,7 @@ export type BertStakingSc = {
         {
           "name": "owner",
           "writable": true,
-          "signer": true,
-          "relations": [
-            "asset"
-          ]
+          "signer": true
         },
         {
           "name": "payer",
@@ -1055,8 +1052,7 @@ export type BertStakingSc = {
           "writable": true
         },
         {
-          "name": "nftVaultOwner",
-          "writable": true
+          "name": "nftVaultOwner"
         },
         {
           "name": "collection",
@@ -1968,27 +1964,123 @@ export type BertStakingSc = {
         "kind": "struct",
         "fields": [
           {
+            "name": "poolStats",
+            "docs": [
+              "Stats for each pool (matches the pools in Config)"
+            ],
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "userPoolStats"
+                  }
+                },
+                4
+              ]
+            }
+          },
+          {
             "name": "totalStakedTokenAmount",
+            "docs": [
+              "Total staked token amount across all pools"
+            ],
             "type": "u64"
           },
           {
             "name": "totalStakedNfts",
+            "docs": [
+              "Total staked NFTs across all pools"
+            ],
             "type": "u32"
           },
           {
             "name": "totalStakedValue",
+            "docs": [
+              "Total staked value across all pools (in tokens)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "totalClaimedYield",
+            "docs": [
+              "Total claimed yield across all pools"
+            ],
             "type": "u64"
           },
           {
             "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
             "type": "u8"
           },
           {
             "name": "padding",
+            "docs": [
+              "Padding for future extensions"
+            ],
             "type": {
               "array": [
                 "u8",
-                64
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "userPoolStats",
+      "docs": [
+        "Stats for a specific pool for a user"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tokensStaked",
+            "docs": [
+              "Total amount of tokens staked by the user in this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "nftsStaked",
+            "docs": [
+              "Number of NFTs staked by the user in this pool"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "totalValue",
+            "docs": [
+              "Total value staked by the user in this pool (in tokens)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "lockPeriodDays",
+            "docs": [
+              "Lock period in days for this pool (to easily identify which pool this is)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "claimedYield",
+            "docs": [
+              "Claimed yield from this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "padding",
+            "docs": [
+              "Padding for future extensions"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
               ]
             }
           }
