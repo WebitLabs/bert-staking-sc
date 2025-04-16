@@ -24,7 +24,7 @@ pub struct StakeToken<'info> {
         seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
         bump = user_account.bump,
     )]
-    pub user_account: Box<Account<'info, UserAccount>>,
+    pub user_account: Box<Account<'info, UserAccountV2>>,
 
     #[account(
         init,
@@ -133,7 +133,7 @@ impl<'info> StakeToken<'info> {
         // be
         // rerpesented in minutes
 
-        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 24 * 60 * 60);
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 60);
         position.status = PositionStatus::Unclaimed;
 
         // Transfer tokens from user to program

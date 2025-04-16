@@ -22,9 +22,35 @@ pub struct UserPoolStats {
     pub _padding: [u8; 32],
 }
 
+// OLD
 #[account]
 #[derive(InitSpace, Debug)]
 pub struct UserAccount {
+    /// Stats for each pool (matches the pools in Config)
+    pub pool_stats: [UserPoolStats; 4],
+
+    /// Total staked token amount across all pools
+    pub total_staked_token_amount: u64,
+
+    /// Total staked NFTs across all pools
+    pub total_staked_nfts: u32,
+
+    /// Total staked value across all pools (in tokens)
+    pub total_staked_value: u64,
+
+    /// Total claimed yield across all pools
+    pub total_claimed_yield: u64,
+
+    /// PDA bump
+    pub bump: u8,
+
+    /// Padding for future extensions
+    pub _padding: [u8; 32],
+}
+
+#[account]
+#[derive(InitSpace, Debug)]
+pub struct UserAccountV2 {
     /// Stats for each pool (matches the pools in Config)
     pub pool_stats: [UserPoolStats; 4],
 

@@ -37,7 +37,7 @@ pub struct ClaimPositionNft<'info> {
         seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
         bump = user_account.bump,
     )]
-    pub user_account: Box<Account<'info, UserAccount>>,
+    pub user_account: Box<Account<'info, UserAccountV2>>,
 
     #[account(
         mut,
@@ -53,7 +53,8 @@ pub struct ClaimPositionNft<'info> {
     /// supposed to be in config also
     pub collection: UncheckedAccount<'info>,
 
-    pub update_authority: Signer<'info>,
+    /// CHECK: TODO:
+    pub update_authority: UncheckedAccount<'info>,
 
     #[account(
         mut,

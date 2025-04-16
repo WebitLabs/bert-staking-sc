@@ -42,7 +42,7 @@ export enum StakingError {
 
 // IDL types
 export type ConfigIdl = IdlAccounts<BertStakingSc>["config"];
-export type UserAccountIdl = IdlAccounts<BertStakingSc>["userAccount"];
+export type UserAccountIdl = IdlAccounts<BertStakingSc>["userAccountV2"];
 export type PositionIdl = IdlAccounts<BertStakingSc>["positionV3"];
 export type UserPoolStatsIdl = IdlTypes<BertStakingSc>["userPoolStats"];
 

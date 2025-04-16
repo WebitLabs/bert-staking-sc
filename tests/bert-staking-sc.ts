@@ -994,12 +994,7 @@ describe("bert-staking-sc", () => {
       });
 
       // Process the claim transaction
-      await createAndProcessTransaction(
-        client,
-        payer,
-        [claimNftIx],
-        [toWeb3JsKeypair(collectionSigner)]
-      );
+      await createAndProcessTransaction(client, payer, [claimNftIx], []);
       console.log("NFT claimed successfully!");
     } catch (err) {
       console.error("Failed to claim NFT:", err);
@@ -1166,7 +1161,7 @@ describe("bert-staking-sc", () => {
     );
 
     // Stake almost up to the limit (leave a small buffer)
-    const firstStakeAmount = smallTokenLimit - (100 * 10 ** decimals); // Just under the limit
+    const firstStakeAmount = smallTokenLimit - 100 * 10 ** decimals; // Just under the limit
     console.log(`Staking ${firstStakeAmount} tokens (under the limit)...`);
 
     // Create stake instruction with amount below the limit
@@ -1183,14 +1178,18 @@ describe("bert-staking-sc", () => {
 
     try {
       // Execute the stake transaction
-      const res = await createAndProcessTransaction(client, payer, [stakeWithinLimitIx]);
-      
+      const res = await createAndProcessTransaction(client, payer, [
+        stakeWithinLimitIx,
+      ]);
+
       // Bankrun way of checking for errors
       if (res.result) {
         throw res.result;
       }
-      
-      console.log(chalk.yellowBright("Successfully staked tokens within the limit"));
+
+      console.log(
+        chalk.yellowBright("Successfully staked tokens within the limit")
+      );
     } catch (err) {
       console.error("Failed to stake tokens within limit:", err);
       expect.fail("Should be able to stake tokens within the limit");
@@ -1216,19 +1215,23 @@ describe("bert-staking-sc", () => {
 
     // This transaction should fail because it would exceed the user's token limit for this pool
     try {
-      const res = await createAndProcessTransaction(client, payer, [stakeExceedingIx]);
-      
+      const res = await createAndProcessTransaction(client, payer, [
+        stakeExceedingIx,
+      ]);
+
       // Bankrun way of checking for errors
       if (res.result) {
         throw res.result;
       }
-      
+
       expect.fail(
         "Should not be able to stake tokens exceeding the user limit per pool"
       );
     } catch (err) {
       console.log(
-        chalk.yellowBright("Transaction correctly failed when exceeding token limit per pool")
+        chalk.yellowBright(
+          "Transaction correctly failed when exceeding token limit per pool"
+        )
       );
       // We expect an error
       expect(err.toString()).to.include("Error");
@@ -1248,14 +1251,18 @@ describe("bert-staking-sc", () => {
     });
 
     try {
-      const res = await createAndProcessTransaction(client, payer, [stakeOtherPoolIx]);
-      
+      const res = await createAndProcessTransaction(client, payer, [
+        stakeOtherPoolIx,
+      ]);
+
       // Bankrun way of checking for errors
       if (res.result) {
         throw res.result;
       }
-      
-      console.log(chalk.yellowBright("Successfully staked tokens in a different pool"));
+
+      console.log(
+        chalk.yellowBright("Successfully staked tokens in a different pool")
+      );
     } catch (err) {
       console.error("Failed to stake tokens in different pool:", err);
       expect.fail("Should be able to stake tokens in a different pool");

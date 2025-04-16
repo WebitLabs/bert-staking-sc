@@ -24,7 +24,7 @@ pub struct ClaimPositionToken<'info> {
         seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
         bump = user_account.bump,
     )]
-    pub user_account: Box<Account<'info, UserAccount>>,
+    pub user_account: Box<Account<'info, UserAccountV2>>,
 
     #[account(
         mut,

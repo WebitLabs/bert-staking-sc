@@ -5,11 +5,14 @@ import { UserAccountIdl, UserPoolStatsIdl } from "../types";
 
 /**
  * Extension function to get stats for a specific pool
- * @param userAccount The user account 
+ * @param userAccount The user account
  * @param poolIndex The pool index to get stats for
  * @returns The stats for the specified pool or null if not found
  */
-export function getPoolStats(userAccount: UserAccountIdl, poolIndex: number): UserPoolStatsIdl | null {
+export function getPoolStats(
+  userAccount: UserAccountIdl,
+  poolIndex: number
+): UserPoolStatsIdl | null {
   if (poolIndex < 0 || poolIndex >= userAccount.poolStats.length) {
     return null;
   }
@@ -22,9 +25,12 @@ export function getPoolStats(userAccount: UserAccountIdl, poolIndex: number): Us
  * @param lockPeriodDays The lock period days to find
  * @returns The stats for the pool with the specified lock period days or null if not found
  */
-export function getPoolStatsByLockPeriod(userAccount: UserAccountIdl, lockPeriodDays: number): UserPoolStatsIdl | null {
+export function getPoolStatsByLockPeriod(
+  userAccount: UserAccountIdl,
+  lockPeriodDays: number
+): UserPoolStatsIdl | null {
   const poolStats = userAccount.poolStats.find(
-    stats => stats.lockPeriodDays === lockPeriodDays
+    (stats) => stats.lockPeriodDays === lockPeriodDays
   );
   return poolStats || null;
 }
@@ -71,7 +77,7 @@ export async function fetchUserAccountRpc(
     );
 
     // Fetch the account
-    const userAccount = await program.account.userAccount.fetchNullable(
+    const userAccount = await program.account.userAccountV2.fetchNullable(
       userPda
     );
 
@@ -95,7 +101,7 @@ export async function fetchUserAccountByAddressRpc(
 ): Promise<UserAccountIdl | null> {
   try {
     // Fetch the account
-    const userAccount = await program.account.userAccount.fetchNullable(
+    const userAccount = await program.account.userAccountV2.fetchNullable(
       address
     );
 

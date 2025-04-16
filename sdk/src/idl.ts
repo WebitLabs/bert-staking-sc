@@ -1473,16 +1473,16 @@ export type BertStakingSc = {
       ]
     },
     {
-      "name": "userAccount",
+      "name": "userAccountV2",
       "discriminator": [
-        211,
-        33,
-        136,
-        16,
-        186,
-        110,
-        242,
-        127
+        49,
+        229,
+        99,
+        247,
+        99,
+        241,
+        117,
+        153
       ]
     }
   ],
@@ -1950,7 +1950,7 @@ export type BertStakingSc = {
       }
     },
     {
-      "name": "userAccount",
+      "name": "userAccountV2",
       "type": {
         "kind": "struct",
         "fields": [

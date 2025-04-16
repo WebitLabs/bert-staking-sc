@@ -17,11 +17,11 @@ pub struct InitializeUser<'info> {
     #[account(
         init,
         payer = owner,
-        space = 8 + UserAccount::INIT_SPACE,
+        space = 8 + UserAccountV2::INIT_SPACE,
         seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
         bump
     )]
-    pub user_account: Account<'info, UserAccount>,
+    pub user_account: Account<'info, UserAccountV2>,
 
     pub mint: InterfaceAccount<'info, Mint>,
 
@@ -43,7 +43,7 @@ impl<'info> InitializeUser<'info> {
         });
 
         // Initialize the user account
-        self.user_account.set_inner(UserAccount {
+        self.user_account.set_inner(UserAccountV2 {
             pool_stats,
             total_staked_value: 0,
             total_staked_nfts: 0,
