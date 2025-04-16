@@ -17,7 +17,7 @@ export async function fetchPositionRpc(
 ): Promise<PositionIdl | null> {
   try {
     let positionPda: PublicKey;
-    
+
     if (asset) {
       // For NFT positions, use asset-based PDA
       [positionPda] = PublicKey.findProgramAddressSync(
@@ -43,7 +43,7 @@ export async function fetchPositionRpc(
     }
 
     // Fetch the account
-    const position = await program.account.positionV2.fetchNullable(
+    const position = await program.account.positionV3.fetchNullable(
       positionPda
     );
 
@@ -67,7 +67,7 @@ export async function fetchPositionByAddressRpc(
 ): Promise<PositionIdl | null> {
   try {
     // Fetch the account
-    const position = await program.account.positionV2.fetchNullable(
+    const position = await program.account.positionV3.fetchNullable(
       positionAddress
     );
 
@@ -100,7 +100,7 @@ export async function fetchPositionsByOwnerRpc(
       },
     ];
 
-    const positions = await program.account.positionV2.all(filter);
+    const positions = await program.account.positionV3.all(filter);
 
     return positions.map((item) => item.account);
   } catch (error) {

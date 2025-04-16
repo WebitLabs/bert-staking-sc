@@ -37,11 +37,11 @@ pub struct StakeNFT<'info> {
     #[account(
         init,
         payer = owner,
-        space = 8 + PositionV2::INIT_SPACE,
+        space = 8 + PositionV3::INIT_SPACE,
         seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), asset.key().as_ref()],
         bump,
     )]
-    pub position: Box<Account<'info, PositionV2>>,
+    pub position: Box<Account<'info, PositionV3>>,
 
     /// CHECK: Will be
     // pub update_authority: UncheckedAccount<'info>,

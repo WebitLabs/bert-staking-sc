@@ -29,11 +29,11 @@ pub struct StakeToken<'info> {
     #[account(
         init,
         payer = owner,
-        space = 8 + PositionV2::INIT_SPACE,
+        space = 8 + PositionV3::INIT_SPACE,
         seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), id.to_le_bytes().as_ref()],
         bump,
     )]
-    pub position: Box<Account<'info, PositionV2>>,
+    pub position: Box<Account<'info, PositionV3>>,
 
     pub mint: Account<'info, Mint>,
 

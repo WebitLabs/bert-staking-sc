@@ -443,7 +443,7 @@
               {
                 "kind": "account",
                 "path": "position.id",
-                "account": "PositionV2"
+                "account": "PositionV3"
               }
             ]
           }
@@ -1454,16 +1454,16 @@
       ]
     },
     {
-      "name": "PositionV2",
+      "name": "PositionV3",
       "discriminator": [
-        117,
-        176,
-        212,
-        199,
-        245,
-        180,
-        133,
-        182
+        194,
+        247,
+        171,
+        54,
+        106,
+        219,
+        96,
+        51
       ]
     },
     {
@@ -1865,7 +1865,7 @@
       }
     },
     {
-      "name": "PositionV2",
+      "name": "PositionV3",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1906,17 +1906,8 @@
             }
           },
           {
-            "name": "nft_mints",
-            "type": {
-              "array": [
-                "pubkey",
-                5
-              ]
-            }
-          },
-          {
-            "name": "nft_index",
-            "type": "u8"
+            "name": "asset",
+            "type": "pubkey"
           },
           {
             "name": "bump",

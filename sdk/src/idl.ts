@@ -449,7 +449,7 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "position.id",
-                "account": "positionV2"
+                "account": "positionV3"
               }
             ]
           }
@@ -1460,16 +1460,16 @@ export type BertStakingSc = {
       ]
     },
     {
-      "name": "positionV2",
+      "name": "positionV3",
       "discriminator": [
-        117,
-        176,
-        212,
-        199,
-        245,
-        180,
-        133,
-        182
+        194,
+        247,
+        171,
+        54,
+        106,
+        219,
+        96,
+        51
       ]
     },
     {
@@ -1871,7 +1871,7 @@ export type BertStakingSc = {
       }
     },
     {
-      "name": "positionV2",
+      "name": "positionV3",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1912,17 +1912,8 @@ export type BertStakingSc = {
             }
           },
           {
-            "name": "nftMints",
-            "type": {
-              "array": [
-                "pubkey",
-                5
-              ]
-            }
-          },
-          {
-            "name": "nftIndex",
-            "type": "u8"
+            "name": "asset",
+            "type": "pubkey"
           },
           {
             "name": "bump",
