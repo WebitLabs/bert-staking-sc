@@ -14,6 +14,7 @@ use mpl_core::{
 };
 
 #[derive(Accounts)]
+#[instruction(id: u64)]
 pub struct StakeNFT<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -38,7 +39,7 @@ pub struct StakeNFT<'info> {
         init,
         payer = owner,
         space = 8 + PositionV3::INIT_SPACE,
-        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), asset.key().as_ref()],
+        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), asset.key().as_ref(), id.to_le_bytes().as_ref()],
         bump,
     )]
     pub position: Box<Account<'info, PositionV3>>,
@@ -76,7 +77,7 @@ pub struct StakeNFT<'info> {
 }
 
 impl<'info> StakeNFT<'info> {
-    pub fn stake_nft(&mut self, pool_index: u8, bumps: &StakeNFTBumps) -> Result<()> {
+    pub fn stake_nft(&mut self, id: u64, pool_index: u8, bumps: &StakeNFTBumps) -> Result<()> {
         // Check if pool_index is valid
         require!(
             self.config.pools_config.len() > pool_index as usize,
@@ -149,6 +150,7 @@ impl<'info> StakeNFT<'info> {
         position.position_type = PositionType::NFT;
         position.lock_period_yield_index = pool_index;
         position.asset = self.asset.key();
+        position.id = id;
         position.bump = bumps.position;
 
         // Caclulate unlock time (curremt time + lock_time in seconds)

@@ -22,6 +22,7 @@ export type ClaimNftPositionParams = {
   updateAuthority: web3.PublicKey;
   vault?: web3.PublicKey;
   configId?: number;
+  positionId?: number;
 };
 
 /**
@@ -41,6 +42,7 @@ export async function claimNftPositionInstruction({
   updateAuthority,
   vault,
   configId = 0,
+  positionId = 0,
 }: ClaimNftPositionParams): Promise<web3.TransactionInstruction> {
   // Get authority from config using the configId
   const [configPda] = sdk.pda.findConfigPda(authority, configId);
@@ -48,7 +50,8 @@ export async function claimNftPositionInstruction({
 
   // Calculate position PDA if not provided
   const positionAddress =
-    positionPda || sdk.pda.findNftPositionPda(owner, tokenMint, asset)[0];
+    positionPda ||
+    sdk.pda.findNftPositionPda(owner, tokenMint, asset, positionId)[0];
 
   // Derive user token account if not provided
   const userTokenAccount =

@@ -1036,6 +1036,10 @@
               {
                 "kind": "account",
                 "path": "asset"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -1082,6 +1086,10 @@
         }
       ],
       "args": [
+        {
+          "name": "id",
+          "type": "u64"
+        },
         {
           "name": "pool_index",
           "type": "u8"

@@ -747,6 +747,7 @@ describe("bert-staking-sc", () => {
     const assetSigner = assets[0];
 
     const poolIndex = 3; // Using the 30-day lock period with 12% yield
+    const nftPositionId = 200; // Use a specific position ID for NFT positions
 
     // Get the Config PDA and account data with our configId
     const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
@@ -759,22 +760,24 @@ describe("bert-staking-sc", () => {
     console.log("Owner:", payer.publicKey.toString());
     console.log("Asset:", assetSigner.publicKey.toString());
     console.log("Collection:", collectionSigner.publicKey.toString());
+    console.log("Position ID:", nftPositionId);
 
     const configAccountBefore = await sdk.fetchConfigByAddress(configPda);
     const poolStatsBefore = configAccountBefore.poolsStats[poolIndex];
 
-    // Find the Position PDA for this owner, mint and asset
+    // Find the Position PDA for this owner, mint, asset and position ID
     const asset = toWeb3JsPublicKey(assetSigner.publicKey);
     const [positionPda] = sdk.pda.findNftPositionPda(
       payer.publicKey,
       tokenMint,
-      asset
+      asset,
+      nftPositionId
     );
     console.log("Position PDA:", positionPda.toString());
 
     const configAccount = await sdk.fetchConfigByAddress(configPda);
 
-    // Create the stake NFT instruction
+    // Create the stake NFT instruction with position ID
     const stakeNftIx = await sdk.stakeNft({
       authority: payer.publicKey,
       owner: payer.publicKey,
@@ -783,6 +786,7 @@ describe("bert-staking-sc", () => {
       asset,
       configId,
       poolIndex,
+      positionId: nftPositionId, // Include position ID
       nftsVault: nftsVaultPda,
     });
 
@@ -799,9 +803,9 @@ describe("bert-staking-sc", () => {
     // Verify the position was created and updated correctly
     const position = await sdk.fetchPosition(
       payer.publicKey,
-      0, // Not used since we're using asset-based PDA
+      nftPositionId, // Now using position ID for NFT positions
       tokenMint,
-      asset // Pass the asset for NFT position lookup
+      asset // Still pass the asset for reference
     );
 
     expect(position).to.not.be.null;
@@ -809,6 +813,7 @@ describe("bert-staking-sc", () => {
     expect(position.positionType).to.deep.equal({ nft: {} });
     expect(position.amount.toNumber()).to.equal(nftValueInTokens);
     expect(position.lockPeriodYieldIndex).to.equal(poolIndex);
+    expect(position.id.toNumber()).to.equal(nftPositionId); // Verify ID is set correctly
 
     // Verify the pool stats were updated
     const configAccountAfter = await sdk.fetchConfigByAddress(configPda);
@@ -822,8 +827,10 @@ describe("bert-staking-sc", () => {
 
     console.log("Position after staking NFT:");
     console.log("- Owner:", position.owner.toString());
+    console.log("- Position ID:", position.id.toString());
     console.log("- Amount:", position.amount.toString());
     console.log("- Position Type:", position.positionType);
+    console.log("- Asset:", position.asset.toString());
     console.log("- Lock Period Yield Index:", position.lockPeriodYieldIndex);
     console.log(
       "- Lock Period (days):",
@@ -888,23 +895,27 @@ describe("bert-staking-sc", () => {
     // Get the asset public key from the previous test
     const asset = toWeb3JsPublicKey(assetSigner.publicKey);
 
-    // Find the Position PDA for this owner, mint and asset
+    const nftPositionId = 200; // Use the same position ID from previous test
+    
+    // Find the Position PDA for this owner, mint, asset and position ID
     const [positionPda] = sdk.pda.findNftPositionPda(
       payer.publicKey,
       tokenMint,
-      asset
+      asset,
+      nftPositionId
     );
     console.log("Position PDA:", positionPda.toString());
 
     // Get the position account to check if it's locked
     const position = await sdk.fetchPosition(
       payer.publicKey,
-      0, // Not used since we're using asset-based PDA
+      nftPositionId, // Now using the position ID for NFT positions
       tokenMint,
-      asset
+      asset // Still pass the asset for reference
     );
 
     console.log("Position before claiming:");
+    console.log("- Position ID:", position.id.toString());
     console.log("- Status:", position.status);
     console.log(
       "- Unlock Time:",
@@ -915,6 +926,7 @@ describe("bert-staking-sc", () => {
     expect(position).to.not.be.null;
     expect(position.positionType).to.deep.equal({ nft: {} });
     expect(position.status).to.deep.equal({ unclaimed: {} });
+    expect(position.id.toNumber()).to.equal(nftPositionId);
 
     // Get stats before claiming
     const configBefore = await sdk.fetchConfigByAddress(configPda);
@@ -980,7 +992,7 @@ describe("bert-staking-sc", () => {
       advanceUnixTimeStamp(provider, BigInt(secondsToWarp));
       console.log("Time warped successfully!");
 
-      // Create claim NFT instruction
+      // Create claim NFT instruction with position ID
       console.log("Creating claim NFT instruction...");
       const claimNftIx = await sdk.claimNftPosition({
         authority: payer.publicKey,
@@ -990,6 +1002,7 @@ describe("bert-staking-sc", () => {
         asset,
         tokenMint,
         configId,
+        positionId: nftPositionId, // Specify the position ID
         updateAuthority: toWeb3JsPublicKey(collectionSigner.publicKey),
       });
 
@@ -1004,15 +1017,17 @@ describe("bert-staking-sc", () => {
     // Verify the position was updated correctly
     const positionAfter = await sdk.fetchPosition(
       payer.publicKey,
-      0,
+      nftPositionId,
       tokenMint,
       asset
     );
 
     console.log("Position after claiming:");
+    console.log("- Position ID:", positionAfter.id.toString());
     console.log("- Status:", positionAfter.status);
 
     expect(positionAfter.status).to.deep.equal({ claimed: {} });
+    expect(positionAfter.id.toNumber()).to.equal(nftPositionId);
 
     // Verify NFT ownership has been transferred back to the owner
     const assetDataAfter = await getMplCoreAsset(

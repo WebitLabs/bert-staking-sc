@@ -242,6 +242,7 @@ export class BertStakingSDK {
     owner,
     authority,
     configId,
+    positionId,
     poolIndex,
     mint,
     collection,
@@ -251,6 +252,7 @@ export class BertStakingSDK {
     owner: PublicKey;
     authority: PublicKey;
     configId?: number;
+    positionId?: number;
     poolIndex: number;
     mint: PublicKey;
     collection: PublicKey;
@@ -262,6 +264,7 @@ export class BertStakingSDK {
       pda: this.pda,
       owner,
       configId,
+      positionId,
       poolIndex,
       authority,
       mint,
@@ -278,6 +281,7 @@ export class BertStakingSDK {
     owner,
     authority,
     configId,
+    positionId,
     poolIndex,
     mint,
     collection,
@@ -287,6 +291,7 @@ export class BertStakingSDK {
     owner: PublicKey;
     authority: PublicKey;
     configId?: number;
+    positionId?: number;
     poolIndex: number;
     mint: PublicKey;
     collection: PublicKey;
@@ -299,6 +304,7 @@ export class BertStakingSDK {
       owner,
       authority,
       configId,
+      positionId,
       poolIndex,
       mint,
       collection,
@@ -628,8 +634,8 @@ export class BertStakingSDK {
    * @returns The position account if found, null otherwise
    */
   async fetchPosition(
-    owner: PublicKey, 
-    id: number, 
+    owner: PublicKey,
+    id: number,
     mint: PublicKey,
     asset?: PublicKey
   ) {

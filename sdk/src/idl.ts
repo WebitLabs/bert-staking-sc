@@ -1042,6 +1042,10 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "asset"
+              },
+              {
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -1088,6 +1092,10 @@ export type BertStakingSc = {
         }
       ],
       "args": [
+        {
+          "name": "id",
+          "type": "u64"
+        },
         {
           "name": "poolIndex",
           "type": "u8"

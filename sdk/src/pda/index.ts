@@ -77,7 +77,8 @@ export class BertStakingPda {
   findNftPositionPda(
     owner: PublicKey,
     mint: PublicKey,
-    asset: PublicKey
+    asset: PublicKey,
+    id: number
   ): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [
@@ -85,6 +86,7 @@ export class BertStakingPda {
         owner.toBuffer(),
         mint.toBuffer(),
         asset.toBuffer(),
+        new BN(id).toArrayLike(Buffer, "le", 8),
       ],
       this.programId
     );
@@ -96,16 +98,9 @@ export class BertStakingPda {
    * @param mint The token mint public key
    * @returns The NFTs vault PDA and bump
    */
-  findNftsVaultPda(
-    config: PublicKey,
-    mint: PublicKey
-  ): [PublicKey, number] {
+  findNftsVaultPda(config: PublicKey, mint: PublicKey): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("nfts_vault"),
-        config.toBuffer(),
-        mint.toBuffer(),
-      ],
+      [Buffer.from("nfts_vault"), config.toBuffer(), mint.toBuffer()],
       this.programId
     );
   }
