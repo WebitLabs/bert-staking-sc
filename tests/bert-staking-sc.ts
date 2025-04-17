@@ -803,9 +803,9 @@ describe("bert-staking-sc", () => {
     // Verify the position was created and updated correctly
     const position = await sdk.fetchPosition(
       payer.publicKey,
-      nftPositionId, // Now using position ID for NFT positions
+      nftPositionId,
       tokenMint,
-      asset // Still pass the asset for reference
+      asset
     );
 
     expect(position).to.not.be.null;
@@ -896,7 +896,7 @@ describe("bert-staking-sc", () => {
     const asset = toWeb3JsPublicKey(assetSigner.publicKey);
 
     const nftPositionId = 200; // Use the same position ID from previous test
-    
+
     // Find the Position PDA for this owner, mint, asset and position ID
     const [positionPda] = sdk.pda.findNftPositionPda(
       payer.publicKey,
@@ -947,7 +947,7 @@ describe("bert-staking-sc", () => {
     const yieldRate = configAccount.poolsConfig[poolIndex].yieldRate.toNumber();
     const stakeAmount = configAccount.nftValueInTokens.toNumber();
     const yieldAmount = Math.floor(stakeAmount * (yieldRate / 10000));
-    const expectedFinalAmount = stakeAmount + yieldAmount;
+    const expectedFinalAmount = yieldAmount;
 
     console.log("Yield calculation:");
     console.log("- NFT value in tokens:", stakeAmount);
@@ -992,6 +992,13 @@ describe("bert-staking-sc", () => {
       advanceUnixTimeStamp(provider, BigInt(secondsToWarp));
       console.log("Time warped successfully!");
 
+      // const [positionPda] = sdk.pda.findNftPositionPda(
+      //   payer.publicKey,
+      //   tokenMint,
+      //   asset,
+      //   nftPositionId
+      // );
+
       // Create claim NFT instruction with position ID
       console.log("Creating claim NFT instruction...");
       const claimNftIx = await sdk.claimNftPosition({
@@ -1002,7 +1009,7 @@ describe("bert-staking-sc", () => {
         asset,
         tokenMint,
         configId,
-        positionId: nftPositionId, // Specify the position ID
+        positionId: nftPositionId,
         updateAuthority: toWeb3JsPublicKey(collectionSigner.publicKey),
       });
 

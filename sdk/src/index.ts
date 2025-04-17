@@ -517,6 +517,7 @@ export class BertStakingSDK {
     payer,
     positionPda,
     configId = 0,
+    positionId = 0,
     tokenMint,
     asset,
     tokenAccount,
@@ -528,6 +529,7 @@ export class BertStakingSDK {
     owner: PublicKey;
     payer: PublicKey;
     configId?: number;
+    positionId?: number;
     positionPda?: PublicKey;
     asset: PublicKey;
     tokenMint: PublicKey;
@@ -543,6 +545,7 @@ export class BertStakingSDK {
       owner,
       payer,
       positionPda,
+      positionId,
       asset,
       tokenMint,
       tokenAccount,
@@ -562,6 +565,7 @@ export class BertStakingSDK {
     payer,
     positionPda,
     configId = 0,
+    positionId = 0,
     asset,
     tokenMint,
     tokenAccount,
@@ -573,6 +577,7 @@ export class BertStakingSDK {
     owner: PublicKey;
     payer: PublicKey;
     configId?: number;
+    positionId?: number;
     positionPda?: PublicKey;
     asset: PublicKey;
     tokenMint: PublicKey;
@@ -587,6 +592,7 @@ export class BertStakingSDK {
       authority,
       owner,
       payer,
+      positionId,
       positionPda,
       asset,
       tokenMint,

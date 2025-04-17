@@ -119,6 +119,11 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "asset"
+              },
+              {
+                "kind": "account",
+                "path": "position.id",
+                "account": "positionV3"
               }
             ]
           }

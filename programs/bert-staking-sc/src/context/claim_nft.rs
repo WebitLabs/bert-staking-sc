@@ -41,7 +41,7 @@ pub struct ClaimPositionNft<'info> {
 
     #[account(
         mut,
-        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), asset.key().as_ref()],
+        seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), asset.key().as_ref(), position.id.to_le_bytes().as_ref()],
         bump = position.bump,
         constraint = position.owner == owner.key(),
         constraint = position.status == PositionStatus::Unclaimed,

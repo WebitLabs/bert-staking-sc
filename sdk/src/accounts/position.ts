@@ -19,13 +19,13 @@ export async function fetchPositionRpc(
     let positionPda: PublicKey;
 
     if (asset) {
-      // For NFT positions, use asset-based PDA
       [positionPda] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("position"),
           owner.toBuffer(),
           mint.toBuffer(),
           asset.toBuffer(),
+          new BN(id || 0).toArrayLike(Buffer, "le", 8),
         ],
         program.programId
       );

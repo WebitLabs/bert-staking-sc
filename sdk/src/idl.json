@@ -113,6 +113,11 @@
               {
                 "kind": "account",
                 "path": "asset"
+              },
+              {
+                "kind": "account",
+                "path": "position.id",
+                "account": "PositionV3"
               }
             ]
           }
