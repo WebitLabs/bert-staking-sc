@@ -12,3 +12,5 @@ dist
 tsconfig.tsbuildinfo
 
 admin.json
+
+.env

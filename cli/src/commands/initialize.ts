@@ -1,9 +1,8 @@
 import { Command } from "commander";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { getConnection, getSDK, getWallet } from "../utils/connection";
 import ora from "ora";
 import { COLLECTION, MINT } from "../constants";
-import { createNftsVaultAccountInstruction } from "@bert-staking/sdk/src/utils";
 import { getMint } from "@solana/spl-token";
 
 /**
@@ -127,6 +126,7 @@ export function initializeCommand(program: Command): void {
             nftsLimitPerUser: parseInt(options.nftLimit),
           });
         } catch (err) {
+          console.log("Program failed to initialize. Err:", err);
           spinner.fail(`Program failed to initialize. Tx: ${txId}`);
           return;
         }

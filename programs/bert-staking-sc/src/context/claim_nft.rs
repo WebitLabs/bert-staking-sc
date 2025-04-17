@@ -121,9 +121,9 @@ impl<'info> ClaimPositionNft<'info> {
             .checked_div(10000) // Basis points conversion (e.g., 500 = 5%)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        let final_amount = base_amount
-            .checked_add(yield_value)
-            .ok_or(StakingError::ArithmeticOverflow)?;
+        // let final_amount = base_amount
+        //     .checked_add(yield_value)
+        //     .ok_or(StakingError::ArithmeticOverflow)?;
 
         // Transfer tokens back to user with yield
         let bump = self.config.bump;
@@ -150,7 +150,7 @@ impl<'info> ClaimPositionNft<'info> {
                 },
                 signer_seeds,
             ),
-            final_amount,
+            yield_value,
         )?;
 
         // TODO: UNSTAKE

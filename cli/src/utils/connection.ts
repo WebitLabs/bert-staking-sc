@@ -18,7 +18,7 @@ const ENDPOINTS = {
 };
 
 // Default program ID
-const DEFAULT_PROGRAM_ID = "H4B2h3ypQtc1Pwzcskx7ApnSWGj9AeuN2q7WvkjvAgE2";
+const DEFAULT_PROGRAM_ID = "G4ZJJ4vytqbUsUiGst52seNZ48t2EQMxJ6eQ4sQcBrYZ";
 
 // Global connection object
 let connection: Connection;
