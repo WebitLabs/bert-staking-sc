@@ -109,11 +109,17 @@ impl<'info> ClaimPositionNft<'info> {
             StakingError::InvalidLockPeriodAndYield
         );
 
-        let lock_period_yield = self.config.pools_config[pool_index as usize];
+        let pool_config = self.config.pools_config[pool_index as usize];
+
+        // Claim only if pool is active
+        require!(
+            pool_config.is_paused == false,
+            StakingError::PoolAlreadyPaused
+        );
 
         // Calculate yield based on position type and config
         let position_amount = self.position.amount;
-        let yield_rate = lock_period_yield.yield_rate;
+        let yield_rate = pool_config.yield_rate;
         let base_amount = position_amount;
         let yield_value = base_amount
             .checked_mul(yield_rate)

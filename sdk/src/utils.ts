@@ -61,21 +61,23 @@ export function createPoolConfigIdl(
   lockPeriodDays: number,
   yieldRate: number | BN,
   maxNftsCap: number = 1000,
-  maxTokensCap: number | BN = 1000000000
+  maxTokensCap: number | BN = 1000000000,
+  isPaused: boolean = false
 ): PoolsConfigType {
   const yieldRateBN =
     typeof yieldRate === "number" ? new BN(yieldRate) : yieldRate;
   const maxTokensCapBN =
     typeof maxTokensCap === "number" ? new BN(maxTokensCap) : maxTokensCap;
 
-  // Create a static array of 64 zeros for padding
-  const paddingArray = new Array(64).fill(0);
+  // Create a static array of 63 zeros for padding - changed from 64 to match updated struct
+  const paddingArray = new Array(63).fill(0);
 
   return {
     lockPeriodDays,
     yieldRate: yieldRateBN,
     maxNftsCap: maxNftsCap,
     maxTokensCap: maxTokensCapBN,
+    isPaused,
     padding: paddingArray,
   };
 }
@@ -98,25 +100,29 @@ export function createDefaultLockPeriodYields(
       1, // 1 day
       defaultYieldRate,
       maxNftsCap,
-      maxTokensCap
+      maxTokensCap,
+      false // not paused by default
     ),
     createPoolConfigIdl(
       3, // 3 days
       defaultYieldRate,
       maxNftsCap,
-      maxTokensCap
+      maxTokensCap,
+      false
     ),
     createPoolConfigIdl(
       7, // 7 days
       defaultYieldRate,
       maxNftsCap,
-      maxTokensCap
+      maxTokensCap,
+      false
     ),
     createPoolConfigIdl(
       30, // 30 days
       defaultYieldRate,
       maxNftsCap,
-      maxTokensCap
+      maxTokensCap,
+      false
     ),
   ];
 }
@@ -129,6 +135,7 @@ export interface PoolConfigParams {
   yieldRate: number | BN;
   maxNfts: number;
   maxTokens: number | BN;
+  isPaused?: boolean;
 }
 
 /**
@@ -150,7 +157,8 @@ export function createPoolsConfig(
       config.lockPeriodDays,
       config.yieldRate,
       config.maxNfts,
-      config.maxTokens
+      config.maxTokens,
+      config.isPaused || false
     )
   );
 }

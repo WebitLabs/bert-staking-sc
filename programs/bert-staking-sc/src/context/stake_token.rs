@@ -88,6 +88,12 @@ impl<'info> StakeToken<'info> {
             StakingError::InvalidLockPeriodAndYield
         );
 
+        // Stake only if pool is not paused
+        require!(
+            pool_config.is_paused == false,
+            StakingError::PoolAlreadyPaused
+        );
+
         // Calculate new per-pool token staked amount
         let new_pool_tokens_staked = self.user_account.pool_stats[pool_index as usize]
             .tokens_staked

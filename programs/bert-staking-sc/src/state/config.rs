@@ -1,14 +1,24 @@
 use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]
+pub struct PoolConfigArgs {
+    pub lock_period_days: u16, // The lock period in days
+    pub yield_rate: u64,       // Yield rate in basis points
+    pub max_nfts_cap: u32,     // Maximum amount of NFTs that can be staked / user
+    pub max_tokens_cap: u64,   // Maximum amount of tokens that can be staked / user
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]
 pub struct PoolConfig {
     pub lock_period_days: u16, // The lock period in days
     pub yield_rate: u64,       // Yield rate in basis points (e.g., 500 = 5%)
     pub max_nfts_cap: u32,     // Maximum amount of NFTs that can be staked / user
     pub max_tokens_cap: u64,   // Maximum amount of tokens that can be staked / user
 
+    pub is_paused: bool,
+
     /// Padding
-    pub _padding: [u8; 64],
+    pub _padding: [u8; 63],
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]

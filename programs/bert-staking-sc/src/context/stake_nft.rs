@@ -94,6 +94,12 @@ impl<'info> StakeNFT<'info> {
             StakingError::InvalidLockPeriodAndYield
         );
 
+        // Stake only if pool is not paused
+        require!(
+            pool_config.is_paused == false,
+            StakingError::PoolAlreadyPaused
+        );
+
         // Calculate new per-pool NFT count
         let new_pool_nfts_staked = self.user_account.pool_stats[pool_index as usize]
             .nfts_staked

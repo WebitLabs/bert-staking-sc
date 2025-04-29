@@ -20,6 +20,10 @@ import {
   stakeTokenInstruction,
   claimTokenPositionInstruction,
   claimNftPositionInstruction,
+  adminSetPoolConfigInstruction,
+  adminPausePoolInstruction,
+  adminActivatePoolInstruction,
+  adminWithdrawTokenInstruction,
 } from "./instructions";
 
 // Import account functions
@@ -674,6 +678,105 @@ export class BertStakingSDK {
    */
   async fetchUserAccountByAddress(userAccountAddress: PublicKey) {
     return fetchUserAccountByAddressRpc(userAccountAddress, this.program);
+  }
+
+  /**
+   * Creates an instruction to set pool configuration
+   */
+  async adminSetPoolConfig({
+    authority,
+    configId,
+    poolIndex,
+    poolConfigArgs,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    poolIndex: number;
+    poolConfigArgs: PoolConfigArgs;
+  }): Promise<TransactionInstruction> {
+    return adminSetPoolConfigInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      poolIndex,
+      poolConfigArgs,
+    });
+  }
+
+  /**
+   * Creates an instruction to pause a pool
+   */
+  async adminPausePool({
+    authority,
+    configId,
+    poolIndex,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    poolIndex: number;
+  }): Promise<TransactionInstruction> {
+    return adminPausePoolInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      poolIndex,
+    });
+  }
+
+  /**
+   * Creates an instruction to activate a pool
+   */
+  async adminActivatePool({
+    authority,
+    configId,
+    poolIndex,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    poolIndex: number;
+  }): Promise<TransactionInstruction> {
+    return adminActivatePoolInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      poolIndex,
+    });
+  }
+
+  /**
+   * Creates an instruction to withdraw tokens
+   */
+  async adminWithdrawToken({
+    authority,
+    destination,
+    configId,
+    tokenMint,
+    amount,
+    vault,
+    destinationTokenAccount,
+  }: {
+    authority: PublicKey;
+    destination: PublicKey;
+    configId?: number;
+    tokenMint: PublicKey;
+    amount: number | BN;
+    vault?: PublicKey;
+    destinationTokenAccount?: PublicKey;
+  }): Promise<TransactionInstruction> {
+    return adminWithdrawTokenInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      destination,
+      configId,
+      tokenMint,
+      amount,
+      vault,
+      destinationTokenAccount,
+    });
   }
 
   /**

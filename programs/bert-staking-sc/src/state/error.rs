@@ -43,4 +43,16 @@ pub enum StakingError {
 
     #[msg("Invalid Timestamp")]
     InvalidTimestamp,
+
+    #[msg("Invalid Admin Amount")]
+    InvalidAdminAmount,
+
+    #[msg("Pool paused")]
+    PoolAlreadyPaused,
+
+    #[msg("Pool is already active")]
+    PoolAlreadyActive,
+
+    #[msg("You can only set pool config if the pool is paused")]
+    InvalidPoolPauseState,
 }

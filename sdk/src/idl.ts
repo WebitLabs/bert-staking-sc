@@ -14,6 +14,437 @@ export type BertStakingSc = {
   },
   "instructions": [
     {
+      "name": "adminActivatePool",
+      "discriminator": [
+        120,
+        32,
+        170,
+        157,
+        250,
+        216,
+        159,
+        252
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "config"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "poolIndex",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "adminPausePool",
+      "discriminator": [
+        74,
+        116,
+        13,
+        230,
+        101,
+        103,
+        117,
+        68
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "config"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "poolIndex",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "adminSetPoolConfig",
+      "discriminator": [
+        87,
+        181,
+        217,
+        7,
+        183,
+        23,
+        15,
+        140
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "config"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "poolIndex",
+          "type": "u16"
+        },
+        {
+          "name": "configParams",
+          "type": {
+            "defined": {
+              "name": "poolConfigArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "adminWithdrawTokens",
+      "discriminator": [
+        214,
+        62,
+        163,
+        202,
+        229,
+        204,
+        126,
+        142
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "destination",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.mint",
+                "account": "config"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "destinationTokenAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "destination"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.mint",
+                "account": "config"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "claimPositionNft",
       "discriminator": [
         199,
@@ -1568,6 +1999,26 @@ export type BertStakingSc = {
       "code": 6013,
       "name": "invalidTimestamp",
       "msg": "Invalid Timestamp"
+    },
+    {
+      "code": 6014,
+      "name": "invalidAdminAmount",
+      "msg": "Invalid Admin Amount"
+    },
+    {
+      "code": 6015,
+      "name": "poolAlreadyPaused",
+      "msg": "Pool paused"
+    },
+    {
+      "code": 6016,
+      "name": "poolAlreadyActive",
+      "msg": "Pool is already active"
+    },
+    {
+      "code": 6017,
+      "name": "invalidPoolPauseState",
+      "msg": "You can only set pool config if the pool is paused"
     }
   ],
   "types": [
@@ -1796,6 +2247,10 @@ export type BertStakingSc = {
             "type": "u64"
           },
           {
+            "name": "isPaused",
+            "type": "bool"
+          },
+          {
             "name": "padding",
             "docs": [
               "Padding"
@@ -1803,9 +2258,33 @@ export type BertStakingSc = {
             "type": {
               "array": [
                 "u8",
-                64
+                63
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "poolConfigArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "lockPeriodDays",
+            "type": "u16"
+          },
+          {
+            "name": "yieldRate",
+            "type": "u64"
+          },
+          {
+            "name": "maxNftsCap",
+            "type": "u32"
+          },
+          {
+            "name": "maxTokensCap",
+            "type": "u64"
           }
         ]
       }

@@ -19,6 +19,16 @@ export enum PositionStatus {
 }
 
 /**
+ * Pool configuration arguments structure
+ */
+export interface PoolConfigArgs {
+  lockPeriodDays: number;
+  yieldRate: number;
+  maxNftsCap: number;
+  maxTokensCap: number | BN;
+}
+
+/**
  * Error codes from the program
  */
 export enum StakingError {
@@ -38,6 +48,10 @@ export enum StakingError {
   AssetNotStaked = 6013,
   AttributesNotInitialized = 6014,
   InvalidTimestamp = 6015,
+  InvalidAdminAmount = 6016,
+  PoolAlreadyPaused = 6017,
+  PoolAlreadyActive = 6018,
+  InvalidPoolPauseState = 6019,
 }
 
 // IDL types
