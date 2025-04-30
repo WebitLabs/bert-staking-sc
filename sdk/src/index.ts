@@ -36,7 +36,7 @@ import {
   fetchUserAccountRpc,
   fetchUserAccountByAddressRpc,
 } from "./accounts";
-import { PositionType } from "./types";
+import { PoolConfigArgs, PositionType } from "./types";
 import { getStandardLockPeriodDays, PoolConfigParams } from "./utils";
 
 // Export types
