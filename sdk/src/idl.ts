@@ -36,6 +36,7 @@ export type BertStakingSc = {
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -93,6 +94,7 @@ export type BertStakingSc = {
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -150,6 +152,7 @@ export type BertStakingSc = {
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {

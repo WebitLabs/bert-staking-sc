@@ -3,12 +3,12 @@ use crate::state::*;
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
-#[instruction(id: u64)]
 pub struct AdminSetPoolConfig<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
     #[account(
+        mut,
         has_one = authority,
         seeds = [b"config", config.authority.key().as_ref(), config.id.to_le_bytes().as_ref()],
         bump = config.bump,
@@ -66,3 +66,4 @@ impl<'info> AdminSetPoolConfig<'info> {
         Ok(())
     }
 }
+
