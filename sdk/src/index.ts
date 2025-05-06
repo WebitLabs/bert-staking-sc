@@ -705,6 +705,44 @@ export class BertStakingSDK {
   }
 
   /**
+   * Creates an RPC call to set pool configuration
+   */
+  async adminSetPoolConfigRpc({
+    authority,
+    configId,
+    poolIndex,
+    poolConfigArgs,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    poolIndex: number;
+    poolConfigArgs: PoolConfigArgs;
+  }): Promise<string> {
+    const ix = await adminSetPoolConfigInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      poolIndex,
+      poolConfigArgs,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+    tx.feePayer = authority;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
    * Creates an instruction to pause a pool
    */
   async adminPausePool({
@@ -726,6 +764,41 @@ export class BertStakingSDK {
   }
 
   /**
+   * Creates an RPC call to pause a pool
+   */
+  async adminPausePoolRpc({
+    authority,
+    configId,
+    poolIndex,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    poolIndex: number;
+  }): Promise<string> {
+    const ix = await adminPausePoolInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      poolIndex,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+    tx.feePayer = authority;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
    * Creates an instruction to activate a pool
    */
   async adminActivatePool({
@@ -744,6 +817,41 @@ export class BertStakingSDK {
       configId,
       poolIndex,
     });
+  }
+
+  /**
+   * Creates an RPC call to activate a pool
+   */
+  async adminActivatePoolRpc({
+    authority,
+    configId,
+    poolIndex,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    poolIndex: number;
+  }): Promise<string> {
+    const ix = await adminActivatePoolInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      poolIndex,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+    tx.feePayer = authority;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
   }
 
   /**
@@ -777,6 +885,53 @@ export class BertStakingSDK {
       vault,
       destinationTokenAccount,
     });
+  }
+
+  /**
+   * Creates an RPC call to withdraw tokens
+   */
+  async adminWithdrawTokenRpc({
+    authority,
+    destination,
+    configId,
+    tokenMint,
+    amount,
+    vault,
+    destinationTokenAccount,
+  }: {
+    authority: PublicKey;
+    destination: PublicKey;
+    configId?: number;
+    tokenMint: PublicKey;
+    amount: number | BN;
+    vault?: PublicKey;
+    destinationTokenAccount?: PublicKey;
+  }): Promise<string> {
+    const ix = await adminWithdrawTokenInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      destination,
+      configId,
+      tokenMint,
+      amount,
+      vault,
+      destinationTokenAccount,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+    tx.feePayer = authority;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
   }
 
   /**

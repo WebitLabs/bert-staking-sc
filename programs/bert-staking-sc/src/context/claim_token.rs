@@ -82,11 +82,6 @@ impl<'info> ClaimPositionToken<'info> {
         );
 
         let pool_config = self.config.pools_config[pool_index as usize];
-        // Claim only if pool is active
-        require!(
-            pool_config.is_paused == false,
-            StakingError::PoolAlreadyPaused
-        );
 
         // Calculate yield based on position type and config
         let position_amount = self.position.amount;

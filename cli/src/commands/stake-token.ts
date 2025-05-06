@@ -1,7 +1,6 @@
 import { Command } from "commander";
 import { PublicKey } from "@solana/web3.js";
 import { getSDK, getWallet } from "../utils/connection";
-import { LockPeriod } from "@bert-staking/sdk";
 import ora from "ora";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { MINT } from "../constants";
