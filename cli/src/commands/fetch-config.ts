@@ -132,9 +132,9 @@ export function fetchConfigCommand(program: Command): void {
           );
 
           // Calculate APY
-          const apy =
-            (pool.yieldRate.toNumber() / 100) * (365 / pool.lockPeriodDays);
-          console.log(`- Equivalent APY: ${apy.toFixed(2)}%`);
+          // const apy =
+          //   (pool.yieldRate.toNumber() / 100) * (365 / pool.lockPeriodDays);
+          // console.log(`- Equivalent APY: ${apy.toFixed(2)}%`);
         });
       } catch (error) {
         ora().fail(`Failed to fetch config: ${error}`);
