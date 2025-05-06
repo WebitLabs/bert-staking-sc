@@ -5,8 +5,10 @@ import { initializeCommand } from "./commands/initialize";
 import { fetchConfigCommand } from "./commands/fetch-config";
 import { fetchPositionCommand } from "./commands/fetch-position";
 import { setupConnection } from "./utils/connection";
-import { initializePositionCommand } from "./commands/initialize-position";
 import { stakeTokenCommand } from "./commands/stake-token";
+import { stakeNftCommand } from "./commands/stake-nft";
+import { claimTokenCommand } from "./commands/claim-token";
+import { claimNftCommand } from "./commands/claim-nft";
 import { createTokenCommand } from "./commands/create-token";
 import { createCoreNftCommand } from "./commands/create-nft";
 import { transferCoreNftCommand } from "./commands/transfer-nft";
@@ -33,14 +35,20 @@ program
   });
 
 // Register commands
-// createTokenCommand(program);
-transferCoreNftCommand(program);
+createTokenCommand(program);
 createCoreNftCommand(program);
+transferCoreNftCommand(program);
 initializeCommand(program);
-// initializePositionCommand(program);
-// stakeTokenCommand(program);
-// fetchConfigCommand(program);
-// fetchPositionCommand(program);
+
+// Staking commands
+stakeTokenCommand(program);
+stakeNftCommand(program);
+claimTokenCommand(program);
+claimNftCommand(program);
+
+// Query commands
+fetchConfigCommand(program);
+fetchPositionCommand(program);
 
 // Register admin commands
 registerAdminCommands(program);

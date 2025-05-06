@@ -7,30 +7,19 @@ import {
   createAndProcessTransaction,
   getAddedAccountInfo,
 } from "./helpers/bankrun";
-import {
-  BertStakingSDK,
-  ConfigIdl,
-  Position,
-  PositionIdl,
-  PositionType,
-} from "../sdk/src";
+import { BertStakingSDK, ConfigIdl } from "../sdk/src";
 import { AddedProgram, BanksClient, ProgramTestContext } from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { MPL_CORE_ADDRESS, USDC_MINT_ADDRESS } from "./helpers/constants";
 import {
   createAtaForMint,
-  createAtaForMintWithAddress,
   getMintDecimals,
   getTokenBalance,
 } from "./helpers/token";
 import { getMplCoreAsset, createCollectionAndMintAsset } from "./helpers/core";
 import { KeypairSigner } from "@metaplex-foundation/umi";
-import {
-  fromWeb3JsPublicKey,
-  toWeb3JsKeypair,
-  toWeb3JsPublicKey,
-} from "@metaplex-foundation/umi-web3js-adapters";
+import { toWeb3JsPublicKey } from "@metaplex-foundation/umi-web3js-adapters";
 
 const addedPrograms: AddedProgram[] = [
   { name: "mpl_core", programId: new PublicKey(MPL_CORE_ADDRESS) },
