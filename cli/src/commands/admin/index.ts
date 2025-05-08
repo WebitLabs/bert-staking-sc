@@ -3,6 +3,7 @@ import { pausePoolCommand } from "./pause-pool";
 import { activatePoolCommand } from "./activate-pool";
 import { setPoolConfigCommand } from "./set-pool-config";
 import { withdrawTokensCommand } from "./withdraw-tokens";
+import { depositYieldCommand } from "./deposit-yield";
 
 /**
  * Register all admin commands
@@ -18,5 +19,5 @@ export function registerAdminCommands(program: Command): void {
   activatePoolCommand(program);
   setPoolConfigCommand(program);
   withdrawTokensCommand(program);
+  depositYieldCommand(program);
 }
-

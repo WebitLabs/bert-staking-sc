@@ -12,7 +12,11 @@ import { AddedProgram, BanksClient, ProgramTestContext } from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { MPL_CORE_ADDRESS, USDC_MINT_ADDRESS } from "./helpers/constants";
-import { createAtaForMint, getTokenBalance } from "./helpers/token";
+import {
+  createAtaForMint,
+  createTokenAccountAtAddress,
+  getTokenBalance,
+} from "./helpers/token";
 import { createCollectionAndMintAsset } from "./helpers/core";
 import { BN } from "@coral-xyz/anchor";
 
@@ -70,6 +74,7 @@ describe("bert-staking-sc-admin", () => {
   let collection: PublicKey;
   let configPda: PublicKey;
   let vaultAta: PublicKey;
+  let authorityVaultPda: PublicKey;
   let decimals: number;
   let tokensInVault: number;
 
@@ -115,6 +120,9 @@ describe("bert-staking-sc-admin", () => {
     // Get vault ATA for the config
     vaultAta = getAssociatedTokenAddressSync(tokenMint, configPda, true);
 
+    // Get authority vault PDA
+    [authorityVaultPda] = sdk.pda.findAuthorityVaultPda(configPda, tokenMint);
+
     try {
       // Initialize the staking program with pool configurations
       const initializeIx = await sdk.initialize({
@@ -131,14 +139,37 @@ describe("bert-staking-sc-admin", () => {
       });
 
       console.log("Initializing program...");
-      await createAndProcessTransaction(client, payer, [initializeIx]);
-      console.log("Program initialized successfully");
+      // Initialize auth vault instruction
+      const initializeAuthVaultIx = await sdk.initializeAuthVault({
+        authority: payer.publicKey,
+        configId,
+        tokenMint,
+      });
 
-      // Create the ATAs with some tokens for the vault
+      // Execute both instructions
+      await createAndProcessTransaction(client, payer, [
+        initializeIx,
+        initializeAuthVaultIx,
+      ]);
+
+      console.log("Program and authority vault initialized successfully");
+
+      // Create the ATAs with some tokens for the vault and authority vault
       const mintAmount = 1_000_000_000 * 10 ** decimals;
       tokensInVault = mintAmount;
+
+      // Mint tokens to main vault
       createAtaForMint(provider, configPda, tokenMint, BigInt(mintAmount));
-      console.log("Tokens minted to vault");
+
+      // Mint tokens to authority vault (for yield payments)
+      createTokenAccountAtAddress(
+        provider,
+        authorityVaultPda,
+        configPda,
+        tokenMint,
+        BigInt(mintAmount)
+      );
+      console.log("Tokens minted to vaults");
 
       // Verify initialization
       const configAccount = await sdk.fetchConfigByAddress(configPda);
@@ -148,6 +179,9 @@ describe("bert-staking-sc-admin", () => {
       expect(configAccount.mint).to.deep.equal(tokenMint);
       expect(configAccount.id.toNumber()).to.deep.equal(configId);
       expect(configAccount.vault.toString()).to.equal(vaultAta.toString());
+      expect(configAccount.authorityVault.toString()).to.equal(
+        authorityVaultPda.toString()
+      );
 
       // Verify pool configurations
       expect(configAccount.poolsConfig.length).to.equal(4);
@@ -453,25 +487,28 @@ describe("bert-staking-sc-admin", () => {
     createAtaForMint(provider, payer.publicKey, tokenMint, BigInt(0));
 
     // Get initial balances
-    const initialVaultBalance = await getTokenBalance(client, vaultAta);
+    const initialAuthVaultBalance = await getTokenBalance(
+      client,
+      authorityVaultPda
+    );
     const initialUserBalance = await getTokenBalance(client, userTokenAccount);
 
-    console.log("Initial vault balance:", initialVaultBalance);
+    console.log("Initial authority vault balance:", initialAuthVaultBalance);
     console.log("Initial user balance:", initialUserBalance);
 
     // Withdraw a specific amount
     const withdrawAmount = 1000 * 10 ** decimals;
 
     try {
-      // Execute the withdraw tokens instruction
+      // Execute the withdraw tokens instruction from authority vault
       const withdrawIx = await sdk.adminWithdrawToken({
         authority: payer.publicKey,
         destination: payer.publicKey,
         configId,
         tokenMint,
         amount: withdrawAmount,
-        vault: vaultAta,
         destinationTokenAccount: userTokenAccount,
+        authorityVault: authorityVaultPda,
       });
 
       const res = await createAndProcessTransaction(client, payer, [
@@ -481,17 +518,24 @@ describe("bert-staking-sc-admin", () => {
         throw res.result;
       }
 
-      console.log(`${withdrawAmount} tokens withdrawn successfully`);
+      console.log(
+        `${withdrawAmount} tokens withdrawn successfully from authority vault`
+      );
 
       // Verify balances have changed correctly
-      const finalVaultBalance = await getTokenBalance(client, vaultAta);
+      const finalAuthVaultBalance = await getTokenBalance(
+        client,
+        authorityVaultPda
+      );
       const finalUserBalance = await getTokenBalance(client, userTokenAccount);
 
-      console.log("Final vault balance:", finalVaultBalance);
+      console.log("Final authority vault balance:", finalAuthVaultBalance);
       console.log("Final user balance:", finalUserBalance);
 
       // Check the differences
-      expect(initialVaultBalance - finalVaultBalance).to.equal(withdrawAmount);
+      expect(initialAuthVaultBalance - finalAuthVaultBalance).to.equal(
+        withdrawAmount
+      );
       expect(finalUserBalance - initialUserBalance).to.equal(withdrawAmount);
 
       // Also verify config metadata hasn't changed
@@ -540,6 +584,10 @@ describe("bert-staking-sc-admin", () => {
       testConfigPda,
       true
     );
+    const [testAuthVaultPda] = sdk.pda.findAuthorityVaultPda(
+      testConfigPda,
+      tokenMint
+    );
 
     // Initialize the test config
     const initializeIx = await sdk.initialize({
@@ -555,32 +603,47 @@ describe("bert-staking-sc-admin", () => {
       nftsLimitPerUser,
     });
 
-    await createAndProcessTransaction(client, payer, [initializeIx]);
+    // Initialize auth vault instruction
+    const initializeAuthVaultIx = await sdk.initializeAuthVault({
+      authority: payer.publicKey,
+      configId: testConfigId,
+      tokenMint,
+    });
 
-    // Mint a small amount to the vault
-    const testVaultAmount = 5000 * 10 ** decimals;
+    // Execute both instructions
+    await createAndProcessTransaction(client, payer, [
+      initializeIx,
+      initializeAuthVaultIx,
+    ]);
+
+    // Create main vault with 0 balance since it's not used for admin withdrawals
+    createAtaForMint(provider, testVaultAta, tokenMint, BigInt(0));
+
+    // Mint a small amount to the authority vault for yield distributions
+    const testAuthVaultAmount = 5000 * 10 ** decimals;
     createAtaForMint(
       provider,
-      testConfigPda,
+      testAuthVaultPda,
       tokenMint,
-      BigInt(testVaultAmount)
+      BigInt(testAuthVaultAmount)
     );
 
-    // Simulate staking by manually updating the totalStakedAmount
-    // This is a bit of a hack for testing - in reality, staking would happen through proper instructions
-    // But we can edit the account directly in the test environment
+    // Since we're testing the authority vault's withdrawal limits,
+    // we're going to attempt to withdraw more than what's in the authority vault
+    // The test should fail when we try to withdraw more than what's available in the authority vault
 
-    // For testing purposes, mark 4000 tokens as staked
-    const stakedAmount = 4000 * 10 ** decimals;
+    // Current authority vault balance
+    const authVaultBalance = await getTokenBalance(client, testAuthVaultPda);
 
-    // Now try to withdraw more than the available admin funds (vault balance - staked amount)
-    const availableForAdmin = testVaultAmount - stakedAmount;
-    const excessiveAmount = availableForAdmin + 100 * 10 ** decimals;
+    // Try to withdraw slightly more than what's in the authority vault
+    const excessiveAmount = authVaultBalance + 100 * 10 ** decimals;
 
-    console.log("Test vault amount:", testVaultAmount);
-    console.log("Simulated staked amount:", stakedAmount);
-    console.log("Available for admin:", availableForAdmin);
-    console.log("Attempting to withdraw:", excessiveAmount);
+    console.log("Authority vault balance:", authVaultBalance);
+    console.log(
+      "Attempting to withdraw:",
+      excessiveAmount,
+      "(exceeding available balance)"
+    );
 
     try {
       // Execute the withdraw tokens instruction with excessive amount
@@ -590,8 +653,8 @@ describe("bert-staking-sc-admin", () => {
         configId: testConfigId,
         tokenMint,
         amount: excessiveAmount,
-        vault: testVaultAta,
         destinationTokenAccount: userTokenAccount,
+        authorityVault: testAuthVaultPda,
       });
 
       const res = await createAndProcessTransaction(client, payer, [
@@ -621,10 +684,14 @@ describe("bert-staking-sc-admin", () => {
       expect(err.toString()).to.include("Error");
     }
 
-    // Now try a valid withdrawal within the admin funds limit
-    const validWithdrawAmount = availableForAdmin - 100 * 10 ** decimals;
+    // Now try a valid withdrawal within the authority vault balance
+    const validWithdrawAmount = authVaultBalance - 100 * 10 ** decimals;
 
-    console.log("Attempting valid withdrawal of:", validWithdrawAmount);
+    console.log(
+      "Attempting valid withdrawal of:",
+      validWithdrawAmount,
+      "(within available balance)"
+    );
 
     try {
       const validWithdrawIx = await sdk.adminWithdrawToken({
@@ -633,8 +700,8 @@ describe("bert-staking-sc-admin", () => {
         configId: testConfigId,
         tokenMint,
         amount: validWithdrawAmount,
-        vault: testVaultAta,
         destinationTokenAccount: userTokenAccount,
+        authorityVault: testAuthVaultPda,
       });
 
       const res = await createAndProcessTransaction(client, payer, [

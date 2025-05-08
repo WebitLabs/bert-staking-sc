@@ -132,9 +132,24 @@ ts-node ./src/index.ts admin:activate-pool --pool-index 2 --config-id 1
 # Update pool configuration
 ts-node ./src/index.ts admin:set-pool-config --pool-index 1 --yield-rate 500 --max-nfts 1000 --max-tokens 1000000000 --config-id 1
 
-# Withdraw tokens from protocol
+# Deposit tokens into yield vault for rewards
+ts-node ./src/index.ts admin:deposit-yield --amount 10000 --token-mint <TOKEN_MINT> --config-id 1
+
+# Withdraw tokens from yield vault
 ts-node ./src/index.ts admin:withdraw-tokens --amount 1000 --token-mint <TOKEN_MINT> --destination <DESTINATION_PUBKEY> --config-id 1
 ```
+
+### Yield Management
+
+The protocol maintains two separate token vaults:
+1. **Main Vault** - Stores user-deposited principal tokens
+2. **Authority Vault** - Stores yield tokens that are used to pay rewards
+
+When users claim their positions:
+1. The principal is returned from the main vault
+2. The yield is paid from the authority vault
+
+Admins need to ensure the authority vault has sufficient tokens to pay yields. If the authority vault has insufficient funds when a user attempts to claim, the transaction will fail with `InsufficientYieldFunds` error.
 
 ## Using the SDK
 

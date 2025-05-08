@@ -15,6 +15,7 @@ import { BertStakingPda } from "./pda";
 // Import instruction creators
 import {
   initializeInstruction,
+  initializeAuthVaultInstruction,
   initializeUserInstruction,
   stakeNftInstruction,
   stakeTokenInstruction,
@@ -115,7 +116,64 @@ export class BertStakingSDK {
   }
 
   /**
-   * Creates an call to RPC to initialize the staking program
+   * Creates an instruction to initialize the authority vault
+   */
+  async initializeAuthVault({
+    authority,
+    configId = 0,
+    tokenMint,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    tokenMint: PublicKey;
+  }): Promise<TransactionInstruction> {
+    return initializeAuthVaultInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      tokenMint,
+    });
+  }
+
+  /**
+   * Creates an RPC call to initialize the authority vault
+   */
+  async initializeAuthVaultRpc({
+    authority,
+    configId = 0,
+    tokenMint,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    tokenMint: PublicKey;
+  }): Promise<string> {
+    const ix = await initializeAuthVaultInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      tokenMint,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+    tx.feePayer = authority;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
+   * Creates an call to RPC to initialize the staking program and its authority vault
+   * This is a combined initialization that handles both steps
    */
   async initializeRpc({
     id,
@@ -146,7 +204,8 @@ export class BertStakingSDK {
     nftValueInTokens: number | BN;
     nftsLimitPerUser: number;
   }): Promise<string> {
-    let ix = await initializeInstruction({
+    // 1. Create instruction to initialize the main config
+    const initIx = await initializeInstruction({
       program: this.program,
       pda: this.pda,
       id,
@@ -164,12 +223,23 @@ export class BertStakingSDK {
       nftsLimitPerUser,
     });
 
-    const tx = new Transaction();
+    // 2. Create instruction to initialize the authority vault
+    const initAuthVaultIx = await initializeAuthVaultInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId: id,
+      tokenMint: mint,
+    });
 
+    // 3. Add both instructions to a transaction
+    const tx = new Transaction();
     const latestBlockhash = await this.provider.connection.getLatestBlockhash();
     tx.recentBlockhash = latestBlockhash.blockhash;
+    tx.feePayer = authority;
 
-    tx.add(ix);
+    tx.add(initIx);
+    tx.add(initAuthVaultIx);
 
     if (this.provider.sendAndConfirm) {
       return await this.provider.sendAndConfirm(tx);
@@ -863,7 +933,7 @@ export class BertStakingSDK {
     configId,
     tokenMint,
     amount,
-    vault,
+    authorityVault,
     destinationTokenAccount,
   }: {
     authority: PublicKey;
@@ -871,7 +941,7 @@ export class BertStakingSDK {
     configId?: number;
     tokenMint: PublicKey;
     amount: number | BN;
-    vault?: PublicKey;
+    authorityVault?: PublicKey;
     destinationTokenAccount?: PublicKey;
   }): Promise<TransactionInstruction> {
     return adminWithdrawTokenInstruction({
@@ -882,7 +952,7 @@ export class BertStakingSDK {
       configId,
       tokenMint,
       amount,
-      vault,
+      authorityVault,
       destinationTokenAccount,
     });
   }
@@ -896,7 +966,7 @@ export class BertStakingSDK {
     configId,
     tokenMint,
     amount,
-    vault,
+    authorityVault,
     destinationTokenAccount,
   }: {
     authority: PublicKey;
@@ -904,7 +974,7 @@ export class BertStakingSDK {
     configId?: number;
     tokenMint: PublicKey;
     amount: number | BN;
-    vault?: PublicKey;
+    authorityVault?: PublicKey;
     destinationTokenAccount?: PublicKey;
   }): Promise<string> {
     const ix = await adminWithdrawTokenInstruction({
@@ -915,7 +985,7 @@ export class BertStakingSDK {
       configId,
       tokenMint,
       amount,
-      vault,
+      authorityVault,
       destinationTokenAccount,
     });
 

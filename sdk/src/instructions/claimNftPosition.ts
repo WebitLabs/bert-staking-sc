@@ -21,6 +21,7 @@ export type ClaimNftPositionParams = {
   collection?: web3.PublicKey;
   updateAuthority: web3.PublicKey;
   vault?: web3.PublicKey;
+  authorityVault?: web3.PublicKey;
   configId?: number;
   positionId?: number;
 };
@@ -75,6 +76,12 @@ export async function claimNftPositionInstruction({
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
+  // Derive the program's authority vault
+  const authorityVaultAccount = sdk.pda.findAuthorityVaultPda(
+    configPda,
+    tokenMint
+  )[0];
+
   return program.methods
     .claimPositionNft()
     .accountsStrict({
@@ -89,6 +96,7 @@ export async function claimNftPositionInstruction({
       mint: tokenMint,
       tokenAccount: userTokenAccount,
       vault: vaultTokenAccount,
+      authorityVault: authorityVaultAccount,
       coreProgram: CORE_PROGRAM_ID,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,

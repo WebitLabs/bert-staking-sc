@@ -14,6 +14,7 @@ import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { MPL_CORE_ADDRESS, USDC_MINT_ADDRESS } from "./helpers/constants";
 import {
   createAtaForMint,
+  createTokenAccountAtAddress,
   getMintDecimals,
   getTokenBalance,
 } from "./helpers/token";
@@ -174,8 +175,20 @@ describe("bert-staking-sc", () => {
       });
 
       console.log("Initializing program...");
-      await createAndProcessTransaction(client, authority, [initializeIx]);
-      console.log("Transaction processed successfully");
+
+      // Initialize auth vault instruction
+      const initializeAuthVaultIx = await sdk.initializeAuthVault({
+        authority: authority.publicKey,
+        configId,
+        tokenMint,
+      });
+
+      // Execute both instructions
+      await createAndProcessTransaction(client, authority, [
+        initializeIx,
+        initializeAuthVaultIx,
+      ]);
+      console.log("Program and authority vault initialized successfully");
 
       configAccount = await sdk.fetchConfigByAddress(configPda);
     } catch (err) {
@@ -190,6 +203,15 @@ describe("bert-staking-sc", () => {
     expect(configAccount.vault.toString()).to.equal(vaultTA.toString());
     expect(configAccount.nftsVault.toString()).to.equal(
       nftsVaultPda.toString()
+    );
+
+    // Verify authority vault was initialized
+    const [authorityVaultPda] = sdk.pda.findAuthorityVaultPda(
+      configPda,
+      tokenMint
+    );
+    expect(configAccount.authorityVault.toString()).to.equal(
+      authorityVaultPda.toString()
     );
 
     // Verify pool configurations
@@ -268,13 +290,48 @@ describe("bert-staking-sc", () => {
 
       const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
 
-      // Create the ATAs with some tokens for the user and the vault
+      // Create the ATAs with some tokens for the user, main vault, and authority vault
       const mintAmount = 1_000_000_000 * 10 ** decimals;
       tokensInVault = mintAmount;
+
+      // Get authority vault PDA
+      const [authorityVaultPda] = sdk.pda.findAuthorityVaultPda(
+        configPda,
+        tokenMint
+      );
+
+      // Create and fund accounts
       createAtaForMint(provider, owner, mint, BigInt(mintAmount));
-      createAtaForMint(provider, configPda, mint, BigInt(mintAmount));
+
+      // Create main vault for principal - initially with 0 tokens
+      createAtaForMint(provider, configPda, mint, BigInt(0));
+
+      // Create authority vault for yield payments - funded with tokens for rewards
+      createTokenAccountAtAddress(
+        provider,
+        authorityVaultPda,
+        configPda,
+        mint,
+        BigInt(mintAmount)
+      );
 
       userTokenAccount = getAssociatedTokenAddressSync(mint, owner, true);
+      const mainVaultAta = getAssociatedTokenAddressSync(mint, configPda, true);
+
+      // Check all balances
+      console.log(
+        `Main vault (for principal) has ${await getTokenBalance(
+          client,
+          mainVaultAta
+        )} USDC`
+      );
+
+      console.log(
+        `Authority vault (for yield) has ${await getTokenBalance(
+          client,
+          authorityVaultPda
+        )} USDC`
+      );
 
       console.log(
         `User has ${await getTokenBalance(client, userTokenAccount)} USDC`
@@ -543,7 +600,13 @@ describe("bert-staking-sc", () => {
       tokenMint,
       positionId
     );
+
+    // Get both vault addresses - main vault for principal and authority vault for yield
     const vaultAta = getAssociatedTokenAddressSync(tokenMint, configPda, true);
+    const [authorityVaultPda] = sdk.pda.findAuthorityVaultPda(
+      configPda,
+      tokenMint
+    );
 
     // First, let's fetch the current position to confirm it exists
     const position = await sdk.fetchPosition(
@@ -584,11 +647,19 @@ describe("bert-staking-sc", () => {
       userTokenAccount
     );
     const vaultBalanceBefore = await getTokenBalance(client, vaultAta);
+    const authorityVaultBalanceBefore = await getTokenBalance(
+      client,
+      authorityVaultPda
+    );
     const poolStatsBefore = configBefore.poolsStats[poolIndex];
 
     console.log("\n---- State Before Claiming ----");
     console.log("User token balance:", userTokenBalanceBefore);
-    console.log("Vault token balance:", vaultBalanceBefore);
+    console.log("Main vault balance (principal):", vaultBalanceBefore);
+    console.log(
+      "Authority vault balance (yield):",
+      authorityVaultBalanceBefore
+    );
     console.log(
       "Config total staked:",
       configBefore.totalStakedAmount.toString()
@@ -637,6 +708,7 @@ describe("bert-staking-sc", () => {
 
       // Create and execute claim position instruction
       console.log("\nClaiming position...");
+
       const claimPositionIx = await sdk.claimTokenPosition({
         authority: payer.publicKey,
         owner: payer.publicKey,
@@ -657,7 +729,7 @@ describe("bert-staking-sc", () => {
 
     // Verify the results of claiming
 
-    // 1. Check user's token balance increased with yield
+    // 1. Check user's token balance increased with yield and principal
     const userTokenBalanceAfter = await getTokenBalance(
       client,
       userTokenAccount
@@ -665,10 +737,17 @@ describe("bert-staking-sc", () => {
     const expectedBalance = userTokenBalanceBefore + expectedFinalAmount;
     expect(userTokenBalanceAfter).to.be.approximately(expectedBalance, 2); // Allow small rounding differences
 
-    // 2. Check vault balance decreased by the correct amount
+    // 2. Check main vault balance decreased by only the principal amount
     const vaultBalanceAfter = await getTokenBalance(client, vaultAta);
-    expect(vaultBalanceAfter).to.equal(
-      vaultBalanceBefore - expectedFinalAmount
+    expect(vaultBalanceAfter).to.equal(vaultBalanceBefore - stakeAmount);
+
+    // 3. Check authority vault balance decreased by only the yield amount
+    const authorityVaultBalanceAfter = await getTokenBalance(
+      client,
+      authorityVaultPda
+    );
+    expect(authorityVaultBalanceAfter).to.equal(
+      authorityVaultBalanceBefore - yieldAmount
     );
 
     // 3. Check position status has been updated to claimed
@@ -704,7 +783,8 @@ describe("bert-staking-sc", () => {
 
     console.log("\n---- State After Claiming ----");
     console.log("User token balance:", userTokenBalanceAfter);
-    console.log("Vault token balance:", vaultBalanceAfter);
+    console.log("Main vault balance (principal):", vaultBalanceAfter);
+    console.log("Authority vault balance (yield):", authorityVaultBalanceAfter);
     console.log("Position status:", positionAfter.status);
     console.log(
       "Config total staked:",
@@ -955,7 +1035,22 @@ describe("bert-staking-sc", () => {
       client,
       userTokenAccount
     );
+
+    // Get authority vault balance for yield payments
+    const [authorityVaultPda] = sdk.pda.findAuthorityVaultPda(
+      configPda,
+      tokenMint
+    );
+    const authorityVaultBalanceBefore = await getTokenBalance(
+      client,
+      authorityVaultPda
+    );
+
     console.log("User token balance before claiming:", userTokenBalanceBefore);
+    console.log(
+      "Authority vault balance (yield) before claiming:",
+      authorityVaultBalanceBefore
+    );
 
     // Verify NFT ownership has been transferred back to the owner
     const assetDataBefore = await getMplCoreAsset(
@@ -990,6 +1085,7 @@ describe("bert-staking-sc", () => {
 
       // Create claim NFT instruction with position ID
       console.log("Creating claim NFT instruction...");
+
       const claimNftIx = await sdk.claimNftPosition({
         authority: payer.publicKey,
         owner: payer.publicKey,
@@ -1042,9 +1138,27 @@ describe("bert-staking-sc", () => {
       client,
       userTokenAccount
     );
+
+    // Check authority vault balance after claim to verify yield came from there
+    const authorityVaultBalanceAfter = await getTokenBalance(
+      client,
+      authorityVaultPda
+    );
+
     console.log("User token balance after claiming:", userTokenBalanceAfter);
+    console.log(
+      "Authority vault balance after claiming:",
+      authorityVaultBalanceAfter
+    );
+
+    // User should have received the yield amount
     expect(userTokenBalanceAfter).to.equal(
       userTokenBalanceBefore + expectedFinalAmount
+    );
+
+    // Authority vault should have decreased by the yield amount
+    expect(authorityVaultBalanceAfter).to.equal(
+      authorityVaultBalanceBefore - yieldAmount
     );
 
     // Verify user account stats were updated

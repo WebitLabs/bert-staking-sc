@@ -8,7 +8,6 @@ import {
   createSignerFromKeypair,
   generateSigner,
   KeypairSigner,
-  publicKey,
   signerIdentity,
   TransactionBuilderSendAndConfirmOptions,
 } from "@metaplex-foundation/umi";
@@ -20,7 +19,6 @@ import {
   getAssetV1GpaBuilder,
   mplCore,
   Key,
-  updateAuthority,
 } from "@metaplex-foundation/mpl-core";
 
 const RPC = process.env.ENDPOINT || "https://api.devnet.solana.com";

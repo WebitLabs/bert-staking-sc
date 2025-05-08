@@ -21,7 +21,7 @@ pub struct Initialize<'info> {
     )]
     pub config: Box<Account<'info, Config>>,
 
-    pub mint: InterfaceAccount<'info, Mint>,
+    pub mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// CHECK:
     pub collection: UncheckedAccount<'info>,
@@ -32,27 +32,11 @@ pub struct Initialize<'info> {
         associated_token::mint = mint,
         associated_token::authority = config,
     )]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
+    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    // #[account(
-    //     init,
-    //     space = 0,
-    //     payer = authority,
-    //     seeds = [b"nfts_vault", config.key().as_ref(), mint.key().as_ref()],
-    //     bump,
-    // )]
     /// CHECK:
     pub nfts_vault: UncheckedAccount<'info>,
 
-    // #[account(
-    //     init,
-    //     payer = authority,
-    //     token::mint = mint,
-    //     token::authority = config,
-    //     seeds = [b"authority_vault", config.key().as_ref(), mint.key().as_ref()],
-    //     bump
-    // )]
-    // pub authority_vault: InterfaceAccount<'info, TokenAccount>,
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -90,7 +74,7 @@ impl<'info> Initialize<'info> {
             collection: self.collection.key(),
             vault: self.vault.key(),
             nfts_vault: self.nfts_vault.key(),
-            authority_vault: self.vault.key(),
+            authority_vault: Pubkey::default(),
 
             pools_config,
             pools_stats,
@@ -103,7 +87,7 @@ impl<'info> Initialize<'info> {
             total_nfts_staked: 0,
 
             bump: bumps.config,
-            authority_vault_bump: bumps.config,
+            authority_vault_bump: 0,
 
             _padding: [0; 128],
         });

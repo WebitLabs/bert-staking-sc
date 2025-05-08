@@ -244,95 +244,44 @@
           }
         },
         {
-          "name": "vault",
+          "name": "authority_vault",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "config"
-              },
-              {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
                   121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
                   95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
               },
               {
                 "kind": "account",
                 "path": "config.mint",
                 "account": "Config"
               }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
+            ]
+          },
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "destination_token_account",
@@ -762,6 +711,42 @@
           }
         },
         {
+          "name": "authority_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
           "name": "core_program",
           "address": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
         },
@@ -1085,6 +1070,42 @@
           }
         },
         {
+          "name": "authority_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
@@ -1286,6 +1307,108 @@
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "initialize_auth_vault",
+      "discriminator": [
+        69,
+        42,
+        152,
+        197,
+        7,
+        14,
+        88,
+        250
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "Config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "Config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "authority_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
     },
     {
       "name": "initiate_user",
@@ -2016,6 +2139,21 @@
       "code": 6017,
       "name": "InvalidPoolPauseState",
       "msg": "You can only set pool config if the pool is paused"
+    },
+    {
+      "code": 6018,
+      "name": "InsufficientYieldFunds",
+      "msg": "Insufficient funds in yield vault for rewards"
+    },
+    {
+      "code": 6019,
+      "name": "AuthorityVaultAlreadyInitialized",
+      "msg": "Authority vault already initialized"
+    },
+    {
+      "code": 6020,
+      "name": "AuthorityVaultNotInitialized",
+      "msg": "Authority vault not initialized"
     }
   ],
   "types": [

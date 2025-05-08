@@ -87,6 +87,45 @@ export function createAtaForMint(
   provider.context.setAccount(accountInfo.address, accountInfo.info);
 }
 
+export function createTokenAccountAtAddress(
+  provider: BankrunProvider,
+  address: PublicKey,
+  owner: PublicKey,
+  mint: PublicKey,
+  amount = BigInt(1_000_000_000_000)
+) {
+  const tokenAccData = Buffer.alloc(ACCOUNT_SIZE);
+
+  AccountLayout.encode(
+    {
+      mint,
+      owner,
+      amount,
+      delegateOption: 0,
+      delegate: PublicKey.default,
+      delegatedAmount: BigInt(0),
+      state: 1,
+      isNativeOption: 0,
+      isNative: BigInt(0),
+      closeAuthorityOption: 0,
+      closeAuthority: PublicKey.default,
+    },
+    tokenAccData
+  );
+
+  const accountInfo = {
+    address,
+    info: {
+      data: tokenAccData,
+      executable: false,
+      lamports: LAMPORTS_PER_SOL,
+      owner: TOKEN_PROGRAM_ID,
+    },
+  };
+
+  provider.context.setAccount(accountInfo.address, accountInfo.info);
+}
+
 export function createAtaForMintWithAddress(
   provider: BankrunProvider,
   address: PublicKey,

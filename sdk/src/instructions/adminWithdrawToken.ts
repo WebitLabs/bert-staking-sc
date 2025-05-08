@@ -2,10 +2,10 @@ import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import { BertStakingSc } from "../idl";
 import { BertStakingPda } from "../pda";
-import { 
+import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddressSync 
+  getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 
 export type AdminWithdrawTokenParams = {
@@ -16,7 +16,7 @@ export type AdminWithdrawTokenParams = {
   configId?: number;
   tokenMint: PublicKey;
   amount: number | BN;
-  vault?: PublicKey;
+  authorityVault?: PublicKey;
   destinationTokenAccount?: PublicKey;
 };
 
@@ -31,25 +31,20 @@ export async function adminWithdrawTokenInstruction({
   configId = 0,
   tokenMint,
   amount,
-  vault,
+  authorityVault,
   destinationTokenAccount,
 }: AdminWithdrawTokenParams): Promise<TransactionInstruction> {
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority, configId);
 
-  // Determine vault address if not provided
-  const vaultAddress = vault || getAssociatedTokenAddressSync(
-    tokenMint,
-    configPda,
-    true
-  );
+  // Determine authority vault address if not provided
+  const authorityVaultAddress =
+    authorityVault || pda.findAuthorityVaultPda(configPda, tokenMint)[0];
 
   // Determine destination token account if not provided
-  const destinationToken = destinationTokenAccount || getAssociatedTokenAddressSync(
-    tokenMint,
-    destination,
-    true
-  );
+  const destinationToken =
+    destinationTokenAccount ||
+    getAssociatedTokenAddressSync(tokenMint, destination, true);
 
   // Convert amount to BN if necessary
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
@@ -60,10 +55,11 @@ export async function adminWithdrawTokenInstruction({
       authority,
       destination,
       config: configPda,
-      vault: vaultAddress,
+      authorityVault: authorityVaultAddress,
       destinationTokenAccount: destinationToken,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
     })
     .instruction();
 }
+

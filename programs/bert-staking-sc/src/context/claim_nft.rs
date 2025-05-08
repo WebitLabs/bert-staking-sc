@@ -80,6 +80,13 @@ pub struct ClaimPositionNft<'info> {
     )]
     pub vault: Account<'info, TokenAccount>,
 
+    #[account(
+        mut,
+        seeds = [b"authority_vault", config.key().as_ref(), mint.key().as_ref()],
+        bump = config.authority_vault_bump,
+    )]
+    pub authority_vault: Account<'info, TokenAccount>,
+
     #[account(address = CORE_PROGRAM_ID)]
     /// CHECK: this will be checked by core
     pub core_program: UncheckedAccount<'info>,
@@ -121,30 +128,28 @@ impl<'info> ClaimPositionNft<'info> {
             .checked_div(10000) // Basis points conversion (e.g., 500 = 5%)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        // let final_amount = base_amount
-        //     .checked_add(yield_value)
-        //     .ok_or(StakingError::ArithmeticOverflow)?;
-
-        // Transfer tokens back to user with yield
+        // Prepare common values for transfers
         let bump = self.config.bump;
         let authority = self.config.authority.key();
-
         let id = self.config.id.to_le_bytes();
         let seeds = &[b"config".as_ref(), authority.as_ref(), id.as_ref(), &[bump]];
         let signer_seeds = &[&seeds[..]];
 
-        // TODO: it's possible here to implement 2 transfers.
-        // 1. yield from authority vault
-        // 2. principal from vault
+        // Check if authority vault has enough tokens for yield
+        let authority_vault_balance = self.authority_vault.amount;
 
-        // For tokens, transfer the original amount plus yield
+        // Ensure the authority vault has enough yield tokens
+        require!(
+            authority_vault_balance >= yield_value,
+            StakingError::InsufficientYieldFunds
+        );
+
+        // Transfer yield from authority vault
         anchor_spl::token::transfer(
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
                 anchor_spl::token::Transfer {
-                    from: self.vault.to_account_info(), // TODO: This is not 100% correct if we
-                    // want to have separation between yield
-                    // vault and regular vault. FIX
+                    from: self.authority_vault.to_account_info(),
                     to: self.token_account.to_account_info(),
                     authority: self.config.to_account_info(),
                 },
@@ -152,6 +157,8 @@ impl<'info> ClaimPositionNft<'info> {
             ),
             yield_value,
         )?;
+
+        msg!("Yield of {} transferred from authority vault", yield_value);
 
         // TODO: UNSTAKE
         // Check if the asset has the attribute plugin already on

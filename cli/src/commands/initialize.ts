@@ -152,6 +152,11 @@ export function initializeCommand(program: Command): void {
         console.log(`- Token Mint: ${config.mint.toString()}`);
         console.log(`- Collection: ${config.collection.toString()}`);
         console.log(`- Vault: ${config.vault.toString()}`);
+        console.log(
+          `- Authority Vault: ${
+            config.authorityVault?.toString() || "Not initialized"
+          }`
+        );
         console.log(`- NFTs Vault: ${config.nftsVault.toString()}`);
         console.log(`- Max Cap: ${config.maxCap.toString()} tokens`);
         console.log(

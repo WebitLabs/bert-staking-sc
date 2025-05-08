@@ -34,6 +34,10 @@ pub mod bert_staking_sc {
         )
     }
 
+    pub fn initialize_auth_vault(ctx: Context<InitializeAuthVault>) -> Result<()> {
+        ctx.accounts.initialize_auth_vault(&ctx.bumps)
+    }
+
     pub fn initiate_user(ctx: Context<InitializeUser>) -> Result<()> {
         ctx.accounts.initialize_user(&ctx.bumps)
     }

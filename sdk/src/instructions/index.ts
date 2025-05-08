@@ -1,4 +1,5 @@
 export * from "./initialize";
+export * from "./initializeAuthVault";
 export * from "./initializeUser";
 export * from "./stakeNft";
 export * from "./stakeToken";

@@ -55,4 +55,13 @@ pub enum StakingError {
 
     #[msg("You can only set pool config if the pool is paused")]
     InvalidPoolPauseState,
+
+    #[msg("Insufficient funds in yield vault for rewards")]
+    InsufficientYieldFunds,
+
+    #[msg("Authority vault already initialized")]
+    AuthorityVaultAlreadyInitialized,
+
+    #[msg("Authority vault not initialized")]
+    AuthorityVaultNotInitialized,
 }

@@ -6,12 +6,12 @@ import { getMint } from "@solana/spl-token";
 import { BN } from "@coral-xyz/anchor";
 
 /**
- * Command to withdraw tokens from the staking vault
+ * Command to withdraw tokens from the yield vault
  */
 export function withdrawTokensCommand(program: Command): void {
   program
     .command("admin:withdraw-tokens")
-    .description("Withdraw tokens from the staking vault (admin only)")
+    .description("Withdraw tokens from the yield vault (admin only)")
     .requiredOption("-a, --amount <number>", "Amount of tokens to withdraw")
     .option("-id, --config-id <number>", "Config ID", "1")
     .option(
@@ -20,7 +20,7 @@ export function withdrawTokensCommand(program: Command): void {
     )
     .action(async (options) => {
       try {
-        const spinner = ora("Withdrawing tokens from vault...").start();
+        const spinner = ora("Withdrawing tokens from yield vault...").start();
 
         const sdk = getSDK();
         const wallet = getWallet();
@@ -51,7 +51,7 @@ export function withdrawTokensCommand(program: Command): void {
         const amount = new BN(parseFloat(options.amount) * 10 ** decimals);
 
         // Use the RPC method to directly execute the transaction
-        spinner.text = `Withdrawing ${options.amount} tokens...`;
+        spinner.text = `Withdrawing ${options.amount} tokens from yield vault...`;
 
         const txid = await sdk.adminWithdrawTokenRpc({
           authority: wallet.publicKey,
@@ -62,7 +62,7 @@ export function withdrawTokensCommand(program: Command): void {
         });
 
         spinner.succeed(
-          `Successfully withdrew ${options.amount} tokens. Tx: ${txid}`
+          `Successfully withdrew ${options.amount} tokens from yield vault. Tx: ${txid}`
         );
         console.log(`\nDestination: ${destination.toString()}`);
       } catch (error) {
@@ -71,4 +71,3 @@ export function withdrawTokensCommand(program: Command): void {
       }
     });
 }
-

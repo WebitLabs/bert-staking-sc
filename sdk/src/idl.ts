@@ -250,95 +250,44 @@ export type BertStakingSc = {
           }
         },
         {
-          "name": "vault",
+          "name": "authorityVault",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "config"
-              },
-              {
                 "kind": "const",
                 "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
                   121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
                   95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
                 ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
               },
               {
                 "kind": "account",
                 "path": "config.mint",
                 "account": "config"
               }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            }
-          }
+            ]
+          },
+          "relations": [
+            "config"
+          ]
         },
         {
           "name": "destinationTokenAccount",
@@ -768,6 +717,42 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "authorityVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
           "name": "coreProgram",
           "address": "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
         },
@@ -1091,6 +1076,42 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "authorityVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
           "name": "tokenProgram",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
@@ -1292,6 +1313,108 @@ export type BertStakingSc = {
           "type": "u8"
         }
       ]
+    },
+    {
+      "name": "initializeAuthVault",
+      "discriminator": [
+        69,
+        42,
+        152,
+        197,
+        7,
+        14,
+        88,
+        250
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.authority",
+                "account": "config"
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "authorityVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "tokenProgram"
+        }
+      ],
+      "args": []
     },
     {
       "name": "initiateUser",
@@ -2022,6 +2145,21 @@ export type BertStakingSc = {
       "code": 6017,
       "name": "invalidPoolPauseState",
       "msg": "You can only set pool config if the pool is paused"
+    },
+    {
+      "code": 6018,
+      "name": "insufficientYieldFunds",
+      "msg": "Insufficient funds in yield vault for rewards"
+    },
+    {
+      "code": 6019,
+      "name": "authorityVaultAlreadyInitialized",
+      "msg": "Authority vault already initialized"
+    },
+    {
+      "code": 6020,
+      "name": "authorityVaultNotInitialized",
+      "msg": "Authority vault not initialized"
     }
   ],
   "types": [

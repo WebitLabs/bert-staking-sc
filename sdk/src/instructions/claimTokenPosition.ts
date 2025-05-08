@@ -17,6 +17,7 @@ export type ClaimPositionParams = {
   tokenAccount?: web3.PublicKey;
   collection?: web3.PublicKey;
   vault?: web3.PublicKey;
+  authorityVault?: web3.PublicKey;
   configId?: number; // ID for the config account
   positionId?: number; // ID for the position account
 };
@@ -67,6 +68,12 @@ export async function claimTokenPositionInstruction({
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
+  // Derive the program's authority vault
+  const authorityVaultAccount = sdk.pda.findAuthorityVaultPda(
+    configPda,
+    tokenMint
+  )[0];
+
   return program.methods
     .claimPositionToken()
     .accountsStrict({
@@ -78,6 +85,7 @@ export async function claimTokenPositionInstruction({
       mint: tokenMint,
       tokenAccount: userTokenAccount,
       vault: vaultTokenAccount,
+      authorityVault: authorityVaultAccount,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       systemProgram: web3.SystemProgram.programId,

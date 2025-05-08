@@ -52,6 +52,7 @@ export enum StakingError {
   PoolAlreadyPaused = 6017,
   PoolAlreadyActive = 6018,
   InvalidPoolPauseState = 6019,
+  InsufficientYieldFunds = 6020,
 }
 
 // IDL types
