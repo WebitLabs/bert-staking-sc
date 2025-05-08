@@ -16,6 +16,10 @@ export function initializeCommand(program: Command): void {
     .option("-c, --collection <pubkey>", "NFT collection address")
     .option("-id, --config-id <number>", "Config ID", "1")
     .option(
+      "-a, --admin-withdraw-destination <pubkey>",
+      "Admin withdraw destination wallet"
+    )
+    .option(
       "-cap, --max-cap <amount>",
       "Maximum staking capacity in tokens",
       "1000000000"
@@ -63,6 +67,11 @@ export function initializeCommand(program: Command): void {
         let collection = options.collection
           ? new PublicKey(options.collection)
           : new PublicKey(COLLECTION);
+
+        // Set admin withdraw destination (default to wallet if not provided)
+        let adminWithdrawDestination = options.adminWithdrawDestination
+          ? new PublicKey(options.adminWithdrawDestination)
+          : wallet.publicKey;
 
         const decimals = (await getMint(connection, mint)).decimals;
 
@@ -116,6 +125,7 @@ export function initializeCommand(program: Command): void {
         try {
           txId = await sdk.initializeRpc({
             authority: wallet.publicKey,
+            adminWithdrawDestination,
             mint,
             collection,
             id: configId,
@@ -156,6 +166,9 @@ export function initializeCommand(program: Command): void {
           `- Authority Vault: ${
             config.authorityVault?.toString() || "Not initialized"
           }`
+        );
+        console.log(
+          `- Admin Withdraw Destination: ${config.adminWithdrawDestination.toString()}`
         );
         console.log(`- NFTs Vault: ${config.nftsVault.toString()}`);
         console.log(`- Max Cap: ${config.maxCap.toString()} tokens`);

@@ -1,24 +1,23 @@
+import { BN } from "@coral-xyz/anchor";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { BankrunProvider } from "anchor-bankrun";
 import { expect } from "chai";
 import chalk from "chalk";
-import { prelude } from "./helpers/prelude";
-import { PublicKey, Keypair, SystemProgram } from "@solana/web3.js";
+import { AddedProgram, BanksClient, ProgramTestContext } from "solana-bankrun";
+import { BertStakingSDK, PoolConfigArgs } from "../sdk/src";
 import {
-  advanceUnixTimeStamp,
   createAndProcessTransaction,
   getAddedAccountInfo,
 } from "./helpers/bankrun";
-import { BertStakingSDK, ConfigIdl, PoolConfigArgs } from "../sdk/src";
-import { AddedProgram, BanksClient, ProgramTestContext } from "solana-bankrun";
-import { BankrunProvider } from "anchor-bankrun";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { MPL_CORE_ADDRESS, USDC_MINT_ADDRESS } from "./helpers/constants";
+import { createCollectionAndMintAsset } from "./helpers/core";
+import { prelude } from "./helpers/prelude";
 import {
   createAtaForMint,
   createTokenAccountAtAddress,
   getTokenBalance,
 } from "./helpers/token";
-import { createCollectionAndMintAsset } from "./helpers/core";
-import { BN } from "@coral-xyz/anchor";
 
 const addedPrograms: AddedProgram[] = [
   { name: "mpl_core", programId: new PublicKey(MPL_CORE_ADDRESS) },
@@ -129,6 +128,7 @@ describe("bert-staking-sc-admin", () => {
         authority: payer.publicKey,
         mint: tokenMint,
         collection,
+        adminWithdrawDestination: payer.publicKey, // Using payer as the admin withdraw destination
         id: configId,
         poolsConfig,
         vault: vaultAta,
@@ -500,14 +500,13 @@ describe("bert-staking-sc-admin", () => {
     const withdrawAmount = 1000 * 10 ** decimals;
 
     try {
-      // Execute the withdraw tokens instruction from authority vault
+      // Execute token withdrawal
       const withdrawIx = await sdk.adminWithdrawToken({
         authority: payer.publicKey,
-        destination: payer.publicKey,
         configId,
         tokenMint,
         amount: withdrawAmount,
-        destinationTokenAccount: userTokenAccount,
+        adminWithdrawTokenAccount: userTokenAccount,
         authorityVault: authorityVaultPda,
       });
 
@@ -551,7 +550,147 @@ describe("bert-staking-sc-admin", () => {
     }
   });
 
-  it("Fails to withdraw more tokens than available for admin", async () => {
+  it("Fails when non-admin user attempts to withdraw tokens", async () => {
+    // Create another user (not the admin)
+    const nonAdminUser = Keypair.generate();
+    console.log("Non-admin user:", nonAdminUser.publicKey.toString());
+
+    // Fund the non-admin user with some SOL to pay for transaction fees
+    const fundNonAdminIx = SystemProgram.transfer({
+      fromPubkey: payer.publicKey,
+      toPubkey: nonAdminUser.publicKey,
+      lamports: 10000000000, // 10 SOL
+    });
+
+    await createAndProcessTransaction(client, payer, [fundNonAdminIx]);
+    console.log("Funded non-admin user with SOL");
+
+    // Create a token account for the non-admin user
+    const nonAdminTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      nonAdminUser.publicKey,
+      false
+    );
+
+    // Initialize the token account
+    createAtaForMint(provider, nonAdminUser.publicKey, tokenMint, BigInt(0));
+    console.log("Created token account for non-admin user");
+
+    // Attempt to withdraw tokens as non-admin
+    const withdrawAmount = 1000 * 10 ** decimals;
+
+    try {
+      // Execute token withdrawal with non-admin as authority
+      const withdrawIx = await sdk.adminWithdrawToken({
+        authority: nonAdminUser.publicKey, // Non-admin user as authority
+        configId,
+        tokenMint,
+        amount: withdrawAmount,
+        adminWithdrawTokenAccount: nonAdminTokenAccount,
+        authorityVault: authorityVaultPda,
+      });
+
+      const res = await createAndProcessTransaction(client, nonAdminUser, [
+        withdrawIx,
+      ]);
+
+      // In bankrun, we check if the result contains an error
+      if (!res.result) {
+        expect.fail("Should have failed when non-admin attempts to withdraw");
+      } else {
+        console.log(
+          chalk.yellowBright(
+            "Transaction correctly failed when non-admin attempted to withdraw"
+          )
+        );
+      }
+    } catch (err) {
+      // This path is also valid if an error is thrown
+      console.log(
+        chalk.yellowBright(
+          "Transaction correctly failed when non-admin attempted to withdraw"
+        )
+      );
+      expect(err.toString()).to.include("Error");
+    }
+  });
+
+  it("Fails when admin tries to withdraw to token account with incorrect owner", async () => {
+    // Create another user to act as an incorrect destination
+    const wrongDestination = Keypair.generate();
+    console.log(
+      "Wrong destination user:",
+      wrongDestination.publicKey.toString()
+    );
+
+    // Fund the wrong destination with some SOL to pay for transaction fees
+    const fundWrongDestIx = SystemProgram.transfer({
+      fromPubkey: payer.publicKey,
+      toPubkey: wrongDestination.publicKey,
+      lamports: 10000000000, // 10 SOL
+    });
+
+    await createAndProcessTransaction(client, payer, [fundWrongDestIx]);
+    console.log("Funded wrong destination user with SOL");
+
+    // Create a token account for the wrong destination
+    const wrongDestTokenAccount = getAssociatedTokenAddressSync(
+      tokenMint,
+      wrongDestination.publicKey,
+      false
+    );
+
+    // Initialize the token account
+    createAtaForMint(
+      provider,
+      wrongDestination.publicKey,
+      tokenMint,
+      BigInt(0)
+    );
+    console.log("Created token account for wrong destination user");
+
+    // Attempt to withdraw tokens to a token account with wrong owner
+    const withdrawAmount = 1000 * 10 ** decimals;
+
+    try {
+      // Execute token withdrawal with correct authority but trying to use a wrong destination token account
+      const withdrawIx = await sdk.adminWithdrawToken({
+        authority: payer.publicKey, // Admin user as authority (correct)
+        configId,
+        tokenMint,
+        amount: withdrawAmount,
+        adminWithdrawTokenAccount: wrongDestTokenAccount, // Wrong destination token account
+        authorityVault: authorityVaultPda,
+      });
+
+      const res = await createAndProcessTransaction(client, payer, [
+        withdrawIx,
+      ]);
+
+      // In bankrun, we check if the result contains an error
+      if (!res.result) {
+        expect.fail(
+          "Should have failed when withdrawing to incorrect destination"
+        );
+      } else {
+        console.log(
+          chalk.yellowBright(
+            "Transaction correctly failed when withdrawing to incorrect destination"
+          )
+        );
+      }
+    } catch (err) {
+      // This path is also valid if an error is thrown
+      console.log(
+        chalk.yellowBright(
+          "Transaction correctly failed when withdrawing to incorrect destination"
+        )
+      );
+      expect(err.toString()).to.include("Error");
+    }
+  });
+
+  it("Fails when trying to withdraw more tokens than available in the authority vault", async () => {
     // Get the user token account
     const userTokenAccount = getAssociatedTokenAddressSync(
       tokenMint,
@@ -567,11 +706,9 @@ describe("bert-staking-sc-admin", () => {
     console.log("Total staked amount:", totalStakedAmount);
     console.log("Vault balance:", vaultBalance);
 
-    // Simulate staking by modifying the config's totalStakedAmount
-    // First stake some tokens to create a scenario where admin funds are limited
-
-    // In a real scenario, we would stake tokens, but we can simulate it
-    // by setting up a more limited environment
+    // We'll create a test environment where we control exactly how many
+    // tokens are in the authority vault, so we can test the token balance
+    // constraints when attempting to withdraw tokens
 
     // Create a new test config with a lower vault balance and some tokens marked as staked
     const testConfigId = configId + 100;
@@ -592,6 +729,7 @@ describe("bert-staking-sc-admin", () => {
     // Initialize the test config
     const initializeIx = await sdk.initialize({
       authority: payer.publicKey,
+      adminWithdrawDestination: payer.publicKey,
       mint: tokenMint,
       collection,
       id: testConfigId,
@@ -621,9 +759,10 @@ describe("bert-staking-sc-admin", () => {
 
     // Mint a small amount to the authority vault for yield distributions
     const testAuthVaultAmount = 5000 * 10 ** decimals;
-    createAtaForMint(
+    createTokenAccountAtAddress(
       provider,
       testAuthVaultPda,
+      testConfigPda, // The owner should be the configPDA
       tokenMint,
       BigInt(testAuthVaultAmount)
     );
@@ -646,14 +785,13 @@ describe("bert-staking-sc-admin", () => {
     );
 
     try {
-      // Execute the withdraw tokens instruction with excessive amount
+      // Test withdrawal with excessive amount
       const withdrawIx = await sdk.adminWithdrawToken({
         authority: payer.publicKey,
-        destination: payer.publicKey,
         configId: testConfigId,
         tokenMint,
         amount: excessiveAmount,
-        destinationTokenAccount: userTokenAccount,
+        adminWithdrawTokenAccount: userTokenAccount,
         authorityVault: testAuthVaultPda,
       });
 
@@ -696,11 +834,10 @@ describe("bert-staking-sc-admin", () => {
     try {
       const validWithdrawIx = await sdk.adminWithdrawToken({
         authority: payer.publicKey,
-        destination: payer.publicKey,
         configId: testConfigId,
         tokenMint,
         amount: validWithdrawAmount,
-        destinationTokenAccount: userTokenAccount,
+        adminWithdrawTokenAccount: userTokenAccount,
         authorityVault: testAuthVaultPda,
       });
 

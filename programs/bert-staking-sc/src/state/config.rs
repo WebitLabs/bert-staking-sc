@@ -46,6 +46,7 @@ pub struct Config {
     pub vault: Pubkey,           // Token Vault
     pub authority_vault: Pubkey, // Authority Vault
     pub nfts_vault: Pubkey,      // NFTs Vault
+    pub admin_withdraw_destination: Pubkey, // Admin withdraw destination
 
     pub pools_config: [PoolConfig; 4],
     pub pools_stats: [PoolStats; 4],
@@ -61,5 +62,5 @@ pub struct Config {
     pub authority_vault_bump: u8, // Authority Vault bump
 
     // Padding
-    pub _padding: [u8; 128],
+    pub _padding: [u8; 96],
 }

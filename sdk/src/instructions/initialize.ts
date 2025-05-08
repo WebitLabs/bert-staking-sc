@@ -18,6 +18,7 @@ export type InitializeParams = {
   authority: web3.PublicKey;
   mint: web3.PublicKey;
   collection: web3.PublicKey;
+  adminWithdrawDestination: web3.PublicKey;
   vault?: web3.PublicKey;
   nftsVault?: web3.PublicKey; // New field for the NFTs vault
   id?: number; // Optional ID for the config
@@ -39,6 +40,7 @@ export async function initializeInstruction({
   authority,
   mint,
   collection,
+  adminWithdrawDestination,
   vault,
   nftsVault,
   id = 0, // Default ID to 0 if not provided
@@ -94,6 +96,7 @@ export async function initializeInstruction({
       collection,
       vault: vaultTA,
       nftsVault: nftsVaultPDA,
+      adminWithdrawDestination,
       systemProgram: web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,

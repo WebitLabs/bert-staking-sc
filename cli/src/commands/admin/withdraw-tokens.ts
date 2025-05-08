@@ -16,7 +16,7 @@ export function withdrawTokensCommand(program: Command): void {
     .option("-id, --config-id <number>", "Config ID", "1")
     .option(
       "-d, --destination <pubkey>",
-      "Destination wallet (defaults to admin wallet)"
+      "Destination wallet (must match admin withdraw destination set during initialization)"
     )
     .action(async (options) => {
       try {
@@ -28,9 +28,6 @@ export function withdrawTokensCommand(program: Command): void {
 
         // Parse options
         const configId = parseInt(options.configId);
-        const destination = options.destination
-          ? new PublicKey(options.destination)
-          : wallet.publicKey;
 
         // Find the config PDA
         const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
@@ -44,6 +41,20 @@ export function withdrawTokensCommand(program: Command): void {
           return;
         }
 
+        // Get the admin_withdraw_destination from config
+        const adminWithdrawDestination = config.adminWithdrawDestination;
+
+        // If user provided a destination, verify it matches the admin_withdraw_destination
+        if (options.destination) {
+          const userDestination = new PublicKey(options.destination);
+          if (!userDestination.equals(adminWithdrawDestination)) {
+            spinner.fail(
+              "Provided destination does not match the admin withdraw destination set during initialization!"
+            );
+            return;
+          }
+        }
+
         // Get token decimals for proper value calculation
         const decimals = (await getMint(connection, config.mint)).decimals;
 
@@ -55,7 +66,6 @@ export function withdrawTokensCommand(program: Command): void {
 
         const txid = await sdk.adminWithdrawTokenRpc({
           authority: wallet.publicKey,
-          destination,
           configId,
           tokenMint: config.mint,
           amount,
@@ -64,7 +74,7 @@ export function withdrawTokensCommand(program: Command): void {
         spinner.succeed(
           `Successfully withdrew ${options.amount} tokens from yield vault. Tx: ${txid}`
         );
-        console.log(`\nDestination: ${destination.toString()}`);
+        console.log(`\nDestination: ${adminWithdrawDestination.toString()}`);
       } catch (error) {
         ora().fail(`Failed to withdraw tokens: ${error}`);
         console.error(error);

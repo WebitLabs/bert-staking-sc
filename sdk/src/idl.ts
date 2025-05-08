@@ -217,11 +217,6 @@ export type BertStakingSc = {
           ]
         },
         {
-          "name": "destination",
-          "writable": true,
-          "signer": true
-        },
-        {
           "name": "config",
           "pda": {
             "seeds": [
@@ -290,13 +285,14 @@ export type BertStakingSc = {
           ]
         },
         {
-          "name": "destinationTokenAccount",
+          "name": "adminWithdrawDestination",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "account",
-                "path": "destination"
+                "path": "config.admin_withdraw_destination",
+                "account": "config"
               },
               {
                 "kind": "const",
@@ -1269,6 +1265,9 @@ export type BertStakingSc = {
         },
         {
           "name": "nftsVault"
+        },
+        {
+          "name": "adminWithdrawDestination"
         },
         {
           "name": "systemProgram",
@@ -2275,6 +2274,10 @@ export type BertStakingSc = {
             "type": "pubkey"
           },
           {
+            "name": "adminWithdrawDestination",
+            "type": "pubkey"
+          },
+          {
             "name": "poolsConfig",
             "type": {
               "array": [
@@ -2333,7 +2336,7 @@ export type BertStakingSc = {
             "type": {
               "array": [
                 "u8",
-                128
+                96
               ]
             }
           }

@@ -72,6 +72,7 @@ export class BertStakingSDK {
   async initialize({
     id,
     authority,
+    adminWithdrawDestination,
     mint,
     collection,
     poolsConfig,
@@ -85,6 +86,7 @@ export class BertStakingSDK {
   }: {
     id: number;
     authority: PublicKey;
+    adminWithdrawDestination: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
     vault?: PublicKey;
@@ -102,6 +104,7 @@ export class BertStakingSDK {
       pda: this.pda,
       id,
       authority,
+      adminWithdrawDestination,
       mint,
       collection,
       vault,
@@ -178,6 +181,7 @@ export class BertStakingSDK {
   async initializeRpc({
     id,
     authority,
+    adminWithdrawDestination,
     mint,
     collection,
     poolsConfig,
@@ -192,6 +196,7 @@ export class BertStakingSDK {
   }: {
     id: number;
     authority: PublicKey;
+    adminWithdrawDestination: PublicKey;
     mint: PublicKey;
     collection: PublicKey;
     poolsConfig?: PoolConfigParams[];
@@ -210,6 +215,7 @@ export class BertStakingSDK {
       pda: this.pda,
       id,
       authority,
+      adminWithdrawDestination,
       mint,
       collection,
       vault,
@@ -929,31 +935,28 @@ export class BertStakingSDK {
    */
   async adminWithdrawToken({
     authority,
-    destination,
     configId,
     tokenMint,
     amount,
     authorityVault,
-    destinationTokenAccount,
+    adminWithdrawTokenAccount,
   }: {
     authority: PublicKey;
-    destination: PublicKey;
     configId?: number;
     tokenMint: PublicKey;
     amount: number | BN;
     authorityVault?: PublicKey;
-    destinationTokenAccount?: PublicKey;
+    adminWithdrawTokenAccount?: PublicKey;
   }): Promise<TransactionInstruction> {
     return adminWithdrawTokenInstruction({
       program: this.program,
       pda: this.pda,
       authority,
-      destination,
       configId,
       tokenMint,
       amount,
       authorityVault,
-      destinationTokenAccount,
+      adminWithdrawTokenAccount,
     });
   }
 
@@ -962,31 +965,28 @@ export class BertStakingSDK {
    */
   async adminWithdrawTokenRpc({
     authority,
-    destination,
     configId,
     tokenMint,
     amount,
     authorityVault,
-    destinationTokenAccount,
+    adminWithdrawTokenAccount,
   }: {
     authority: PublicKey;
-    destination: PublicKey;
     configId?: number;
     tokenMint: PublicKey;
     amount: number | BN;
     authorityVault?: PublicKey;
-    destinationTokenAccount?: PublicKey;
+    adminWithdrawTokenAccount?: PublicKey;
   }): Promise<string> {
     const ix = await adminWithdrawTokenInstruction({
       program: this.program,
       pda: this.pda,
       authority,
-      destination,
       configId,
       tokenMint,
       amount,
       authorityVault,
-      destinationTokenAccount,
+      adminWithdrawTokenAccount,
     });
 
     const tx = new Transaction();

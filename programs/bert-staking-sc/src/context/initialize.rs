@@ -37,6 +37,9 @@ pub struct Initialize<'info> {
     /// CHECK:
     pub nfts_vault: UncheckedAccount<'info>,
 
+    /// CHECK: The destination for admin withdrawals. Checked at withdrawal
+    pub admin_withdraw_destination: UncheckedAccount<'info>,
+
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -75,6 +78,7 @@ impl<'info> Initialize<'info> {
             vault: self.vault.key(),
             nfts_vault: self.nfts_vault.key(),
             authority_vault: Pubkey::default(),
+            admin_withdraw_destination: self.admin_withdraw_destination.key(),
 
             pools_config,
             pools_stats,
@@ -89,7 +93,7 @@ impl<'info> Initialize<'info> {
             bump: bumps.config,
             authority_vault_bump: 0,
 
-            _padding: [0; 128],
+            _padding: [0; 96],
         });
 
         Ok(())

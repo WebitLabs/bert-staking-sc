@@ -12,9 +12,6 @@ pub struct AdminWithdrawToken<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    #[account(mut)]
-    pub destination: Signer<'info>,
-
     #[account(
         has_one = authority,
         has_one = authority_vault,
@@ -33,9 +30,9 @@ pub struct AdminWithdrawToken<'info> {
     #[account(
         mut,
         associated_token::mint = config.mint,
-        associated_token::authority = destination,
+        associated_token::authority = config.admin_withdraw_destination,
     )]
-    pub destination_token_account: Account<'info, TokenAccount>,
+    pub admin_withdraw_destination: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -63,7 +60,7 @@ impl<'info> AdminWithdrawToken<'info> {
                 self.token_program.to_account_info(),
                 anchor_spl::token::Transfer {
                     from: self.authority_vault.to_account_info(),
-                    to: self.destination_token_account.to_account_info(),
+                    to: self.admin_withdraw_destination.to_account_info(),
                     authority: self.config.to_account_info(),
                 },
                 signer_seeds,

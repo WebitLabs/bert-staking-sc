@@ -211,11 +211,6 @@
           ]
         },
         {
-          "name": "destination",
-          "writable": true,
-          "signer": true
-        },
-        {
           "name": "config",
           "pda": {
             "seeds": [
@@ -284,13 +279,14 @@
           ]
         },
         {
-          "name": "destination_token_account",
+          "name": "admin_withdraw_destination",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "account",
-                "path": "destination"
+                "path": "config.admin_withdraw_destination",
+                "account": "Config"
               },
               {
                 "kind": "const",
@@ -1263,6 +1259,9 @@
         },
         {
           "name": "nfts_vault"
+        },
+        {
+          "name": "admin_withdraw_destination"
         },
         {
           "name": "system_program",
@@ -2269,6 +2268,10 @@
             "type": "pubkey"
           },
           {
+            "name": "admin_withdraw_destination",
+            "type": "pubkey"
+          },
+          {
             "name": "pools_config",
             "type": {
               "array": [
@@ -2327,7 +2330,7 @@
             "type": {
               "array": [
                 "u8",
-                128
+                96
               ]
             }
           }

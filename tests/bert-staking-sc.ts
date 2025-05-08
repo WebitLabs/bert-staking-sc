@@ -163,6 +163,7 @@ describe("bert-staking-sc", () => {
       // Initialize the staking program with pool configurations
       const initializeIx = await sdk.initialize({
         authority: authority.publicKey,
+        adminWithdrawDestination: authority.publicKey,
         mint: tokenMint,
         collection: toWeb3JsPublicKey(collectionSigner.publicKey),
         id: configId,
@@ -1241,6 +1242,7 @@ describe("bert-staking-sc", () => {
     // Initialize the config with the smaller token limit
     const initializeIx = await sdk.initialize({
       authority: payer.publicKey,
+      adminWithdrawDestination: payer.publicKey,
       mint: tokenMint,
       collection: toWeb3JsPublicKey(collectionSigner.publicKey),
       id: testConfigId,
@@ -1436,6 +1438,7 @@ describe("bert-staking-sc", () => {
     // Initialize the config with the smaller NFT limit
     const initializeIx = await sdk.initialize({
       authority: payer.publicKey,
+      adminWithdrawDestination: payer.publicKey,
       mint: tokenMint,
       collection: toWeb3JsPublicKey(collectionSigner.publicKey),
       id: testConfigId,

@@ -12,12 +12,11 @@ export type AdminWithdrawTokenParams = {
   program: Program<BertStakingSc>;
   pda: BertStakingPda;
   authority: PublicKey;
-  destination: PublicKey;
   configId?: number;
   tokenMint: PublicKey;
   amount: number | BN;
   authorityVault?: PublicKey;
-  destinationTokenAccount?: PublicKey;
+  adminWithdrawTokenAccount?: PublicKey;
 };
 
 /**
@@ -27,12 +26,11 @@ export async function adminWithdrawTokenInstruction({
   program,
   pda,
   authority,
-  destination,
   configId = 0,
   tokenMint,
   amount,
   authorityVault,
-  destinationTokenAccount,
+  adminWithdrawTokenAccount,
 }: AdminWithdrawTokenParams): Promise<TransactionInstruction> {
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority, configId);
@@ -41,10 +39,14 @@ export async function adminWithdrawTokenInstruction({
   const authorityVaultAddress =
     authorityVault || pda.findAuthorityVaultPda(configPda, tokenMint)[0];
 
-  // Determine destination token account if not provided
-  const destinationToken =
-    destinationTokenAccount ||
-    getAssociatedTokenAddressSync(tokenMint, destination, true);
+  // Fetch the config account to get the adminWithdrawDestination
+  const configAccount = await program.account.config.fetch(configPda);
+  const adminWithdrawDestination = configAccount.adminWithdrawDestination;
+
+  // Determine admin withdraw token account if not provided
+  const adminWithdrawToken =
+    adminWithdrawTokenAccount ||
+    getAssociatedTokenAddressSync(tokenMint, adminWithdrawDestination, true);
 
   // Convert amount to BN if necessary
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
@@ -53,10 +55,9 @@ export async function adminWithdrawTokenInstruction({
     .adminWithdrawTokens(amountBN)
     .accountsStrict({
       authority,
-      destination,
       config: configPda,
       authorityVault: authorityVaultAddress,
-      destinationTokenAccount: destinationToken,
+      adminWithdrawDestination: adminWithdrawToken,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
     })
