@@ -48,8 +48,7 @@ pub struct Config {
     pub nfts_vault: Pubkey,      // NFTs Vault
     pub admin_withdraw_destination: Pubkey, // Admin withdraw destination
 
-    pub pools_config: [PoolConfig; 4],
-    pub pools_stats: [PoolStats; 4],
+    pub pool_count: u32, // Track number of pools created
 
     pub max_cap: u64,             // Maximum tokens that can be staked
     pub nft_value_in_tokens: u64, // Fixed value for each NFT in tokens

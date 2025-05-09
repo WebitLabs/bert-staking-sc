@@ -15,13 +15,36 @@ pub struct InitializeUser<'info> {
     pub config: Account<'info, Config>,
 
     #[account(
+        seeds = [
+            b"pool",
+            config.key().as_ref(),
+            pool.index.to_le_bytes().as_ref()
+        ],
+        bump = pool.bump,
+    )]
+    pub pool: Account<'info, Pool>,
+
+    #[account(
         init,
         payer = owner,
-        space = 8 + UserAccountV2::INIT_SPACE,
+        space = 8 + UserAccountV3::INIT_SPACE,
         seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
         bump
     )]
-    pub user_account: Account<'info, UserAccountV2>,
+    pub user_account: Account<'info, UserAccountV3>,
+
+    #[account(
+        init,
+        payer = owner,
+        space = 8 + UserPoolStatsAccount::INIT_SPACE,
+        seeds = [
+            b"user_pool_stats",
+            owner.key().as_ref(),
+            pool.key().as_ref(),
+        ],
+        bump
+    )]
+    pub user_pool_stats: Account<'info, UserPoolStatsAccount>,
 
     pub mint: InterfaceAccount<'info, Mint>,
 
@@ -30,28 +53,26 @@ pub struct InitializeUser<'info> {
 
 impl<'info> InitializeUser<'info> {
     pub fn initialize_user(&mut self, bumps: &InitializeUserBumps) -> Result<()> {
-        let config = &mut self.config;
-
-        // Create an array of UserPoolStats initialized to zeros
-        let pool_stats = config.pools_config.map(|pool| UserPoolStats {
-            tokens_staked: 0,
-            nfts_staked: 0,
-            total_value: 0,
-            lock_period_days: pool.lock_period_days,
-            claimed_yield: 0,
-            _padding: [0; 32],
-        });
-
         // Initialize the user account
-        self.user_account.set_inner(UserAccountV2 {
-            pool_stats,
+        self.user_account.set_inner(UserAccountV3 {
+            config: self.config.key(),
             total_staked_value: 0,
             total_staked_nfts: 0,
             total_staked_token_amount: 0,
             total_claimed_yield: 0,
             bump: bumps.user_account,
-            _padding: [0; 32],
+            _padding: [0; 64],
         });
+
+        // Initialize user pool stats
+        let user_pool_stats = &mut self.user_pool_stats;
+        user_pool_stats.user = self.owner.key();
+        user_pool_stats.pool = self.pool.key();
+        user_pool_stats.tokens_staked = 0;
+        user_pool_stats.nfts_staked = 0;
+        user_pool_stats.total_value = 0;
+        user_pool_stats.claimed_yield = 0;
+        user_pool_stats.bump = bumps.user_pool_stats;
 
         Ok(())
     }

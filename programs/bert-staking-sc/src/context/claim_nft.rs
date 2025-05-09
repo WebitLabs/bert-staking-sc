@@ -1,4 +1,4 @@
-use crate::state::*;
+use crate::{state::*, StakingError};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -7,11 +7,8 @@ use anchor_spl::{
 
 use mpl_core::{
     accounts::{BaseAssetV1, BaseCollectionV1},
-    fetch_plugin,
     instructions::TransferV1CpiBuilder,
-    types::{
-        Attribute, Attributes, FreezeDelegate, Plugin, PluginAuthority, PluginType, UpdateAuthority,
-    },
+    types::UpdateAuthority,
     ID as CORE_PROGRAM_ID,
 };
 
@@ -34,10 +31,32 @@ pub struct ClaimPositionNft<'info> {
 
     #[account(
         mut,
+        seeds = [
+            b"pool", 
+            config.key().as_ref(),
+            &pool.index.to_le_bytes(),
+        ],
+        bump = pool.bump,
+    )]
+    pub pool: Box<Account<'info, Pool>>,
+
+    #[account(
+        mut,
         seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
         bump = user_account.bump,
     )]
-    pub user_account: Box<Account<'info, UserAccountV2>>,
+    pub user_account: Box<Account<'info, UserAccountV3>>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"user_pool_stats",
+            owner.key().as_ref(),
+            pool.key().as_ref(),
+        ],
+        bump = user_pool_stats.bump,
+    )]
+    pub user_pool_stats: Box<Account<'info, UserPoolStatsAccount>>,
 
     #[account(
         mut,
@@ -45,15 +64,14 @@ pub struct ClaimPositionNft<'info> {
         bump = position.bump,
         constraint = position.owner == owner.key(),
         constraint = position.status == PositionStatus::Unclaimed,
-
+        constraint = position.pool == pool.key() @ StakingError::InvalidPositionType,
     )]
-    pub position: Box<Account<'info, PositionV3>>,
+    pub position: Box<Account<'info, PositionV4>>,
 
-    /// CHECK: TODO: Either check it's from collection or check against this account which is
-    /// supposed to be in config also
+    /// CHECK: This is checked in config constraint
     pub collection: UncheckedAccount<'info>,
 
-    /// CHECK: TODO:
+    /// CHECK: Used for plugin updates
     pub update_authority: UncheckedAccount<'info>,
 
     #[account(
@@ -109,18 +127,15 @@ impl<'info> ClaimPositionNft<'info> {
             StakingError::InvalidPositionType
         );
 
-        // This require is trivial - should not happen!
-        let pool_index = self.position.lock_period_yield_index;
-        require!(
-            self.config.pools_config.len() > pool_index as usize,
-            StakingError::InvalidLockPeriodAndYield
-        );
+        // Get references to main accounts
+        let config = &mut self.config;
+        let pool = &mut self.pool;
+        let user_pool_stats = &mut self.user_pool_stats;
+        let position = &mut self.position;
 
-        let pool_config = self.config.pools_config[pool_index as usize];
-
-        // Calculate yield based on position type and config
-        let position_amount = self.position.amount;
-        let yield_rate = pool_config.yield_rate;
+        // Calculate yield based on position type and pool config
+        let position_amount = position.amount;
+        let yield_rate = pool.yield_rate;
         let base_amount = position_amount;
         let yield_value = base_amount
             .checked_mul(yield_rate)
@@ -129,9 +144,9 @@ impl<'info> ClaimPositionNft<'info> {
             .ok_or(StakingError::ArithmeticOverflow)?;
 
         // Prepare common values for transfers
-        let bump = self.config.bump;
-        let authority = self.config.authority.key();
-        let id = self.config.id.to_le_bytes();
+        let bump = config.bump;
+        let authority = config.authority.key();
+        let id = config.id.to_le_bytes();
         let seeds = &[b"config".as_ref(), authority.as_ref(), id.as_ref(), &[bump]];
         let signer_seeds = &[&seeds[..]];
 
@@ -151,7 +166,7 @@ impl<'info> ClaimPositionNft<'info> {
                 anchor_spl::token::Transfer {
                     from: self.authority_vault.to_account_info(),
                     to: self.token_account.to_account_info(),
-                    authority: self.config.to_account_info(),
+                    authority: config.to_account_info(),
                 },
                 signer_seeds,
             ),
@@ -160,101 +175,10 @@ impl<'info> ClaimPositionNft<'info> {
 
         msg!("Yield of {} transferred from authority vault", yield_value);
 
-        // TODO: UNSTAKE
-        // Check if the asset has the attribute plugin already on
-        // match fetch_plugin::<BaseAssetV1, Attributes>(
-        //     &self.asset.to_account_info(),
-        //     mpl_core::types::PluginType::Attributes,
-        // ) {
-        //     Ok((_, fetched_attribute_list, _)) => {
-        //         let mut attribute_list: Vec<Attribute> = Vec::new();
-        //         let mut is_initialized: bool = false;
-        //         let mut staked_time: i64 = 0;
-        //
-        //         for attribute in fetched_attribute_list.attribute_list.iter() {
-        //             if attribute.key == "staked" {
-        //                 require!(attribute.value != "0", StakingError::AssetNotStaked);
-        //                 attribute_list.push(Attribute {
-        //                     key: "staked".to_string(),
-        //                     value: 0.to_string(),
-        //                 });
-        //                 staked_time = staked_time
-        //                     .checked_add(
-        //                         Clock::get()?
-        //                             .unix_timestamp
-        //                             .checked_sub(
-        //                                 attribute
-        //                                     .value
-        //                                     .parse::<i64>()
-        //                                     .map_err(|_| StakingError::InvalidTimestamp)?,
-        //                             )
-        //                             .ok_or(StakingError::ArithmeticOverflow)?,
-        //                     )
-        //                     .ok_or(StakingError::ArithmeticOverflow)?;
-        //                 is_initialized = true;
-        //             } else if attribute.key == "staked_time" {
-        //                 staked_time = staked_time
-        //                     .checked_add(
-        //                         attribute
-        //                             .value
-        //                             .parse::<i64>()
-        //                             .map_err(|_| StakingError::InvalidTimestamp)?,
-        //                     )
-        //                     .ok_or(StakingError::ArithmeticOverflow)?;
-        //             } else {
-        //                 attribute_list.push(attribute.clone());
-        //             }
-        //         }
-        //
-        //         attribute_list.push(Attribute {
-        //             key: "staked_time".to_string(),
-        //             value: staked_time.to_string(),
-        //         });
-        //
-        //         // require!(is_initialized, StakingError::StakingNotInitialized);
-        //
-        //         UpdatePluginV1CpiBuilder::new(&self.core_program.to_account_info())
-        //             .asset(&self.asset.to_account_info())
-        //             .collection(Some(&self.collection.to_account_info()))
-        //             .payer(&self.payer.to_account_info())
-        //             .authority(Some(&self.update_authority.to_account_info()))
-        //             .system_program(&self.system_program.to_account_info())
-        //             .plugin(Plugin::Attributes(Attributes { attribute_list }))
-        //             .invoke()?;
-        //     }
-        //     Err(_) => {
-        //         return Err(StakingError::AttributesNotInitialized.into());
-        //     }
-        // }
-        //
-        // // Unfreeze the asset
-        // UpdatePluginV1CpiBuilder::new(&self.core_program.to_account_info())
-        //     .asset(&self.asset.to_account_info())
-        //     .collection(Some(&self.collection.to_account_info()))
-        //     .payer(&self.payer.to_account_info())
-        //     .authority(Some(&self.update_authority.to_account_info()))
-        //     .system_program(&self.system_program.to_account_info())
-        //     .plugin(Plugin::FreezeDelegate(FreezeDelegate { frozen: false }))
-        //     .invoke()?;
-        //
-        // // Remove the FreezeDelegate Plugin
-        // RemovePluginV1CpiBuilder::new(&self.core_program)
-        //     .asset(&self.asset.to_account_info())
-        //     .collection(Some(&self.collection.to_account_info()))
-        //     .payer(&self.payer)
-        //     .authority(Some(&self.owner))
-        //     .system_program(&self.system_program)
-        //     .plugin_type(PluginType::FreezeDelegate)
-        //     .invoke()?;
-
-        let id = self.config.id.to_le_bytes();
-        let seeds = &[b"config".as_ref(), authority.as_ref(), id.as_ref(), &[bump]];
-        let signer_seeds = &[&seeds[..]];
-
-        // Transfer The asset:
+        // Transfer The asset back to owner:
         TransferV1CpiBuilder::new(&self.core_program.to_account_info())
             .asset(&self.asset.to_account_info())
-            .authority(Some(&self.config.to_account_info()))
+            .authority(Some(&config.to_account_info()))
             .new_owner(&self.owner.to_account_info())
             .payer(&self.payer.to_account_info())
             .collection(Some(&self.collection.to_account_info()))
@@ -262,10 +186,7 @@ impl<'info> ClaimPositionNft<'info> {
             .invoke_signed(signer_seeds)?;
 
         // Update position status to claimed
-        let position = &mut self.position;
         position.status = PositionStatus::Claimed;
-
-        let config = &mut self.config;
 
         // Update config's total staked amount
         config.total_staked_amount = config
@@ -273,66 +194,45 @@ impl<'info> ClaimPositionNft<'info> {
             .checked_sub(config.nft_value_in_tokens)
             .ok_or(ProgramError::ArithmeticOverflow)?;
 
-        // Update pool stats directly in the array
-        {
-            // Create a scoped mutable reference to the pool stats
-            let pool_stats = &mut config.pools_stats[pool_index as usize];
+        // Update pool statistics
+        pool.total_nfts_staked = pool
+            .total_nfts_staked
+            .checked_sub(1)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            // Update pool config
-            pool_stats.total_nfts_staked = pool_stats
-                .total_nfts_staked
-                .checked_sub(1)
-                .ok_or(StakingError::ArithmeticOverflow)?;
-            pool_stats.lifetime_claimed_yield = pool_stats
-                .lifetime_claimed_yield
-                .checked_add(yield_value)
-                .ok_or(StakingError::ArithmeticOverflow)?;
+        pool.lifetime_claimed_yield = pool
+            .lifetime_claimed_yield
+            .checked_add(yield_value)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            msg!(
-                "pool_stats: lpd: {:?} | tns: {:?} | tss: {:?} | lns: {:?} | lts: {:?} | lcy: {:?}",
-                pool_stats.lock_period_days,
-                pool_stats.total_nfts_staked,
-                pool_stats.total_tokens_staked,
-                pool_stats.lifetime_nfts_staked,
-                pool_stats.lifetime_tokens_staked,
-                pool_stats.lifetime_claimed_yield
-            );
-        }
-
-        // Update user stats
-        let user_account = &mut self.user_account;
-
-        // Check if pool_index is valid for user pool stats
-        require!(
-            pool_index < user_account.pool_stats.len() as u8,
-            StakingError::InvalidLockPeriodAndYield
+        msg!(
+            "pool_stats: lpd: {:?} | tns: {:?} | tss: {:?} | lns: {:?} | lts: {:?} | lcy: {:?}",
+            pool.lock_period_days,
+            pool.total_nfts_staked,
+            pool.total_tokens_staked,
+            pool.lifetime_nfts_staked,
+            pool.lifetime_tokens_staked,
+            pool.lifetime_claimed_yield
         );
 
-        // Update per-pool stats
-        {
-            // Create a scoped mutable reference to the user's pool stats
-            let user_pool_stats = &mut user_account.pool_stats[pool_index as usize];
+        // Update user pool stats
+        user_pool_stats.nfts_staked = user_pool_stats
+            .nfts_staked
+            .checked_sub(1)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            // Update NFTs staked in this pool
-            user_pool_stats.nfts_staked = user_pool_stats
-                .nfts_staked
-                .checked_sub(1)
-                .ok_or(StakingError::ArithmeticOverflow)?;
+        user_pool_stats.total_value = user_pool_stats
+            .total_value
+            .checked_sub(config.nft_value_in_tokens)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            // Update total value in this pool
-            user_pool_stats.total_value = user_pool_stats
-                .total_value
-                .checked_sub(self.config.nft_value_in_tokens)
-                .ok_or(StakingError::ArithmeticOverflow)?;
-
-            // Update claimed yield for this pool
-            user_pool_stats.claimed_yield = user_pool_stats
-                .claimed_yield
-                .checked_add(yield_value)
-                .ok_or(StakingError::ArithmeticOverflow)?;
-        }
+        user_pool_stats.claimed_yield = user_pool_stats
+            .claimed_yield
+            .checked_add(yield_value)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
         // Update global user stats
+        let user_account = &mut self.user_account;
         user_account.total_staked_nfts = user_account
             .total_staked_nfts
             .checked_sub(1)
@@ -340,7 +240,7 @@ impl<'info> ClaimPositionNft<'info> {
 
         user_account.total_staked_value = user_account
             .total_staked_value
-            .checked_sub(self.config.nft_value_in_tokens)
+            .checked_sub(config.nft_value_in_tokens)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
         user_account.total_claimed_yield = user_account
@@ -356,11 +256,10 @@ impl<'info> ClaimPositionNft<'info> {
         );
 
         msg!(
-            "user_pool_stats[{}]: nfts: {:?} | value: {:?} | yield: {:?}",
-            pool_index,
-            user_account.pool_stats[pool_index as usize].nfts_staked,
-            user_account.pool_stats[pool_index as usize].total_value,
-            user_account.pool_stats[pool_index as usize].claimed_yield
+            "user_pool_stats: nfts: {:?} | value: {:?} | yield: {:?}",
+            user_pool_stats.nfts_staked,
+            user_pool_stats.total_value,
+            user_pool_stats.claimed_yield
         );
 
         Ok(())

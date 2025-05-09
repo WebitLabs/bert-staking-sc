@@ -1,4 +1,4 @@
-use crate::state::*;
+use crate::{state::*, StakingError};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -21,10 +21,32 @@ pub struct ClaimPositionToken<'info> {
 
     #[account(
         mut,
+        seeds = [
+            b"pool",
+            config.key().as_ref(),
+            &pool.index.to_le_bytes(),
+        ],
+        bump = pool.bump,
+    )]
+    pub pool: Box<Account<'info, Pool>>,
+
+    #[account(
+        mut,
         seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
         bump = user_account.bump,
     )]
-    pub user_account: Box<Account<'info, UserAccountV2>>,
+    pub user_account: Box<Account<'info, UserAccountV3>>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"user_pool_stats",
+            owner.key().as_ref(),
+            pool.key().as_ref(),
+        ],
+        bump = user_pool_stats.bump,
+    )]
+    pub user_pool_stats: Box<Account<'info, UserPoolStatsAccount>>,
 
     #[account(
         mut,
@@ -32,11 +54,11 @@ pub struct ClaimPositionToken<'info> {
         bump = position.bump,
         constraint = position.owner == owner.key(),
         constraint = position.status == PositionStatus::Unclaimed,
+        constraint = position.pool == pool.key() @ StakingError::InvalidPositionType,
     )]
-    pub position: Box<Account<'info, PositionV3>>,
+    pub position: Box<Account<'info, PositionV4>>,
 
-    /// CHECK: TODO: Either check it's from collection or check against this account which is
-    /// supposed to be in config also
+    /// CHECK: This is checked in config constraint
     pub collection: UncheckedAccount<'info>,
 
     /// Token mint.
@@ -81,18 +103,15 @@ impl<'info> ClaimPositionToken<'info> {
             StakingError::InvalidPositionType
         );
 
-        // This require is trivial - should not happen!
-        let pool_index = self.position.lock_period_yield_index;
-        require!(
-            self.config.pools_config.len() > pool_index as usize,
-            StakingError::InvalidLockPeriodAndYield
-        );
+        // Get references to main accounts
+        let config = &mut self.config;
+        let pool = &mut self.pool;
+        let user_pool_stats = &mut self.user_pool_stats;
+        let position = &mut self.position;
 
-        let pool_config = self.config.pools_config[pool_index as usize];
-
-        // Calculate yield based on position type and config
-        let position_amount = self.position.amount;
-        let yield_rate = pool_config.yield_rate;
+        // Calculate yield based on position type and pool config
+        let position_amount = position.amount;
+        let yield_rate = pool.yield_rate;
         let base_amount = position_amount;
         let yield_value = base_amount
             .checked_mul(yield_rate)
@@ -101,9 +120,9 @@ impl<'info> ClaimPositionToken<'info> {
             .ok_or(StakingError::ArithmeticOverflow)?;
 
         // Prepare common values for transfers
-        let bump = self.config.bump;
-        let authority = self.config.authority.key();
-        let id = self.config.id.to_le_bytes();
+        let bump = config.bump;
+        let authority = config.authority.key();
+        let id = config.id.to_le_bytes();
         let seeds = &[b"config".as_ref(), authority.as_ref(), id.as_ref(), &[bump]];
         let signer_seeds = &[&seeds[..]];
 
@@ -124,7 +143,7 @@ impl<'info> ClaimPositionToken<'info> {
                 anchor_spl::token::Transfer {
                     from: self.vault.to_account_info(),
                     to: self.token_account.to_account_info(),
-                    authority: self.config.to_account_info(),
+                    authority: config.to_account_info(),
                 },
                 signer_seeds,
             ),
@@ -138,7 +157,7 @@ impl<'info> ClaimPositionToken<'info> {
                 anchor_spl::token::Transfer {
                     from: self.authority_vault.to_account_info(),
                     to: self.token_account.to_account_info(),
-                    authority: self.config.to_account_info(),
+                    authority: config.to_account_info(),
                 },
                 signer_seeds,
             ),
@@ -148,11 +167,7 @@ impl<'info> ClaimPositionToken<'info> {
         msg!("Yield of {} transferred from authority vault", yield_value);
 
         // Update position status to claimed
-        let position = &mut self.position;
         position.status = PositionStatus::Claimed;
-
-        let config = &mut self.config;
-        // let mut pool_stats = config.pools_stats[pool_index as usize];
 
         // Update config's total staked amount
         config.total_staked_amount = config
@@ -160,66 +175,45 @@ impl<'info> ClaimPositionToken<'info> {
             .checked_sub(position_amount)
             .ok_or(ProgramError::ArithmeticOverflow)?;
 
-        // Update pool stats directly in the array
-        {
-            // Create a scoped mutable reference to the pool stats
-            let pool_stats = &mut config.pools_stats[pool_index as usize];
+        // Update pool statistics
+        pool.total_tokens_staked = pool
+            .total_tokens_staked
+            .checked_sub(position_amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            // Update pool config
-            pool_stats.total_tokens_staked = pool_stats
-                .total_tokens_staked
-                .checked_sub(position_amount)
-                .ok_or(StakingError::ArithmeticOverflow)?;
-            pool_stats.lifetime_claimed_yield = pool_stats
-                .lifetime_claimed_yield
-                .checked_add(yield_value)
-                .ok_or(StakingError::ArithmeticOverflow)?;
+        pool.lifetime_claimed_yield = pool
+            .lifetime_claimed_yield
+            .checked_add(yield_value)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            msg!(
-                "pool_stats: lpd: {:?} | tns: {:?} | tss: {:?} | lns: {:?} | lts: {:?} | lcy: {:?}",
-                pool_stats.lock_period_days,
-                pool_stats.total_nfts_staked,
-                pool_stats.total_tokens_staked,
-                pool_stats.lifetime_nfts_staked,
-                pool_stats.lifetime_tokens_staked,
-                pool_stats.lifetime_claimed_yield
-            );
-        } // The mutable borrow of pool_stats ends here
-
-        // Update user stats
-        let user_account = &mut self.user_account;
-
-        // Check if pool_index is valid for user pool stats
-        require!(
-            pool_index < user_account.pool_stats.len() as u8,
-            StakingError::InvalidLockPeriodAndYield
+        msg!(
+            "pool_stats: lpd: {:?} | tns: {:?} | tss: {:?} | lns: {:?} | lts: {:?} | lcy: {:?}",
+            pool.lock_period_days,
+            pool.total_nfts_staked,
+            pool.total_tokens_staked,
+            pool.lifetime_nfts_staked,
+            pool.lifetime_tokens_staked,
+            pool.lifetime_claimed_yield
         );
 
-        // Update per-pool stats
-        {
-            // Create a scoped mutable reference to the user's pool stats
-            let user_pool_stats = &mut user_account.pool_stats[pool_index as usize];
+        // Update user pool stats
+        user_pool_stats.tokens_staked = user_pool_stats
+            .tokens_staked
+            .checked_sub(position_amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            // Update tokens staked in this pool
-            user_pool_stats.tokens_staked = user_pool_stats
-                .tokens_staked
-                .checked_sub(position_amount)
-                .ok_or(StakingError::ArithmeticOverflow)?;
+        user_pool_stats.total_value = user_pool_stats
+            .total_value
+            .checked_sub(position_amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            // Update total value in this pool
-            user_pool_stats.total_value = user_pool_stats
-                .total_value
-                .checked_sub(position_amount)
-                .ok_or(StakingError::ArithmeticOverflow)?;
-
-            // Update claimed yield for this pool
-            user_pool_stats.claimed_yield = user_pool_stats
-                .claimed_yield
-                .checked_add(yield_value)
-                .ok_or(StakingError::ArithmeticOverflow)?;
-        }
+        user_pool_stats.claimed_yield = user_pool_stats
+            .claimed_yield
+            .checked_add(yield_value)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
         // Update global user stats
+        let user_account = &mut self.user_account;
         user_account.total_staked_token_amount = user_account
             .total_staked_token_amount
             .checked_sub(position_amount)
@@ -244,11 +238,10 @@ impl<'info> ClaimPositionToken<'info> {
         );
 
         msg!(
-            "user_pool_stats[{}]: tokens: {:?} | value: {:?} | yield: {:?}",
-            pool_index,
-            user_account.pool_stats[pool_index as usize].tokens_staked,
-            user_account.pool_stats[pool_index as usize].total_value,
-            user_account.pool_stats[pool_index as usize].claimed_yield
+            "user_pool_stats: tokens: {:?} | value: {:?} | yield: {:?}",
+            user_pool_stats.tokens_staked,
+            user_pool_stats.total_value,
+            user_pool_stats.claimed_yield
         );
 
         Ok(())

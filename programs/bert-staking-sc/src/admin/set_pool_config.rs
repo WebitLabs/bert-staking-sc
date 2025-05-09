@@ -1,5 +1,4 @@
-use crate::state::*;
-
+use crate::{state::*, StakingError};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -14,30 +13,31 @@ pub struct AdminSetPoolConfig<'info> {
         bump = config.bump,
     )]
     pub config: Account<'info, Config>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"pool",
+            config.key().as_ref(),
+            pool.index.to_le_bytes().as_ref()
+        ],
+        bump = pool.bump,
+    )]
+    pub pool: Account<'info, Pool>,
 }
 
 impl<'info> AdminSetPoolConfig<'info> {
-    pub fn admin_pause_pool(&mut self, pool_index: u16) -> Result<()> {
-        require!(
-            self.config.pools_config.len() > pool_index as usize,
-            StakingError::InvalidLockPeriodAndYield
-        );
-
-        let pool = &mut self.config.pools_config[pool_index as usize];
-        require!(pool.is_paused == false, StakingError::PoolAlreadyPaused);
+    pub fn admin_pause_pool(&mut self) -> Result<()> {
+        let pool = &mut self.pool;
+        require!(!pool.is_paused, StakingError::PoolAlreadyPaused);
 
         pool.is_paused = true;
 
         Ok(())
     }
 
-    pub fn admin_activate_pool(&mut self, pool_index: u16) -> Result<()> {
-        require!(
-            self.config.pools_config.len() > pool_index as usize,
-            StakingError::InvalidLockPeriodAndYield
-        );
-
-        let pool = &mut self.config.pools_config[pool_index as usize];
+    pub fn admin_activate_pool(&mut self) -> Result<()> {
+        let pool = &mut self.pool;
         require!(pool.is_paused, StakingError::PoolAlreadyActive);
 
         pool.is_paused = false;
@@ -45,18 +45,9 @@ impl<'info> AdminSetPoolConfig<'info> {
         Ok(())
     }
 
-    pub fn admin_set_pool_config(
-        &mut self,
-        pool_index: u16,
-        pool_config_args: PoolConfigArgs,
-    ) -> Result<()> {
-        require!(
-            self.config.pools_config.len() > pool_index as usize,
-            StakingError::InvalidLockPeriodAndYield
-        );
-
-        let pool = &mut self.config.pools_config[pool_index as usize];
-        require!(pool.is_paused == true, StakingError::InvalidPoolPauseState);
+    pub fn admin_set_pool_config(&mut self, pool_config_args: PoolConfigArgs) -> Result<()> {
+        let pool = &mut self.pool;
+        require!(pool.is_paused, StakingError::InvalidPoolPauseState);
 
         pool.max_tokens_cap = pool_config_args.max_tokens_cap;
         pool.max_nfts_cap = pool_config_args.max_nfts_cap;
@@ -66,4 +57,3 @@ impl<'info> AdminSetPoolConfig<'info> {
         Ok(())
     }
 }
-

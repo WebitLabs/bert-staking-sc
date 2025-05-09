@@ -1,4 +1,4 @@
-use crate::state::*;
+use crate::{state::*, StakingError};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -21,19 +21,41 @@ pub struct StakeToken<'info> {
 
     #[account(
         mut,
+        seeds = [
+            b"pool",
+            config.key().as_ref(),
+            pool.index.to_le_bytes().as_ref()
+        ],
+        bump = pool.bump,
+    )]
+    pub pool: Box<Account<'info, Pool>>,
+
+    #[account(
+        mut,
         seeds = [b"user", owner.key().as_ref(), config.key().as_ref()],
         bump = user_account.bump,
     )]
-    pub user_account: Box<Account<'info, UserAccountV2>>,
+    pub user_account: Box<Account<'info, UserAccountV3>>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"user_pool_stats",
+            owner.key().as_ref(),
+            pool.key().as_ref(),
+        ],
+        bump = user_pool_stats.bump,
+    )]
+    pub user_pool_stats: Box<Account<'info, UserPoolStatsAccount>>,
 
     #[account(
         init,
         payer = owner,
-        space = 8 + PositionV3::INIT_SPACE,
+        space = 8 + PositionV4::INIT_SPACE,
         seeds = [b"position", owner.key().as_ref(), mint.key().as_ref(), id.to_le_bytes().as_ref()],
         bump,
     )]
-    pub position: Box<Account<'info, PositionV3>>,
+    pub position: Box<Account<'info, PositionV4>>,
 
     pub mint: Account<'info, Mint>,
 
@@ -58,50 +80,28 @@ pub struct StakeToken<'info> {
 }
 
 impl<'info> StakeToken<'info> {
-    pub fn stake_token(
-        &mut self,
-        id: u64,
-        pool_index: u8,
-        amount: u64,
-        bumps: &StakeTokenBumps,
-    ) -> Result<()> {
+    pub fn stake_token(&mut self, id: u64, amount: u64, bumps: &StakeTokenBumps) -> Result<()> {
         // Check if amount is valid
         if amount == 0 {
             return Err(StakingError::InvalidAmount.into());
         }
 
-        // Check if pool_index is valid
-        require!(
-            self.config.pools_config.len() > pool_index as usize,
-            StakingError::InvalidLockPeriodAndYield
-        );
-
-        // Get a mutable reference to the config
+        // Get references to main accounts
         let config = &mut self.config;
-
-        // Create a copy of the pool config for reading
-        let pool_config = config.pools_config[pool_index as usize];
-
-        // Check if pool_index is out of bounds for user pool stats
-        require!(
-            pool_index < self.user_account.pool_stats.len() as u8,
-            StakingError::InvalidLockPeriodAndYield
-        );
+        let pool = &mut self.pool;
+        let user_pool_stats = &mut self.user_pool_stats;
 
         // Stake only if pool is not paused
-        require!(
-            pool_config.is_paused == false,
-            StakingError::PoolAlreadyPaused
-        );
+        require!(!pool.is_paused, StakingError::PoolAlreadyPaused);
 
         // Calculate new per-pool token staked amount
-        let new_pool_tokens_staked = self.user_account.pool_stats[pool_index as usize]
+        let new_pool_tokens_staked = user_pool_stats
             .tokens_staked
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
         // Calculate new per-pool total value
-        let new_pool_total_value = self.user_account.pool_stats[pool_index as usize]
+        let new_pool_total_value = user_pool_stats
             .total_value
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
@@ -115,31 +115,25 @@ impl<'info> StakeToken<'info> {
 
         // Check user has not exceeded the pool's max token cap
         require!(
-            new_pool_tokens_staked <= pool_config.max_tokens_cap,
+            new_pool_tokens_staked <= pool.max_tokens_cap,
             StakingError::UserTokensLimitCapReached
         );
 
         // Create a position for the staked tokens
         let position = &mut self.position;
         position.owner = self.owner.key();
+        position.pool = pool.key();
         position.deposit_time = Clock::get()?.unix_timestamp;
         position.amount = position.amount.checked_add(amount).unwrap();
         position.position_type = PositionType::Token;
-        position.lock_period_yield_index = pool_index;
-        position.asset = self.system_program.key();
+        position.asset = self.mint.key();
         position.id = id;
         position.bump = bumps.position;
+        position.last_claimed_at = Clock::get()?.unix_timestamp;
 
-        // Caclulate unlock time (curremt time + lock_time in seconds)
-        // Use the days value directly from the pool config
-        let lock_days = pool_config.lock_period_days;
-        // IMPORTANT
-        // lock_days
-        // will
-        // be
-        // rerpesented in minutes
-
-        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 60);
+        // Calculate unlock time (current time + lock_time in seconds)
+        let lock_days = pool.lock_period_days;
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 60); // Convert days to seconds
         position.status = PositionStatus::Unclaimed;
 
         // Transfer tokens from user to program
@@ -161,58 +155,34 @@ impl<'info> StakeToken<'info> {
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        // if new_total > config.max_cap {
-        //     return Err(StakingError::MaxCapReached.into());
-        // }
-
         config.total_staked_amount = new_total;
 
-        // Update pool stats directly in the array
-        {
-            // Create a scoped mutable reference to the pool stats
-            let pool_stats = &mut config.pools_stats[pool_index as usize];
+        // Update pool statistics
+        pool.total_tokens_staked = pool
+            .total_tokens_staked
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            // Update total tokens staked
-            pool_stats.total_tokens_staked = pool_stats
-                .total_tokens_staked
-                .checked_add(amount)
-                .ok_or(StakingError::ArithmeticOverflow)?;
+        pool.lifetime_tokens_staked = pool
+            .lifetime_tokens_staked
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
 
-            // Update lifetime tokens staked
-            pool_stats.lifetime_tokens_staked = pool_stats
-                .lifetime_tokens_staked
-                .checked_add(amount)
-                .ok_or(StakingError::ArithmeticOverflow)?;
+        msg!(
+            "pool_stats: lpd: {:?} | tns: {:?} | tss: {:?} | lns: {:?} | lts: {:?}",
+            pool.lock_period_days,
+            pool.total_nfts_staked,
+            pool.total_tokens_staked,
+            pool.lifetime_nfts_staked,
+            pool.lifetime_tokens_staked
+        );
 
-            msg!(
-                "pool_stats: lpd: {:?} | tns: {:?} | tss: {:?} | lns: {:?} | lts: {:?}",
-                pool_stats.lock_period_days,
-                pool_stats.total_nfts_staked,
-                pool_stats.total_tokens_staked,
-                pool_stats.lifetime_nfts_staked,
-                pool_stats.lifetime_tokens_staked
-            );
-        } // The mutable borrow of pool_stats ends here
-
-        // Update user stats
-        let user_account = &mut self.user_account;
-
-        // Update per-pool stats
-        {
-            // Create a scoped mutable reference to the user's pool stats
-            let user_pool_stats = &mut user_account.pool_stats[pool_index as usize];
-
-            // Update tokens staked in this pool
-            user_pool_stats.tokens_staked = new_pool_tokens_staked;
-
-            // Update total value in this pool
-            user_pool_stats.total_value = new_pool_total_value;
-
-            // Ensure lock period days is set correctly
-            // user_pool_stats.lock_period_days = pool_config.lock_period_days;
-        }
+        // Update user stats for this pool
+        user_pool_stats.tokens_staked = new_pool_tokens_staked;
+        user_pool_stats.total_value = new_pool_total_value;
 
         // Update global user stats
+        let user_account = &mut self.user_account;
         user_account.total_staked_token_amount = user_account
             .total_staked_token_amount
             .checked_add(amount)
@@ -224,8 +194,8 @@ impl<'info> StakeToken<'info> {
             "user_account: tsta {:?} | tsv: {:?} | pool[{}].tokens_staked: {:?}",
             user_account.total_staked_token_amount,
             user_account.total_staked_value,
-            pool_index,
-            user_account.pool_stats[pool_index as usize].tokens_staked
+            pool.key(),
+            pool.total_tokens_staked
         );
 
         Ok(())

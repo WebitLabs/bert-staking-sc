@@ -49,26 +49,12 @@ impl<'info> Initialize<'info> {
     pub fn initialize(
         &mut self,
         id: u64,
-        pools_config: [PoolConfig; 4],
         max_cap: u64,
         nft_value_in_tokens: u64,
         nfts_limit_per_user: u8,
         bumps: &InitializeBumps,
     ) -> Result<()> {
         let config = &mut self.config;
-
-        let pools_stats = pools_config.map(|pool| PoolStats {
-            lock_period_days: pool.lock_period_days,
-
-            total_nfts_staked: 0,
-            total_tokens_staked: 0,
-
-            lifetime_nfts_staked: 0,
-            lifetime_tokens_staked: 0,
-            lifetime_claimed_yield: 0,
-
-            _padding: [0; 64],
-        });
 
         config.set_inner(Config {
             id,
@@ -80,8 +66,7 @@ impl<'info> Initialize<'info> {
             authority_vault: Pubkey::default(),
             admin_withdraw_destination: self.admin_withdraw_destination.key(),
 
-            pools_config,
-            pools_stats,
+            pool_count: 0, // Start with no pools, they'll be created separately
 
             max_cap,
             nft_value_in_tokens,

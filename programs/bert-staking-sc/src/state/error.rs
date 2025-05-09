@@ -64,4 +64,7 @@ pub enum StakingError {
 
     #[msg("Authority vault not initialized")]
     AuthorityVaultNotInitialized,
+
+    #[msg("Unauthorized Operation")]
+    Unauthorized,
 }
