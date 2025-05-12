@@ -62,14 +62,35 @@ export type BertStakingSc = {
               }
             ]
           }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "pool"
+              }
+            ]
+          }
         }
       ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u16"
-        }
-      ]
+      "args": []
     },
     {
       "name": "adminPausePool",
@@ -120,14 +141,35 @@ export type BertStakingSc = {
               }
             ]
           }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "pool"
+              }
+            ]
+          }
         }
       ],
-      "args": [
-        {
-          "name": "poolIndex",
-          "type": "u16"
-        }
-      ]
+      "args": []
     },
     {
       "name": "adminSetPoolConfig",
@@ -178,13 +220,35 @@ export type BertStakingSc = {
               }
             ]
           }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "pool"
+              }
+            ]
+          }
         }
       ],
       "args": [
-        {
-          "name": "poolIndex",
-          "type": "u16"
-        },
         {
           "name": "configParams",
           "type": {
@@ -445,6 +509,32 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "userAccount",
           "writable": true,
           "pda": {
@@ -465,6 +555,42 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "userPoolStats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -502,16 +628,13 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "position.id",
-                "account": "positionV3"
+                "account": "positionV4"
               }
             ]
           }
         },
         {
           "name": "collection",
-          "docs": [
-            "supposed to be in config also"
-          ],
           "relations": [
             "config"
           ]
@@ -815,6 +938,32 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "userAccount",
           "writable": true,
           "pda": {
@@ -835,6 +984,42 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "userPoolStats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -868,16 +1053,13 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "position.id",
-                "account": "positionV3"
+                "account": "positionV4"
               }
             ]
           }
         },
         {
           "name": "collection",
-          "docs": [
-            "supposed to be in config also"
-          ],
           "relations": [
             "config"
           ]
@@ -1287,19 +1469,6 @@ export type BertStakingSc = {
           "type": "u64"
         },
         {
-          "name": "lockPeriodYields",
-          "type": {
-            "array": [
-              {
-                "defined": {
-                  "name": "poolConfig"
-                }
-              },
-              4
-            ]
-          }
-        },
-        {
           "name": "maxCap",
           "type": "u64"
         },
@@ -1416,6 +1585,84 @@ export type BertStakingSc = {
       "args": []
     },
     {
+      "name": "initializePool",
+      "discriminator": [
+        95,
+        180,
+        10,
+        172,
+        84,
+        174,
+        232,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        },
+        {
+          "name": "lockPeriodDays",
+          "type": "u16"
+        },
+        {
+          "name": "yieldRate",
+          "type": "u64"
+        },
+        {
+          "name": "maxNftsCap",
+          "type": "u32"
+        },
+        {
+          "name": "maxTokensCap",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "initiateUser",
       "discriminator": [
         32,
@@ -1462,6 +1709,31 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "userAccount",
           "writable": true,
           "pda": {
@@ -1482,6 +1754,42 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "userPoolStats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -1550,6 +1858,32 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "userAccount",
           "writable": true,
           "pda": {
@@ -1570,6 +1904,42 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "userPoolStats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -1656,10 +2026,6 @@ export type BertStakingSc = {
         {
           "name": "id",
           "type": "u64"
-        },
-        {
-          "name": "poolIndex",
-          "type": "u8"
         }
       ]
     },
@@ -1711,6 +2077,32 @@ export type BertStakingSc = {
           }
         },
         {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "userAccount",
           "writable": true,
           "pda": {
@@ -1731,6 +2123,42 @@ export type BertStakingSc = {
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "userPoolStats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -1977,10 +2405,6 @@ export type BertStakingSc = {
           "type": "u64"
         },
         {
-          "name": "poolIndex",
-          "type": "u8"
-        },
-        {
           "name": "amount",
           "type": "u64"
         }
@@ -2028,29 +2452,55 @@ export type BertStakingSc = {
       ]
     },
     {
-      "name": "positionV3",
+      "name": "pool",
       "discriminator": [
-        194,
-        247,
-        171,
-        54,
-        106,
-        219,
-        96,
-        51
+        241,
+        154,
+        109,
+        4,
+        17,
+        177,
+        109,
+        188
       ]
     },
     {
-      "name": "userAccountV2",
+      "name": "positionV4",
       "discriminator": [
-        49,
-        229,
-        99,
-        247,
-        99,
-        241,
-        117,
-        153
+        202,
+        171,
+        178,
+        46,
+        38,
+        48,
+        31,
+        36
+      ]
+    },
+    {
+      "name": "userAccountV3",
+      "discriminator": [
+        184,
+        176,
+        178,
+        22,
+        50,
+        106,
+        126,
+        134
+      ]
+    },
+    {
+      "name": "userPoolStatsAccount",
+      "discriminator": [
+        23,
+        136,
+        131,
+        110,
+        30,
+        91,
+        112,
+        74
       ]
     }
   ],
@@ -2159,6 +2609,11 @@ export type BertStakingSc = {
       "code": 6020,
       "name": "authorityVaultNotInitialized",
       "msg": "Authority vault not initialized"
+    },
+    {
+      "code": 6021,
+      "name": "unauthorized",
+      "msg": "Unauthorized Operation"
     }
   ],
   "types": [
@@ -2278,30 +2733,8 @@ export type BertStakingSc = {
             "type": "pubkey"
           },
           {
-            "name": "poolsConfig",
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "poolConfig"
-                  }
-                },
-                4
-              ]
-            }
-          },
-          {
-            "name": "poolsStats",
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "poolStats"
-                  }
-                },
-                4
-              ]
-            }
+            "name": "poolCount",
+            "type": "u32"
           },
           {
             "name": "maxCap",
@@ -2370,39 +2803,110 @@ export type BertStakingSc = {
       }
     },
     {
-      "name": "poolConfig",
+      "name": "pool",
       "type": {
         "kind": "struct",
         "fields": [
           {
+            "name": "config",
+            "docs": [
+              "Parent config reference"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "docs": [
+              "Pool index for reference"
+            ],
+            "type": "u32"
+          },
+          {
             "name": "lockPeriodDays",
+            "docs": [
+              "The lock period in days"
+            ],
             "type": "u16"
           },
           {
             "name": "yieldRate",
+            "docs": [
+              "Yield rate in basis points (e.g., 500 = 5%)"
+            ],
             "type": "u64"
           },
           {
             "name": "maxNftsCap",
+            "docs": [
+              "Maximum NFTs per user in this pool"
+            ],
             "type": "u32"
           },
           {
             "name": "maxTokensCap",
+            "docs": [
+              "Maximum tokens per user in this pool"
+            ],
             "type": "u64"
           },
           {
             "name": "isPaused",
+            "docs": [
+              "Whether the pool is paused"
+            ],
             "type": "bool"
+          },
+          {
+            "name": "totalNftsStaked",
+            "docs": [
+              "Current total NFTs staked in this pool"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "totalTokensStaked",
+            "docs": [
+              "Current total tokens staked in this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "lifetimeNftsStaked",
+            "docs": [
+              "All-time NFTs staked in this pool"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "lifetimeTokensStaked",
+            "docs": [
+              "All-time tokens staked in this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "lifetimeClaimedYield",
+            "docs": [
+              "All-time yield claimed from this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
           },
           {
             "name": "padding",
             "docs": [
-              "Padding"
+              "Padding for future extensions"
             ],
             "type": {
               "array": [
                 "u8",
-                63
+                64
               ]
             }
           }
@@ -2429,50 +2933,6 @@ export type BertStakingSc = {
           {
             "name": "maxTokensCap",
             "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "poolStats",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "lockPeriodDays",
-            "type": "u16"
-          },
-          {
-            "name": "totalNftsStaked",
-            "type": "u32"
-          },
-          {
-            "name": "totalTokensStaked",
-            "type": "u64"
-          },
-          {
-            "name": "lifetimeNftsStaked",
-            "type": "u32"
-          },
-          {
-            "name": "lifetimeTokensStaked",
-            "type": "u64"
-          },
-          {
-            "name": "lifetimeClaimedYield",
-            "type": "u64"
-          },
-          {
-            "name": "padding",
-            "docs": [
-              "Padding"
-            ],
-            "type": {
-              "array": [
-                "u8",
-                64
-              ]
-            }
           }
         ]
       }
@@ -2506,24 +2966,43 @@ export type BertStakingSc = {
       }
     },
     {
-      "name": "positionV3",
+      "name": "positionV4",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "owner",
+            "docs": [
+              "Owner of the position"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "Pool this position belongs to"
+            ],
             "type": "pubkey"
           },
           {
             "name": "depositTime",
+            "docs": [
+              "Time when deposit was made (unix timestamp)"
+            ],
             "type": "i64"
           },
           {
             "name": "amount",
+            "docs": [
+              "Amount of tokens staked or value of NFT"
+            ],
             "type": "u64"
           },
           {
             "name": "positionType",
+            "docs": [
+              "Type of position: NFT or Token"
+            ],
             "type": {
               "defined": {
                 "name": "positionType"
@@ -2531,15 +3010,17 @@ export type BertStakingSc = {
             }
           },
           {
-            "name": "lockPeriodYieldIndex",
-            "type": "u8"
-          },
-          {
             "name": "unlockTime",
+            "docs": [
+              "Time when the position can be unlocked"
+            ],
             "type": "i64"
           },
           {
             "name": "status",
+            "docs": [
+              "Status of position: Unclaimed or Claimed"
+            ],
             "type": {
               "defined": {
                 "name": "positionStatus"
@@ -2548,15 +3029,43 @@ export type BertStakingSc = {
           },
           {
             "name": "asset",
+            "docs": [
+              "NFT mint address (asset) - only used for NFT positions"
+            ],
             "type": "pubkey"
           },
           {
             "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
             "type": "u8"
           },
           {
             "name": "id",
+            "docs": [
+              "Position identifier"
+            ],
             "type": "u64"
+          },
+          {
+            "name": "lastClaimedAt",
+            "docs": [
+              "Last time yield was claimed"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "padding",
+            "docs": [
+              "Padding for future extensions"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
@@ -2585,25 +3094,16 @@ export type BertStakingSc = {
       }
     },
     {
-      "name": "userAccountV2",
+      "name": "userAccountV3",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "poolStats",
+            "name": "config",
             "docs": [
-              "Stats for each pool (matches the pools in Config)"
+              "The config this user account is associated with"
             ],
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "userPoolStats"
-                  }
-                },
-                4
-              ]
-            }
+            "type": "pubkey"
           },
           {
             "name": "totalStakedTokenAmount",
@@ -2648,7 +3148,7 @@ export type BertStakingSc = {
             "type": {
               "array": [
                 "u8",
-                32
+                64
               ]
             }
           }
@@ -2656,13 +3156,27 @@ export type BertStakingSc = {
       }
     },
     {
-      "name": "userPoolStats",
+      "name": "userPoolStatsAccount",
       "docs": [
-        "Stats for a specific pool for a user"
+        "A separate PDA for each user's stats for a specific pool"
       ],
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "user",
+            "docs": [
+              "The user this stats belongs to"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool this stats is for"
+            ],
+            "type": "pubkey"
+          },
           {
             "name": "tokensStaked",
             "docs": [
@@ -2685,18 +3199,18 @@ export type BertStakingSc = {
             "type": "u64"
           },
           {
-            "name": "lockPeriodDays",
-            "docs": [
-              "Lock period in days for this pool (to easily identify which pool this is)"
-            ],
-            "type": "u16"
-          },
-          {
             "name": "claimedYield",
             "docs": [
               "Claimed yield from this pool"
             ],
             "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
           },
           {
             "name": "padding",
@@ -2706,7 +3220,7 @@ export type BertStakingSc = {
             "type": {
               "array": [
                 "u8",
-                32
+                64
               ]
             }
           }

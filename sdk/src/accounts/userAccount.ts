@@ -4,38 +4,6 @@ import { BertStakingSc } from "../idl";
 import { UserAccountIdl, UserPoolStatsIdl } from "../types";
 
 /**
- * Extension function to get stats for a specific pool
- * @param userAccount The user account
- * @param poolIndex The pool index to get stats for
- * @returns The stats for the specified pool or null if not found
- */
-export function getPoolStats(
-  userAccount: UserAccountIdl,
-  poolIndex: number
-): UserPoolStatsIdl | null {
-  if (poolIndex < 0 || poolIndex >= userAccount.poolStats.length) {
-    return null;
-  }
-  return userAccount.poolStats[poolIndex];
-}
-
-/**
- * Extension function to get stats for a pool by lock period days
- * @param userAccount The user account
- * @param lockPeriodDays The lock period days to find
- * @returns The stats for the pool with the specified lock period days or null if not found
- */
-export function getPoolStatsByLockPeriod(
-  userAccount: UserAccountIdl,
-  lockPeriodDays: number
-): UserPoolStatsIdl | null {
-  const poolStats = userAccount.poolStats.find(
-    (stats) => stats.lockPeriodDays === lockPeriodDays
-  );
-  return poolStats || null;
-}
-
-/**
  * Extension function to get the total tokens staked across all pools
  * @param userAccount The user account
  * @returns The total tokens staked
@@ -77,7 +45,7 @@ export async function fetchUserAccountRpc(
     );
 
     // Fetch the account
-    const userAccount = await program.account.userAccountV2.fetchNullable(
+    const userAccount = await program.account.userAccountV3.fetchNullable(
       userPda
     );
 
@@ -101,7 +69,7 @@ export async function fetchUserAccountByAddressRpc(
 ): Promise<UserAccountIdl | null> {
   try {
     // Fetch the account
-    const userAccount = await program.account.userAccountV2.fetchNullable(
+    const userAccount = await program.account.userAccountV3.fetchNullable(
       address
     );
 

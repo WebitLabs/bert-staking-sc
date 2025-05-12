@@ -9,10 +9,12 @@ export type InitializeUserParams = {
   configId?: number;
   authority?: web3.PublicKey;
   mint: web3.PublicKey;
+  poolIndex: number;
 };
 
 /**
- * Create an instruction to initialize a user account
+ * Create an instruction to initialize a user account and user pool stats
+ * This instruction initializes both the global user account and stats for a specific pool
  */
 export async function initializeUserInstruction({
   program,
@@ -21,6 +23,7 @@ export async function initializeUserInstruction({
   configId = 0,
   authority,
   mint,
+  poolIndex,
 }: InitializeUserParams): Promise<web3.TransactionInstruction> {
   // If authority is not provided, derive it from the owner
   const authorityKey = authority || owner;
@@ -28,17 +31,26 @@ export async function initializeUserInstruction({
   // Find the config PDA
   const [configPda] = pda.findConfigPda(authorityKey, configId);
 
+  // Find the pool PDA
+  const [poolPda] = pda.findPoolPda(configPda, poolIndex);
+
   // Find the user account PDA
   const [userAccountPda] = pda.findUserAccountPda(owner, configPda);
+
+  // Find the user pool stats PDA
+  const [userPoolStatsPda] = pda.findUserPoolStatsPda(owner, poolPda);
 
   return program.methods
     .initiateUser()
     .accountsStrict({
       owner,
       config: configPda,
+      pool: poolPda,
       userAccount: userAccountPda,
+      userPoolStats: userPoolStatsPda,
       mint,
       systemProgram: web3.SystemProgram.programId,
     })
     .instruction();
 }
+

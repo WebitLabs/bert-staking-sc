@@ -57,9 +57,10 @@ export enum StakingError {
 
 // IDL types
 export type ConfigIdl = IdlAccounts<BertStakingSc>["config"];
-export type UserAccountIdl = IdlAccounts<BertStakingSc>["userAccountV2"];
-export type PositionIdl = IdlAccounts<BertStakingSc>["positionV3"];
-export type UserPoolStatsIdl = IdlTypes<BertStakingSc>["userPoolStats"];
+export type UserAccountIdl = IdlAccounts<BertStakingSc>["userAccountV3"];
+export type PositionIdl = IdlAccounts<BertStakingSc>["positionV4"];
+export type UserPoolStatsIdl = IdlTypes<BertStakingSc>["userPoolStatsAccount"];
+export type PoolIdl = IdlTypes<BertStakingSc>["pool"];
 
 /**
  * Lock period yield mapping structure

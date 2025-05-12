@@ -106,4 +106,24 @@ export class BertStakingPda {
       this.programId
     );
   }
+
+  // Find the user pool stats PDA
+  findUserPoolStatsPda(user: PublicKey, pool: PublicKey) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("user_pool_stats"), user.toBuffer(), pool.toBuffer()],
+      this.programId
+    );
+  }
+
+  // Find the user pool stats PDA
+  findPoolPda(config: PublicKey, index: number) {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("pool"),
+        config.toBuffer(),
+        new BN(index).toArrayLike(Buffer, "le", 4),
+      ],
+      this.programId
+    );
+  }
 }

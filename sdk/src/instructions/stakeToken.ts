@@ -47,6 +47,12 @@ export async function stakeTokenInstruction({
   // Find User Account PDA
   const [userAccountPda] = pda.findUserAccountPda(owner, configPda);
 
+  // Find Pool PDA with the pool index
+  const [poolPda] = pda.findPoolPda(configPda, poolIndex);
+
+  // Find User Pool Stats PDA
+  const [userPoolStatsPda] = pda.findUserPoolStatsPda(owner, poolPda);
+
   // Find Position PDA with the positionId
   const [positionPda] = pda.findPositionPda(owner, tokenMint, positionId);
 
@@ -66,11 +72,13 @@ export async function stakeTokenInstruction({
     vault || getAssociatedTokenAddressSync(tokenMint, configPda, true);
 
   return program.methods
-    .stakeToken(new BN(positionId), poolIndex, amountBN)
+    .stakeToken(new BN(positionId), amountBN)
     .accountsStrict({
       owner,
       config: configPda,
+      pool: poolPda,
       userAccount: userAccountPda,
+      userPoolStats: userPoolStatsPda,
       position: positionPda,
       mint: tokenMint,
       tokenAccount: userTokenAccount,

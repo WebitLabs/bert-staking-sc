@@ -27,6 +27,9 @@ export async function adminSetPoolConfigInstruction({
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority, configId);
 
+  // Find Pool PDA
+  const [poolPda] = pda.findPoolPda(configPda, poolIndex);
+
   const maxTokensCap =
     typeof poolConfigArgs.maxTokensCap === "number"
       ? new BN(poolConfigArgs.maxTokensCap)
@@ -43,10 +46,11 @@ export async function adminSetPoolConfigInstruction({
   };
 
   return program.methods
-    .adminSetPoolConfig(poolIndex, configArgs)
+    .adminSetPoolConfig(configArgs)
     .accountsStrict({
       authority,
       config: configPda,
+      pool: poolPda,
     })
     .instruction();
 }
@@ -67,11 +71,15 @@ export async function adminPausePoolInstruction({
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority, configId);
 
+  // Find Pool PDA
+  const [poolPda] = pda.findPoolPda(configPda, poolIndex);
+
   return program.methods
-    .adminPausePool(poolIndex)
+    .adminPausePool()
     .accountsStrict({
       authority,
       config: configPda,
+      pool: poolPda,
     })
     .instruction();
 }
@@ -92,11 +100,15 @@ export async function adminActivatePoolInstruction({
   // Find Config PDA
   const [configPda] = pda.findConfigPda(authority, configId);
 
+  // Find Pool PDA
+  const [poolPda] = pda.findPoolPda(configPda, poolIndex);
+
   return program.methods
-    .adminActivatePool(poolIndex)
+    .adminActivatePool()
     .accountsStrict({
       authority,
       config: configPda,
+      pool: poolPda,
     })
     .instruction();
 }

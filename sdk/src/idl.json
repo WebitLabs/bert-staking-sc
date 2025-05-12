@@ -56,14 +56,35 @@
               }
             ]
           }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "Pool"
+              }
+            ]
+          }
         }
       ],
-      "args": [
-        {
-          "name": "pool_index",
-          "type": "u16"
-        }
-      ]
+      "args": []
     },
     {
       "name": "admin_pause_pool",
@@ -114,14 +135,35 @@
               }
             ]
           }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "Pool"
+              }
+            ]
+          }
         }
       ],
-      "args": [
-        {
-          "name": "pool_index",
-          "type": "u16"
-        }
-      ]
+      "args": []
     },
     {
       "name": "admin_set_pool_config",
@@ -172,13 +214,35 @@
               }
             ]
           }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "Pool"
+              }
+            ]
+          }
         }
       ],
       "args": [
-        {
-          "name": "pool_index",
-          "type": "u16"
-        },
         {
           "name": "config_params",
           "type": {
@@ -439,6 +503,32 @@
           }
         },
         {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "user_account",
           "writable": true,
           "pda": {
@@ -459,6 +549,42 @@
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_pool_stats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -496,16 +622,13 @@
               {
                 "kind": "account",
                 "path": "position.id",
-                "account": "PositionV3"
+                "account": "PositionV4"
               }
             ]
           }
         },
         {
           "name": "collection",
-          "docs": [
-            "supposed to be in config also"
-          ],
           "relations": [
             "config"
           ]
@@ -809,6 +932,32 @@
           }
         },
         {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "user_account",
           "writable": true,
           "pda": {
@@ -829,6 +978,42 @@
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_pool_stats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -862,16 +1047,13 @@
               {
                 "kind": "account",
                 "path": "position.id",
-                "account": "PositionV3"
+                "account": "PositionV4"
               }
             ]
           }
         },
         {
           "name": "collection",
-          "docs": [
-            "supposed to be in config also"
-          ],
           "relations": [
             "config"
           ]
@@ -1281,19 +1463,6 @@
           "type": "u64"
         },
         {
-          "name": "lock_period_yields",
-          "type": {
-            "array": [
-              {
-                "defined": {
-                  "name": "PoolConfig"
-                }
-              },
-              4
-            ]
-          }
-        },
-        {
           "name": "max_cap",
           "type": "u64"
         },
@@ -1410,6 +1579,84 @@
       "args": []
     },
     {
+      "name": "initialize_pool",
+      "discriminator": [
+        95,
+        180,
+        10,
+        172,
+        84,
+        174,
+        232,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        },
+        {
+          "name": "lock_period_days",
+          "type": "u16"
+        },
+        {
+          "name": "yield_rate",
+          "type": "u64"
+        },
+        {
+          "name": "max_nfts_cap",
+          "type": "u32"
+        },
+        {
+          "name": "max_tokens_cap",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "initiate_user",
       "discriminator": [
         32,
@@ -1456,6 +1703,31 @@
           }
         },
         {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "user_account",
           "writable": true,
           "pda": {
@@ -1476,6 +1748,42 @@
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_pool_stats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -1544,6 +1852,32 @@
           }
         },
         {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "user_account",
           "writable": true,
           "pda": {
@@ -1564,6 +1898,42 @@
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_pool_stats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -1650,10 +2020,6 @@
         {
           "name": "id",
           "type": "u64"
-        },
-        {
-          "name": "pool_index",
-          "type": "u8"
         }
       ]
     },
@@ -1705,6 +2071,32 @@
           }
         },
         {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "account",
+                "path": "pool.index",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "user_account",
           "writable": true,
           "pda": {
@@ -1725,6 +2117,42 @@
               {
                 "kind": "account",
                 "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_pool_stats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -1971,10 +2399,6 @@
           "type": "u64"
         },
         {
-          "name": "pool_index",
-          "type": "u8"
-        },
-        {
           "name": "amount",
           "type": "u64"
         }
@@ -2022,29 +2446,55 @@
       ]
     },
     {
-      "name": "PositionV3",
+      "name": "Pool",
       "discriminator": [
-        194,
-        247,
-        171,
-        54,
-        106,
-        219,
-        96,
-        51
+        241,
+        154,
+        109,
+        4,
+        17,
+        177,
+        109,
+        188
       ]
     },
     {
-      "name": "UserAccountV2",
+      "name": "PositionV4",
       "discriminator": [
-        49,
-        229,
-        99,
-        247,
-        99,
-        241,
-        117,
-        153
+        202,
+        171,
+        178,
+        46,
+        38,
+        48,
+        31,
+        36
+      ]
+    },
+    {
+      "name": "UserAccountV3",
+      "discriminator": [
+        184,
+        176,
+        178,
+        22,
+        50,
+        106,
+        126,
+        134
+      ]
+    },
+    {
+      "name": "UserPoolStatsAccount",
+      "discriminator": [
+        23,
+        136,
+        131,
+        110,
+        30,
+        91,
+        112,
+        74
       ]
     }
   ],
@@ -2153,6 +2603,11 @@
       "code": 6020,
       "name": "AuthorityVaultNotInitialized",
       "msg": "Authority vault not initialized"
+    },
+    {
+      "code": 6021,
+      "name": "Unauthorized",
+      "msg": "Unauthorized Operation"
     }
   ],
   "types": [
@@ -2272,30 +2727,8 @@
             "type": "pubkey"
           },
           {
-            "name": "pools_config",
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "PoolConfig"
-                  }
-                },
-                4
-              ]
-            }
-          },
-          {
-            "name": "pools_stats",
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "PoolStats"
-                  }
-                },
-                4
-              ]
-            }
+            "name": "pool_count",
+            "type": "u32"
           },
           {
             "name": "max_cap",
@@ -2364,39 +2797,110 @@
       }
     },
     {
-      "name": "PoolConfig",
+      "name": "Pool",
       "type": {
         "kind": "struct",
         "fields": [
           {
+            "name": "config",
+            "docs": [
+              "Parent config reference"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "docs": [
+              "Pool index for reference"
+            ],
+            "type": "u32"
+          },
+          {
             "name": "lock_period_days",
+            "docs": [
+              "The lock period in days"
+            ],
             "type": "u16"
           },
           {
             "name": "yield_rate",
+            "docs": [
+              "Yield rate in basis points (e.g., 500 = 5%)"
+            ],
             "type": "u64"
           },
           {
             "name": "max_nfts_cap",
+            "docs": [
+              "Maximum NFTs per user in this pool"
+            ],
             "type": "u32"
           },
           {
             "name": "max_tokens_cap",
+            "docs": [
+              "Maximum tokens per user in this pool"
+            ],
             "type": "u64"
           },
           {
             "name": "is_paused",
+            "docs": [
+              "Whether the pool is paused"
+            ],
             "type": "bool"
+          },
+          {
+            "name": "total_nfts_staked",
+            "docs": [
+              "Current total NFTs staked in this pool"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "total_tokens_staked",
+            "docs": [
+              "Current total tokens staked in this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "lifetime_nfts_staked",
+            "docs": [
+              "All-time NFTs staked in this pool"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "lifetime_tokens_staked",
+            "docs": [
+              "All-time tokens staked in this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "lifetime_claimed_yield",
+            "docs": [
+              "All-time yield claimed from this pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
           },
           {
             "name": "_padding",
             "docs": [
-              "Padding"
+              "Padding for future extensions"
             ],
             "type": {
               "array": [
                 "u8",
-                63
+                64
               ]
             }
           }
@@ -2423,50 +2927,6 @@
           {
             "name": "max_tokens_cap",
             "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "PoolStats",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "lock_period_days",
-            "type": "u16"
-          },
-          {
-            "name": "total_nfts_staked",
-            "type": "u32"
-          },
-          {
-            "name": "total_tokens_staked",
-            "type": "u64"
-          },
-          {
-            "name": "lifetime_nfts_staked",
-            "type": "u32"
-          },
-          {
-            "name": "lifetime_tokens_staked",
-            "type": "u64"
-          },
-          {
-            "name": "lifetime_claimed_yield",
-            "type": "u64"
-          },
-          {
-            "name": "_padding",
-            "docs": [
-              "Padding"
-            ],
-            "type": {
-              "array": [
-                "u8",
-                64
-              ]
-            }
           }
         ]
       }
@@ -2500,24 +2960,43 @@
       }
     },
     {
-      "name": "PositionV3",
+      "name": "PositionV4",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "owner",
+            "docs": [
+              "Owner of the position"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "Pool this position belongs to"
+            ],
             "type": "pubkey"
           },
           {
             "name": "deposit_time",
+            "docs": [
+              "Time when deposit was made (unix timestamp)"
+            ],
             "type": "i64"
           },
           {
             "name": "amount",
+            "docs": [
+              "Amount of tokens staked or value of NFT"
+            ],
             "type": "u64"
           },
           {
             "name": "position_type",
+            "docs": [
+              "Type of position: NFT or Token"
+            ],
             "type": {
               "defined": {
                 "name": "PositionType"
@@ -2525,15 +3004,17 @@
             }
           },
           {
-            "name": "lock_period_yield_index",
-            "type": "u8"
-          },
-          {
             "name": "unlock_time",
+            "docs": [
+              "Time when the position can be unlocked"
+            ],
             "type": "i64"
           },
           {
             "name": "status",
+            "docs": [
+              "Status of position: Unclaimed or Claimed"
+            ],
             "type": {
               "defined": {
                 "name": "PositionStatus"
@@ -2542,15 +3023,43 @@
           },
           {
             "name": "asset",
+            "docs": [
+              "NFT mint address (asset) - only used for NFT positions"
+            ],
             "type": "pubkey"
           },
           {
             "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
             "type": "u8"
           },
           {
             "name": "id",
+            "docs": [
+              "Position identifier"
+            ],
             "type": "u64"
+          },
+          {
+            "name": "last_claimed_at",
+            "docs": [
+              "Last time yield was claimed"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "_padding",
+            "docs": [
+              "Padding for future extensions"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
@@ -2579,25 +3088,16 @@
       }
     },
     {
-      "name": "UserAccountV2",
+      "name": "UserAccountV3",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "pool_stats",
+            "name": "config",
             "docs": [
-              "Stats for each pool (matches the pools in Config)"
+              "The config this user account is associated with"
             ],
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "UserPoolStats"
-                  }
-                },
-                4
-              ]
-            }
+            "type": "pubkey"
           },
           {
             "name": "total_staked_token_amount",
@@ -2642,7 +3142,7 @@
             "type": {
               "array": [
                 "u8",
-                32
+                64
               ]
             }
           }
@@ -2650,13 +3150,27 @@
       }
     },
     {
-      "name": "UserPoolStats",
+      "name": "UserPoolStatsAccount",
       "docs": [
-        "Stats for a specific pool for a user"
+        "A separate PDA for each user's stats for a specific pool"
       ],
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "user",
+            "docs": [
+              "The user this stats belongs to"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "The pool this stats is for"
+            ],
+            "type": "pubkey"
+          },
           {
             "name": "tokens_staked",
             "docs": [
@@ -2679,18 +3193,18 @@
             "type": "u64"
           },
           {
-            "name": "lock_period_days",
-            "docs": [
-              "Lock period in days for this pool (to easily identify which pool this is)"
-            ],
-            "type": "u16"
-          },
-          {
             "name": "claimed_yield",
             "docs": [
               "Claimed yield from this pool"
             ],
             "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
           },
           {
             "name": "_padding",
@@ -2700,7 +3214,7 @@
             "type": {
               "array": [
                 "u8",
-                32
+                64
               ]
             }
           }

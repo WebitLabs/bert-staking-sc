@@ -17,6 +17,7 @@ import {
   initializeInstruction,
   initializeAuthVaultInstruction,
   initializeUserInstruction,
+  initializePoolInstruction,
   stakeNftInstruction,
   stakeTokenInstruction,
   claimTokenPositionInstruction,
@@ -36,6 +37,12 @@ import {
   fetchPositionsByOwnerRpc,
   fetchUserAccountRpc,
   fetchUserAccountByAddressRpc,
+  fetchPoolRpc,
+  fetchPoolByAddressRpc,
+  fetchPoolsByConfigRpc,
+  fetchUserPoolStatsRpc,
+  fetchUserPoolStatsByAddressRpc,
+  fetchUserPoolStatsByUserRpc,
 } from "./accounts";
 import { PoolConfigArgs, PositionType } from "./types";
 import { getStandardLockPeriodDays, PoolConfigParams } from "./utils";
@@ -175,8 +182,8 @@ export class BertStakingSDK {
   }
 
   /**
-   * Creates an call to RPC to initialize the staking program and its authority vault
-   * This is a combined initialization that handles both steps
+   * Creates an call to RPC to initialize the staking program, pools, and its authority vault
+   * This is a combined initialization that handles all initialization steps
    */
   async initializeRpc({
     id,
@@ -192,7 +199,7 @@ export class BertStakingSDK {
     maxCap,
     nftValueInTokens,
     nftsLimitPerUser,
-    defaultYieldRate,
+    defaultYieldRate = 500, // Default to 5% if not specified
   }: {
     id: number;
     authority: PublicKey;
@@ -220,10 +227,6 @@ export class BertStakingSDK {
       collection,
       vault,
       nftsVault,
-      poolsConfig,
-      defaultYieldRate,
-      maxNftsCap,
-      maxTokensCap,
       maxCap,
       nftValueInTokens,
       nftsLimitPerUser,
@@ -238,7 +241,7 @@ export class BertStakingSDK {
       tokenMint: mint,
     });
 
-    // 3. Add both instructions to a transaction
+    // 3. Create a transaction and add main instructions
     const tx = new Transaction();
     const latestBlockhash = await this.provider.connection.getLatestBlockhash();
     tx.recentBlockhash = latestBlockhash.blockhash;
@@ -246,6 +249,46 @@ export class BertStakingSDK {
 
     tx.add(initIx);
     tx.add(initAuthVaultIx);
+
+    // 4. If we have pool configurations, initialize each pool
+    if (poolsConfig && poolsConfig.length > 0) {
+      for (let i = 0; i < poolsConfig.length; i++) {
+        const poolConfig = poolsConfig[i];
+        const poolIndex = i;
+
+        // Create instruction to initialize this pool
+        const initPoolIx = await initializePoolInstruction({
+          program: this.program,
+          pda: this.pda,
+          authority,
+          configId: id,
+          index: poolIndex,
+          lockPeriodDays: poolConfig.lockPeriodDays,
+          yieldRate: poolConfig.yieldRate,
+          maxNftsCap: poolConfig.maxNfts || maxNftsCap || 1000,
+          maxTokensCap: poolConfig.maxTokens || maxTokensCap || 1000000000,
+        });
+
+        tx.add(initPoolIx);
+      }
+    }
+    // If no pool config provided but we have defaultYieldRate, initialize a default pool
+    else if (defaultYieldRate) {
+      // Create a single default pool (index 0)
+      const initPoolIx = await initializePoolInstruction({
+        program: this.program,
+        pda: this.pda,
+        authority,
+        configId: id,
+        index: 0,
+        lockPeriodDays: 30, // Default 30-day lock period
+        yieldRate: defaultYieldRate,
+        maxNftsCap: maxNftsCap || 1000,
+        maxTokensCap: maxTokensCap || 1000000000,
+      });
+
+      tx.add(initPoolIx);
+    }
 
     if (this.provider.sendAndConfirm) {
       return await this.provider.sendAndConfirm(tx);
@@ -262,11 +305,13 @@ export class BertStakingSDK {
     authority,
     configId,
     mint,
+    poolIndex,
   }: {
     owner: PublicKey;
     authority?: PublicKey;
     configId?: number;
     mint: PublicKey;
+    poolIndex: number;
   }): Promise<TransactionInstruction> {
     return initializeUserInstruction({
       program: this.program,
@@ -275,6 +320,40 @@ export class BertStakingSDK {
       authority,
       configId,
       mint,
+      poolIndex,
+    });
+  }
+
+  /**
+   * Creates an instruction to initialize a pool
+   */
+  async initializePool({
+    authority,
+    configId = 0,
+    index,
+    lockPeriodDays,
+    yieldRate,
+    maxNftsCap,
+    maxTokensCap,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    index: number;
+    lockPeriodDays: number;
+    yieldRate: number | BN;
+    maxNftsCap: number;
+    maxTokensCap: number | BN;
+  }): Promise<TransactionInstruction> {
+    return initializePoolInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      index,
+      lockPeriodDays,
+      yieldRate,
+      maxNftsCap,
+      maxTokensCap,
     });
   }
 
@@ -286,11 +365,13 @@ export class BertStakingSDK {
     authority,
     configId,
     mint,
+    poolIndex,
   }: {
     owner: PublicKey;
     authority?: PublicKey;
     configId?: number;
     mint: PublicKey;
+    poolIndex: number;
   }): Promise<string> {
     const ix = await initializeUserInstruction({
       program: this.program,
@@ -299,12 +380,60 @@ export class BertStakingSDK {
       authority,
       configId,
       mint,
+      poolIndex,
     });
 
     const tx = new Transaction();
 
     const latestBlockhash = await this.provider.connection.getLatestBlockhash();
     tx.recentBlockhash = latestBlockhash.blockhash;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
+   * Creates an RPC call to initialize a pool
+   */
+  async initializePoolRpc({
+    authority,
+    configId = 0,
+    index,
+    lockPeriodDays,
+    yieldRate,
+    maxNftsCap,
+    maxTokensCap,
+  }: {
+    authority: PublicKey;
+    configId?: number;
+    index: number;
+    lockPeriodDays: number;
+    yieldRate: number | BN;
+    maxNftsCap: number;
+    maxTokensCap: number | BN;
+  }): Promise<string> {
+    const ix = await initializePoolInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      configId,
+      index,
+      lockPeriodDays,
+      yieldRate,
+      maxNftsCap,
+      maxTokensCap,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+    tx.feePayer = authority;
 
     tx.add(ix);
 
@@ -510,6 +639,7 @@ export class BertStakingSDK {
     collection,
     vault,
     positionId = 0,
+    poolIndex,
   }: {
     authority?: PublicKey;
     owner: PublicKey;
@@ -520,6 +650,7 @@ export class BertStakingSDK {
     collection?: PublicKey;
     vault?: PublicKey;
     positionId?: number;
+    poolIndex: number;
   }): Promise<TransactionInstruction> {
     return claimTokenPositionInstruction({
       program: this.program,
@@ -533,6 +664,7 @@ export class BertStakingSDK {
       vault,
       configId,
       positionId,
+      poolIndex,
     });
   }
 
@@ -549,6 +681,7 @@ export class BertStakingSDK {
     collection,
     vault,
     positionId = 0,
+    poolIndex,
   }: {
     authority?: PublicKey;
     owner: PublicKey;
@@ -559,6 +692,7 @@ export class BertStakingSDK {
     collection?: PublicKey;
     vault?: PublicKey;
     positionId?: number;
+    poolIndex: number;
   }): Promise<string> {
     const ix = await claimTokenPositionInstruction({
       program: this.program,
@@ -572,6 +706,7 @@ export class BertStakingSDK {
       vault,
       configId,
       positionId,
+      poolIndex,
     });
 
     const tx = new Transaction();
@@ -604,6 +739,7 @@ export class BertStakingSDK {
     collection,
     updateAuthority,
     vault,
+    poolIndex,
   }: {
     authority?: PublicKey;
     owner: PublicKey;
@@ -617,6 +753,7 @@ export class BertStakingSDK {
     collection?: PublicKey;
     updateAuthority: PublicKey;
     vault?: PublicKey;
+    poolIndex: number;
   }): Promise<TransactionInstruction> {
     return claimNftPositionInstruction({
       program: this.program,
@@ -633,6 +770,7 @@ export class BertStakingSDK {
       updateAuthority,
       vault,
       configId,
+      poolIndex,
     });
   }
 
@@ -652,6 +790,7 @@ export class BertStakingSDK {
     collection,
     updateAuthority,
     vault,
+    poolIndex,
   }: {
     authority?: PublicKey;
     owner: PublicKey;
@@ -665,6 +804,7 @@ export class BertStakingSDK {
     collection?: PublicKey;
     updateAuthority: PublicKey;
     vault?: PublicKey;
+    poolIndex: number;
   }): Promise<string> {
     const ix = await claimNftPositionInstruction({
       program: this.program,
@@ -681,6 +821,7 @@ export class BertStakingSDK {
       updateAuthority,
       vault,
       configId,
+      poolIndex,
     });
 
     const tx = new Transaction();
@@ -754,6 +895,48 @@ export class BertStakingSDK {
    */
   async fetchUserAccountByAddress(userAccountAddress: PublicKey) {
     return fetchUserAccountByAddressRpc(userAccountAddress, this.program);
+  }
+
+  /**
+   * Fetches a pool by config and index
+   */
+  async fetchPool(config: PublicKey, index: number) {
+    return fetchPoolRpc(config, index, this.program);
+  }
+
+  /**
+   * Fetches a pool by address
+   */
+  async fetchPoolByAddress(poolAddress: PublicKey) {
+    return fetchPoolByAddressRpc(poolAddress, this.program);
+  }
+
+  /**
+   * Fetches all pools for a config
+   */
+  async fetchPoolsByConfig(config: PublicKey) {
+    return fetchPoolsByConfigRpc(config, this.program);
+  }
+
+  /**
+   * Fetches a user pool stats for a given user and pool
+   */
+  async fetchUserPoolStats(user: PublicKey, pool: PublicKey) {
+    return fetchUserPoolStatsRpc(user, pool, this.program);
+  }
+
+  /**
+   * Fetches a user pool stats by address
+   */
+  async fetchUserPoolStatsByAddress(address: PublicKey) {
+    return fetchUserPoolStatsByAddressRpc(address, this.program);
+  }
+
+  /**
+   * Fetches all user pool stats for a user
+   */
+  async fetchUserPoolStatsByUser(user: PublicKey) {
+    return fetchUserPoolStatsByUserRpc(user, this.program);
   }
 
   /**

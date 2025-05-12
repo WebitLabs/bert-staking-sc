@@ -43,8 +43,14 @@ export async function stakeNftInstruction({
   // Find Config PDA with the provided ID
   const [configPda] = pda.findConfigPda(authority, configId);
 
+  // Find Pool PDA with the pool index
+  const [poolPda] = pda.findPoolPda(configPda, poolIndex);
+  
   // Find User Account PDA
   const [userAccountPda] = pda.findUserAccountPda(owner, configPda);
+  
+  // Find User Pool Stats PDA
+  const [userPoolStatsPda] = pda.findUserPoolStatsPda(owner, poolPda);
 
   // Find Position PDA with the asset
   const [positionPda] = pda.findNftPositionPda(owner, mint, asset, positionId);
@@ -53,11 +59,13 @@ export async function stakeNftInstruction({
   const nftsVaultPda = nftsVault || pda.findNftsVaultPda(configPda, mint)[0];
 
   return program.methods
-    .stakeNft(new BN(positionId), poolIndex)
+    .stakeNft(new BN(positionId))
     .accountsStrict({
       owner,
       config: configPda,
+      pool: poolPda,
       userAccount: userAccountPda,
+      userPoolStats: userPoolStatsPda,
       position: positionPda,
       asset,
       nftVaultOwner: nftsVaultPda,

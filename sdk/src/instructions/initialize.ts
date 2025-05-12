@@ -6,11 +6,7 @@ import {
   getAssociatedTokenAddressSync,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import {
-  createDefaultLockPeriodYields,
-  createPoolsConfig,
-  PoolConfigParams,
-} from "../utils";
+import { PoolConfigParams } from "../utils";
 
 export type InitializeParams = {
   program: Program<BertStakingSc>;
@@ -20,19 +16,23 @@ export type InitializeParams = {
   collection: web3.PublicKey;
   adminWithdrawDestination: web3.PublicKey;
   vault?: web3.PublicKey;
-  nftsVault?: web3.PublicKey; // New field for the NFTs vault
+  nftsVault?: web3.PublicKey; // Field for the NFTs vault
   id?: number; // Optional ID for the config
+  maxCap: number | BN; // Maximum tokens across all pools
+  nftValueInTokens: number | BN;
+  nftsLimitPerUser: number;
+  // The following are not used directly in initialize anymore but kept for backward compatibility
   poolsConfig?: PoolConfigParams[]; // Array of pool configurations
   defaultYieldRate?: number | BN; // Default yield rate if no poolsConfig provided
   maxNftsCap?: number; // Default maximum NFTs per pool if no poolsConfig provided
   maxTokensCap?: number | BN; // Default maximum tokens per pool if no poolsConfig provided
-  maxCap: number | BN; // Maximum tokens across all pools
-  nftValueInTokens: number | BN;
-  nftsLimitPerUser: number;
 };
 
 /**
- * Create an instruction to initialize the staking program
+ * Create an instruction to initialize the staking program config
+ * 
+ * Note: With the new architecture, pools are initialized separately using initializePool
+ * after config initialization
  */
 export async function initializeInstruction({
   program,
@@ -44,10 +44,6 @@ export async function initializeInstruction({
   vault,
   nftsVault,
   id = 0, // Default ID to 0 if not provided
-  poolsConfig,
-  defaultYieldRate = 500, // Default to 5% if not specified
-  maxNftsCap = 1000, // Default max NFTs per pool
-  maxTokensCap = 1000000000, // Default max tokens per pool
   maxCap,
   nftValueInTokens,
   nftsLimitPerUser,
@@ -62,29 +58,16 @@ export async function initializeInstruction({
   // Find Config PDA with the provided ID
   const [configPda] = pda.findConfigPda(authority, id);
 
-  // Create pool configs array
-  let poolsConfigArray;
-  if (poolsConfig && poolsConfig.length > 0) {
-    poolsConfigArray = createPoolsConfig(poolsConfig);
-  } else {
-    // TODO: Remove
-    poolsConfigArray = createDefaultLockPeriodYields(
-      defaultYieldRate,
-      maxNftsCap,
-      maxTokensCap
-    );
-  }
-
   // Get token accounts
   const vaultTA = vault || getAssociatedTokenAddressSync(mint, configPda, true);
 
   // Create the NFTs vault PDA (if not provided)
   const nftsVaultPDA = nftsVault || pda.findNftsVaultPda(configPda, mint)[0];
 
+  // Initialize with just the basic config values - pools are initialized separately
   return program.methods
     .initialize(
       new BN(id),
-      poolsConfigArray,
       maxCapBN,
       nftValueInTokensBN,
       nftsLimitPerUser

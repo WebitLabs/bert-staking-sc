@@ -20,6 +20,7 @@ export type ClaimPositionParams = {
   authorityVault?: web3.PublicKey;
   configId?: number; // ID for the config account
   positionId?: number; // ID for the position account
+  poolIndex: number; // Index of the pool to use for claiming
 };
 
 /**
@@ -37,6 +38,7 @@ export async function claimTokenPositionInstruction({
   vault,
   configId = 0,
   positionId = 0,
+  poolIndex,
 }: ClaimPositionParams): Promise<web3.TransactionInstruction> {
   // Get authority from config using the configId
   const [configPda] = sdk.pda.findConfigPda(authority, configId);
@@ -45,6 +47,12 @@ export async function claimTokenPositionInstruction({
   // Calculate position PDA if not provided
   const positionAddress =
     positionPda || sdk.pda.findPositionPda(owner, tokenMint, positionId)[0];
+
+  // Find Pool PDA with the pool index
+  const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+
+  // Find User Pool Stats PDA
+  const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(owner, poolPda);
 
   // Derive user token account if not provided
   const userTokenAccount =
@@ -79,7 +87,9 @@ export async function claimTokenPositionInstruction({
     .accountsStrict({
       owner,
       config: configPda,
+      pool: poolPda,
       userAccount: userPda,
+      userPoolStats: userPoolStatsPda,
       position: positionAddress,
       collection,
       mint: tokenMint,
