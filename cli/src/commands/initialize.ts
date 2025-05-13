@@ -1,9 +1,9 @@
 import { Command } from "commander";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Transaction } from "@solana/web3.js";
 import { getConnection, getSDK, getWallet } from "../utils/connection";
 import ora from "ora";
 import { COLLECTION, MINT } from "../constants";
-import { getMint } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync, getMint } from "@solana/spl-token";
 import { PoolIdl } from "@bert-staking/sdk";
 
 /**
@@ -124,10 +124,12 @@ export function initializeCommand(program: Command): void {
         // 1. INITIALIZE THE BASIC CONFIG (split into individual steps)
         spinner.text = "Step 1: Creating basic config...";
 
+        let transact = new Transaction();
+
         // Create and send the initialize instruction for main config only
         try {
           // Create initialize instruction
-          const tx = await sdk.initializeRpc({
+          const initIx = await sdk.initialize({
             id: configId,
             authority: wallet.publicKey,
             adminWithdrawDestination,
@@ -139,24 +141,28 @@ export function initializeCommand(program: Command): void {
             nftsLimitPerUser,
           });
 
-          spinner.text = `Basic config initialized. Tx: ${tx}`;
+          transact.add(initIx);
+
+          // spinner.text = `Basic config initialized. Tx: ${tx}`;
 
           // Short delay to ensure config is available
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          // await new Promise((resolve) => setTimeout(resolve, 2000));
 
           // 2. INITIALIZE THE AUTHORITY VAULT
-          spinner.text = "Step 2: Creating authority vault...";
+          // spinner.text = "Step 2: Creating authority vault...";
 
-          const authVaultIx = await sdk.initializeAuthVaultRpc({
+          const authVaultIx = await sdk.initializeAuthVault({
             authority: wallet.publicKey,
             configId,
             tokenMint: mint,
           });
 
-          spinner.text = `Authority vault initialized. Tx: ${authVaultIx}`;
+          transact.add(authVaultIx);
+
+          // spinner.text = `Authority vault initialized. Tx: ${authVaultIx}`;
 
           // Short delay to ensure vault is available
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          // await new Promise((resolve) => setTimeout(resolve, 2000));
 
           // 3. INITIALIZE EACH POOL SEPARATELY
           // Initialize each pool in a separate transaction
@@ -166,7 +172,7 @@ export function initializeCommand(program: Command): void {
               poolConfig.lockPeriodDays
             } days)...`;
 
-            const initPoolIx = await sdk.initializePoolRpc({
+            const initPoolIx = await sdk.initializePool({
               authority: wallet.publicKey,
               configId,
               index: i,
@@ -176,10 +182,23 @@ export function initializeCommand(program: Command): void {
               maxTokensCap: poolConfig.maxTokens,
             });
 
-            spinner.text = `Pool ${i} initialized. Tx: ${initPoolIx}`;
+            transact.add(initPoolIx);
+
+            // spinner.text = `Pool ${i} initialized. Tx: ${initPoolIx}`;
 
             // Short delay to ensure pool is available
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+
+          const provider = sdk.provider;
+          const latestBlockhash =
+            await provider.connection.getLatestBlockhash();
+
+          transact.recentBlockhash = latestBlockhash.blockhash;
+          transact.feePayer = wallet.publicKey;
+
+          if (provider.sendAndConfirm) {
+            await provider.sendAndConfirm(transact);
           }
         } catch (err) {
           console.log("Program failed to initialize. Err:", err);

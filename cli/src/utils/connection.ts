@@ -7,7 +7,7 @@ import os from "os";
 import path from "path";
 import { Command } from "commander";
 
-const DEVNET_RPC = process.env.ENDPOINT || "https://api.devnet.solana.com";
+const DEVNET_RPC = process.env.ENDPOINT1 || "https://api.devnet.solana.com";
 
 // Default RPC endpoints
 const ENDPOINTS = {
