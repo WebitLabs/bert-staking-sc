@@ -116,33 +116,78 @@ export function initializeCommand(program: Command): void {
           },
         ];
 
-        // Create initialize instruction
-        spinner.text = "Creating initialize instruction...";
-
+        // Convert values for on-chain representation
         const maxCap = parseInt(options.maxCap) * 10 ** decimals;
         const nftValueInTokens = parseInt(options.nftValue) * 10 ** decimals;
+        const nftsLimitPerUser = parseInt(options.nftLimit);
 
-        let txId;
+        // 1. INITIALIZE THE BASIC CONFIG (split into individual steps)
+        spinner.text = "Step 1: Creating basic config...";
+
+        // Create and send the initialize instruction for main config only
         try {
-          txId = await sdk.initializeRpc({
+          // Create initialize instruction
+          const tx = await sdk.initializeRpc({
+            id: configId,
             authority: wallet.publicKey,
             adminWithdrawDestination,
             mint,
             collection,
-            id: configId,
-            poolsConfig,
             nftsVault: nftsVaultPda,
             maxCap,
             nftValueInTokens,
-            nftsLimitPerUser: parseInt(options.nftLimit),
+            nftsLimitPerUser,
           });
+
+          spinner.text = `Basic config initialized. Tx: ${tx}`;
+
+          // Short delay to ensure config is available
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          // 2. INITIALIZE THE AUTHORITY VAULT
+          spinner.text = "Step 2: Creating authority vault...";
+
+          const authVaultIx = await sdk.initializeAuthVaultRpc({
+            authority: wallet.publicKey,
+            configId,
+            tokenMint: mint,
+          });
+
+          spinner.text = `Authority vault initialized. Tx: ${authVaultIx}`;
+
+          // Short delay to ensure vault is available
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          // 3. INITIALIZE EACH POOL SEPARATELY
+          // Initialize each pool in a separate transaction
+          for (let i = 0; i < poolsConfig.length; i++) {
+            const poolConfig = poolsConfig[i];
+            spinner.text = `Step ${3 + i}: Creating pool ${i} (${
+              poolConfig.lockPeriodDays
+            } days)...`;
+
+            const initPoolIx = await sdk.initializePoolRpc({
+              authority: wallet.publicKey,
+              configId,
+              index: i,
+              lockPeriodDays: poolConfig.lockPeriodDays,
+              yieldRate: poolConfig.yieldRate,
+              maxNftsCap: poolConfig.maxNfts,
+              maxTokensCap: poolConfig.maxTokens,
+            });
+
+            spinner.text = `Pool ${i} initialized. Tx: ${initPoolIx}`;
+
+            // Short delay to ensure pool is available
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
         } catch (err) {
           console.log("Program failed to initialize. Err:", err);
-          spinner.fail(`Program failed to initialize. Tx: ${txId}`);
+          spinner.fail(`Program failed to initialize.`);
           return;
         }
 
-        spinner.succeed(`Program initialized successfully. Tx: ${txId}`);
+        spinner.succeed(`Program initialized successfully`);
 
         // Fetch and display config
         spinner.text = "Fetching program config...";

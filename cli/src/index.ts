@@ -44,8 +44,8 @@ initializeCommand(program);
 // Staking commands
 stakeTokenCommand(program);
 stakeNftCommand(program);
-// claimTokenCommand(program);
-// claimNftCommand(program);
+claimTokenCommand(program);
+claimNftCommand(program);
 
 // Query commands
 fetchConfigCommand(program);

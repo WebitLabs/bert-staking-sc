@@ -9,7 +9,8 @@ use admin::*;
 use context::*;
 use state::*;
 
-declare_id!("G4ZJJ4vytqbUsUiGst52seNZ48t2EQMxJ6eQ4sQcBrYZ");
+// declare_id!("G4ZJJ4vytqbUsUiGst52seNZ48t2EQMxJ6eQ4sQcBrYZ");
+declare_id!("5SBAWmpeag75vcgPvnSxbibQQoKguZaa5KDdR8TBjC1N");
 
 // Re-export StakingError for use in the program
 pub use state::StakingError;
