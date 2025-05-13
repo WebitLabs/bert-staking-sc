@@ -2,6 +2,7 @@ import { Command } from "commander";
 import figlet from "figlet";
 import chalk from "chalk";
 import { initializeCommand } from "./commands/initialize";
+import { initializePoolCommand } from "./commands/initialize-pool";
 import { fetchConfigCommand } from "./commands/fetch-config";
 import { fetchPositionCommand } from "./commands/fetch-position";
 import { fetchUserPoolStatsCommand } from "./commands/fetch-user-pool-stats";
@@ -40,6 +41,7 @@ createTokenCommand(program);
 createCoreNftCommand(program);
 transferCoreNftCommand(program);
 initializeCommand(program);
+initializePoolCommand(program);
 
 // Staking commands
 stakeTokenCommand(program);
