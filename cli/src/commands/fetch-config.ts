@@ -1,26 +1,26 @@
-import { Command } from "commander";
-import { PublicKey } from "@solana/web3.js";
-import { getConnection, getSDK, getWallet } from "../utils/connection";
-import ora from "ora";
-import { getMint } from "@solana/spl-token";
-import { fetchPoolsByConfigRpc } from "@bert-staking/sdk";
+import { Command } from 'commander';
+import { PublicKey } from '@solana/web3.js';
+import { getConnection, getSDK, getWallet } from '../utils/connection';
+import ora from 'ora';
+import { getMint } from '@solana/spl-token';
+import { fetchPoolsByConfigRpc } from '@bert-staking/sdk';
 
 /**
  * Fetch config command implementation
  */
 export function fetchConfigCommand(program: Command): void {
   program
-    .command("fetch-config")
-    .description("Fetch staking program configuration details")
-    .option("-id, --config-id <number>", "Config ID", "1")
+    .command('fetch-config')
+    .description('Fetch staking program configuration details')
+    .option('-id, --config-id <number>', 'Config ID', '1')
     .option(
-      "-a, --authority <pubkey>",
-      "Authority public key (defaults to wallet)"
+      '-a, --authority <pubkey>',
+      'Authority public key (defaults to wallet)'
     )
-    .option("-c, --config <pubkey>", "Config PDA (if you know it)")
+    .option('-c, --config <pubkey>', 'Config PDA (if you know it)')
     .action(async (options) => {
       try {
-        const spinner = ora("Fetching staking configuration...").start();
+        const spinner = ora('Fetching staking configuration...').start();
 
         const sdk = getSDK();
         const wallet = getWallet();
@@ -57,16 +57,17 @@ export function fetchConfigCommand(program: Command): void {
           (m) => m.decimals
         );
 
-        spinner.succeed("Staking configuration loaded successfully");
+        spinner.succeed('Staking configuration loaded successfully');
 
         // Display configuration details
-        console.log("\n=== Staking Program Configuration ===");
+        console.log('\n=== Staking Program Configuration ===');
         console.log(`Config ID: ${config.id.toString()}`);
         console.log(`Authority: ${config.authority.toString()}`);
         console.log(`Token Mint: ${config.mint.toString()}`);
         console.log(`Collection: ${config.collection.toString()}`);
         console.log(`Vault: ${config.vault.toString()}`);
         console.log(`NFTs Vault: ${config.nftsVault.toString()}`);
+        console.log(`Authority Vault: ${config.authorityVault?.toString()}`);
 
         // Format values with proper decimal places
         const maxCap = config.maxCap.toNumber() / 10 ** decimals;
@@ -87,11 +88,11 @@ export function fetchConfigCommand(program: Command): void {
         console.log(`- Total NFTs Staked: ${config.totalNftsStaked}`);
 
         // Display pools configuration
-        console.log("\n=== Pool Configurations ===");
+        console.log('\n=== Pool Configurations ===');
         const pools = await sdk.fetchPoolsByConfig(configPda);
 
         if (!pools || pools.length === 0) {
-          console.log("No pools found for this configuration.");
+          console.log('No pools found for this configuration.');
         } else {
           for (let i = 0; i < pools.length; i++) {
             const pool = pools[i];
@@ -101,7 +102,7 @@ export function fetchConfigCommand(program: Command): void {
             console.log(`- Config: ${pool.config.toString()}`);
             console.log(`- Index: ${pool.index}`);
             console.log(`- Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
-            console.log(`- Paused: ${pool.isPaused ? "Yes" : "No"}`);
+            console.log(`- Paused: ${pool.isPaused ? 'Yes' : 'No'}`);
 
             // Max caps
             const maxNfts = pool.maxNftsCap;
