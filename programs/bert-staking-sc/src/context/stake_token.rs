@@ -38,13 +38,15 @@ pub struct StakeToken<'info> {
     pub user_account: Box<Account<'info, UserAccountV3>>,
 
     #[account(
-        mut,
+        init_if_needed,
+        payer = owner,
+        space = 8 + UserPoolStatsAccount::INIT_SPACE,
         seeds = [
             b"user_pool_stats",
             owner.key().as_ref(),
             pool.key().as_ref(),
         ],
-        bump = user_pool_stats.bump,
+        bump
     )]
     pub user_pool_stats: Box<Account<'info, UserPoolStatsAccount>>,
 
@@ -64,14 +66,14 @@ pub struct StakeToken<'info> {
         associated_token::mint = mint,
         associated_token::authority = owner,
     )]
-    pub token_account: Account<'info, TokenAccount>,
+    pub token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
         associated_token::mint = mint,
         associated_token::authority = config,
     )]
-    pub vault: Account<'info, TokenAccount>,
+    pub vault: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -180,6 +182,11 @@ impl<'info> StakeToken<'info> {
         // Update user stats for this pool
         user_pool_stats.tokens_staked = new_pool_tokens_staked;
         user_pool_stats.total_value = new_pool_total_value;
+
+        user_pool_stats.user = self.owner.key();
+        user_pool_stats.pool = pool.key();
+
+        user_pool_stats.bump = bumps.user_pool_stats;
 
         // Update global user stats
         let user_account = &mut self.user_account;

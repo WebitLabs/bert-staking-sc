@@ -13,8 +13,7 @@ export type InitializeUserParams = {
 };
 
 /**
- * Create an instruction to initialize a user account and user pool stats
- * This instruction initializes both the global user account and stats for a specific pool
+ * Create an instruction to initialize a user account
  */
 export async function initializeUserInstruction({
   program,
@@ -37,9 +36,6 @@ export async function initializeUserInstruction({
   // Find the user account PDA
   const [userAccountPda] = pda.findUserAccountPda(owner, configPda);
 
-  // Find the user pool stats PDA
-  const [userPoolStatsPda] = pda.findUserPoolStatsPda(owner, poolPda);
-
   return program.methods
     .initiateUser()
     .accountsStrict({
@@ -47,10 +43,8 @@ export async function initializeUserInstruction({
       config: configPda,
       pool: poolPda,
       userAccount: userAccountPda,
-      userPoolStats: userPoolStatsPda,
       mint,
       systemProgram: web3.SystemProgram.programId,
     })
     .instruction();
 }
-

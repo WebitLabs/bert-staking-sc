@@ -110,7 +110,7 @@ describe("bert-staking-sc-admin", () => {
     console.log("Collection address:", collection.toString());
   });
 
-  it("Initializes the staking program with pool configurations", async () => {
+  it("Initializes the staking program and creates pool configurations", async () => {
     console.log("Authority:", payer.publicKey.toString());
 
     [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
@@ -123,14 +123,13 @@ describe("bert-staking-sc-admin", () => {
     [authorityVaultPda] = sdk.pda.findAuthorityVaultPda(configPda, tokenMint);
 
     try {
-      // Initialize the staking program with pool configurations
+      // Initialize the staking program (without pool configurations in new architecture)
       const initializeIx = await sdk.initialize({
         authority: payer.publicKey,
         mint: tokenMint,
         collection,
         adminWithdrawDestination: payer.publicKey, // Using payer as the admin withdraw destination
         id: configId,
-        poolsConfig,
         vault: vaultAta,
         nftsVault: SystemProgram.programId,
         maxCap,
@@ -153,6 +152,26 @@ describe("bert-staking-sc-admin", () => {
       ]);
 
       console.log("Program and authority vault initialized successfully");
+
+      // Create instructions for initializing each pool
+      const poolInstructions = [];
+      for (let i = 0; i < poolsConfig.length; i++) {
+        const poolConfig = poolsConfig[i];
+        const initPoolIx = await sdk.initializePool({
+          authority: payer.publicKey,
+          configId,
+          index: i,
+          lockPeriodDays: poolConfig.lockPeriodDays,
+          yieldRate: poolConfig.yieldRate,
+          maxNftsCap: poolConfig.maxNfts,
+          maxTokensCap: poolConfig.maxTokens,
+        });
+        poolInstructions.push(initPoolIx);
+      }
+
+      // Execute pool initialization instructions
+      await createAndProcessTransaction(client, payer, poolInstructions);
+      console.log("All pools initialized successfully");
 
       // Create the ATAs with some tokens for the vault and authority vault
       const mintAmount = 1_000_000_000 * 10 ** decimals;
@@ -183,19 +202,32 @@ describe("bert-staking-sc-admin", () => {
         authorityVaultPda.toString()
       );
 
-      // Verify pool configurations
-      expect(configAccount.poolsConfig.length).to.equal(4);
+      // Now verify each pool was correctly initialized
+      console.log("Verifying pool configurations...");
 
-      // Verify the pool configurations match our input
-      for (let i = 0; i < 4; i++) {
-        const pool = configAccount.poolsConfig[i];
+      for (let i = 0; i < poolsConfig.length; i++) {
+        const [poolPda] = sdk.pda.findPoolPda(configPda, i);
+        console.log(`Pool ${i} PDA: ${poolPda.toString()}`);
+
+        const pool = await sdk.fetchPoolByAddress(poolPda);
+
+        // Verify pool values match our input
+        expect(pool.config.toString()).to.equal(configPda.toString());
+        expect(pool.index).to.equal(i);
         expect(pool.lockPeriodDays).to.equal(poolsConfig[i].lockPeriodDays);
         expect(pool.yieldRate.toNumber()).to.equal(poolsConfig[i].yieldRate);
         expect(pool.maxNftsCap).to.equal(poolsConfig[i].maxNfts);
         expect(pool.maxTokensCap.toString()).to.equal(
           poolsConfig[i].maxTokens.toString()
         );
-        expect(pool.isPaused).to.be.false;
+        expect(pool.isPaused).to.be.false; // Pools should start as active
+
+        console.log(`Pool ${i} configuration verified:`);
+        console.log(`- Lock Period: ${pool.lockPeriodDays} days`);
+        console.log(`- Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
+        console.log(`- Max NFTs: ${pool.maxNftsCap}`);
+        console.log(`- Max Tokens: ${pool.maxTokensCap.toString()}`);
+        console.log(`- Is Paused: ${pool.isPaused}`);
       }
     } catch (err) {
       console.error("Failed to initialize:", err);
@@ -207,9 +239,13 @@ describe("bert-staking-sc-admin", () => {
     // Test pausing pool 0
     const poolIndex = 0;
 
+    // Find the Pool PDA
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+
     // Capture state before pausing
-    const configBefore = await sdk.fetchConfigByAddress(configPda);
-    expect(configBefore.poolsConfig[poolIndex].isPaused).to.be.false;
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolBefore.isPaused).to.be.false;
 
     try {
       // Execute the pause pool instruction
@@ -227,12 +263,14 @@ describe("bert-staking-sc-admin", () => {
       console.log(`Pool ${poolIndex} paused successfully`);
 
       // Verify the pool is paused
-      const configAfter = await sdk.fetchConfigByAddress(configPda);
-      expect(configAfter.poolsConfig[poolIndex].isPaused).to.be.true;
+      const poolAfter = await sdk.fetchPoolByAddress(poolPda);
+      expect(poolAfter.isPaused).to.be.true;
 
       // Verify other pool states haven't changed
       for (let i = 1; i < 4; i++) {
-        expect(configAfter.poolsConfig[i].isPaused).to.be.false;
+        const [otherPoolPda] = sdk.pda.findPoolPda(configPda, i);
+        const otherPool = await sdk.fetchPoolByAddress(otherPoolPda);
+        expect(otherPool.isPaused).to.be.false;
       }
     } catch (err) {
       console.error("Failed to pause pool:", err);
@@ -243,6 +281,14 @@ describe("bert-staking-sc-admin", () => {
   it("Fails to pause an already paused pool", async () => {
     // Try to pause pool 0 again
     const poolIndex = 0;
+
+    // Find the Pool PDA
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+
+    // Verify the pool is currently paused
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolBefore.isPaused).to.be.true;
 
     try {
       const pauseIx = await sdk.adminPausePool({
@@ -271,14 +317,22 @@ describe("bert-staking-sc-admin", () => {
         )
       );
     }
+
+    // Verify the pool is still paused
+    const poolAfter = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolAfter.isPaused).to.be.true;
   });
 
   it("Sets pool configuration for a paused pool", async () => {
     const poolIndex = 0;
 
+    // Find the Pool PDA
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+
     // Capture state before updating
-    const configBefore = await sdk.fetchConfigByAddress(configPda);
-    const poolBefore = configBefore.poolsConfig[poolIndex];
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolBefore.isPaused).to.be.true; // Pool should be paused from previous test
 
     // New pool configuration
     const newConfig: PoolConfigArgs = {
@@ -307,8 +361,7 @@ describe("bert-staking-sc-admin", () => {
       console.log(`Pool ${poolIndex} configuration updated successfully`);
 
       // Verify configuration was updated
-      const configAfter = await sdk.fetchConfigByAddress(configPda);
-      const poolAfter = configAfter.poolsConfig[poolIndex];
+      const poolAfter = await sdk.fetchPoolByAddress(poolPda);
 
       // Check each field was updated correctly
       expect(poolAfter.lockPeriodDays).to.equal(newConfig.lockPeriodDays);
@@ -328,12 +381,14 @@ describe("bert-staking-sc-admin", () => {
       console.log(`- Yield rate: ${poolBefore.yieldRate.toNumber() / 100}%`);
       console.log(`- Max NFTs: ${poolBefore.maxNftsCap}`);
       console.log(`- Max Tokens: ${poolBefore.maxTokensCap.toString()}`);
+      console.log(`- Is Paused: ${poolBefore.isPaused}`);
 
       console.log("Pool configuration after update:");
       console.log(`- Lock period: ${poolAfter.lockPeriodDays} days`);
       console.log(`- Yield rate: ${poolAfter.yieldRate.toNumber() / 100}%`);
       console.log(`- Max NFTs: ${poolAfter.maxNftsCap}`);
       console.log(`- Max Tokens: ${poolAfter.maxTokensCap.toString()}`);
+      console.log(`- Is Paused: ${poolAfter.isPaused}`);
     } catch (err) {
       console.error("Failed to update pool configuration:", err);
       throw err;
@@ -343,9 +398,13 @@ describe("bert-staking-sc-admin", () => {
   it("Activates a pool successfully", async () => {
     const poolIndex = 0;
 
+    // Find the Pool PDA
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+
     // Verify the pool is currently paused
-    const configBefore = await sdk.fetchConfigByAddress(configPda);
-    expect(configBefore.poolsConfig[poolIndex].isPaused).to.be.true;
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolBefore.isPaused).to.be.true;
 
     try {
       // Execute the activate pool instruction
@@ -365,19 +424,33 @@ describe("bert-staking-sc-admin", () => {
       console.log(`Pool ${poolIndex} activated successfully`);
 
       // Verify the pool is no longer paused
-      const configAfter = await sdk.fetchConfigByAddress(configPda);
-      expect(configAfter.poolsConfig[poolIndex].isPaused).to.be.false;
+      const poolAfter = await sdk.fetchPoolByAddress(poolPda);
+      expect(poolAfter.isPaused).to.be.false;
 
-      // Verify other pool configurations weren't changed
-      for (let i = 0; i < 4; i++) {
-        if (i === poolIndex) continue;
-        expect(configAfter.poolsConfig[i].lockPeriodDays).to.equal(
-          configBefore.poolsConfig[i].lockPeriodDays
-        );
-        expect(configAfter.poolsConfig[i].yieldRate.toString()).to.equal(
-          configBefore.poolsConfig[i].yieldRate.toString()
-        );
+      // Verify other pool properties weren't changed
+      expect(poolAfter.lockPeriodDays).to.equal(poolBefore.lockPeriodDays);
+      expect(poolAfter.yieldRate.toString()).to.equal(
+        poolBefore.yieldRate.toString()
+      );
+      expect(poolAfter.maxNftsCap).to.equal(poolBefore.maxNftsCap);
+      expect(poolAfter.maxTokensCap.toString()).to.equal(
+        poolBefore.maxTokensCap.toString()
+      );
+
+      // Verify other pools weren't affected
+      for (let i = 1; i < 4; i++) {
+        const [otherPoolPda] = sdk.pda.findPoolPda(configPda, i);
+        const otherPool = await sdk.fetchPoolByAddress(otherPoolPda);
+        // These pools should still not be paused
+        expect(otherPool.isPaused).to.be.false;
       }
+
+      console.log("Pool configuration after activation:");
+      console.log(`- Lock period: ${poolAfter.lockPeriodDays} days`);
+      console.log(`- Yield rate: ${poolAfter.yieldRate.toNumber() / 100}%`);
+      console.log(`- Max NFTs: ${poolAfter.maxNftsCap}`);
+      console.log(`- Max Tokens: ${poolAfter.maxTokensCap.toString()}`);
+      console.log(`- Is Paused: ${poolAfter.isPaused}`);
     } catch (err) {
       console.error("Failed to activate pool:", err);
       throw err;
@@ -386,6 +459,14 @@ describe("bert-staking-sc-admin", () => {
 
   it("Fails to activate an already active pool", async () => {
     const poolIndex = 0;
+
+    // Find the Pool PDA
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+
+    // Verify the pool is currently active
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolBefore.isPaused).to.be.false;
 
     try {
       const activateIx = await sdk.adminActivatePool({
@@ -416,14 +497,28 @@ describe("bert-staking-sc-admin", () => {
         )
       );
     }
+
+    // Verify the pool is still active (not paused)
+    const poolAfter = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolAfter.isPaused).to.be.false;
   });
 
   it("Fails to update configuration of an active pool", async () => {
     const poolIndex = 0;
 
+    // Find the Pool PDA
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+
     // Verify the pool is currently active
-    const config = await sdk.fetchConfigByAddress(configPda);
-    expect(config.poolsConfig[poolIndex].isPaused).to.be.false;
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolBefore.isPaused).to.be.false;
+
+    // Capture original configuration
+    const originalLockPeriod = poolBefore.lockPeriodDays;
+    const originalYieldRate = poolBefore.yieldRate;
+    const originalMaxNfts = poolBefore.maxNftsCap;
+    const originalMaxTokens = poolBefore.maxTokensCap;
 
     // New pool configuration
     const newConfig: PoolConfigArgs = {
@@ -469,10 +564,16 @@ describe("bert-staking-sc-admin", () => {
     }
 
     // Verify the pool configuration wasn't changed
-    const configAfter = await sdk.fetchConfigByAddress(configPda);
-    expect(configAfter.poolsConfig[poolIndex].lockPeriodDays).to.not.equal(
-      newConfig.lockPeriodDays
+    const poolAfter = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolAfter.lockPeriodDays).to.equal(originalLockPeriod);
+    expect(poolAfter.yieldRate.toString()).to.equal(
+      originalYieldRate.toString()
     );
+    expect(poolAfter.maxNftsCap).to.equal(originalMaxNfts);
+    expect(poolAfter.maxTokensCap.toString()).to.equal(
+      originalMaxTokens.toString()
+    );
+    expect(poolAfter.isPaused).to.be.false;
   });
 
   it("Withdraws tokens from the vault", async () => {
@@ -544,6 +645,23 @@ describe("bert-staking-sc-admin", () => {
       const totalStaked = config.totalStakedAmount.toNumber();
       console.log("Total staked amount:", totalStaked);
       expect(totalStaked).to.equal(0); // Should be 0 as no staking happened
+
+      // Verify pools weren't affected by the token withdrawal
+      for (let i = 0; i < poolsConfig.length; i++) {
+        const [poolPda] = sdk.pda.findPoolPda(configPda, i);
+        const pool = await sdk.fetchPoolByAddress(poolPda);
+
+        // Verify pool with 0 index still has our updated values, others have initial values
+        if (i === 0) {
+          expect(pool.lockPeriodDays).to.equal(2); // From previous test
+          expect(pool.yieldRate.toNumber()).to.equal(400); // From previous test
+          expect(pool.isPaused).to.be.false; // Was activated
+        } else {
+          expect(pool.lockPeriodDays).to.equal(poolsConfig[i].lockPeriodDays);
+          expect(pool.yieldRate.toNumber()).to.equal(poolsConfig[i].yieldRate);
+          expect(pool.isPaused).to.be.false;
+        }
+      }
     } catch (err) {
       console.error("Failed to withdraw tokens:", err);
       throw err;
@@ -733,7 +851,6 @@ describe("bert-staking-sc-admin", () => {
       mint: tokenMint,
       collection,
       id: testConfigId,
-      poolsConfig,
       vault: testVaultAta,
       nftsVault: SystemProgram.programId,
       maxCap,
@@ -753,6 +870,26 @@ describe("bert-staking-sc-admin", () => {
       initializeIx,
       initializeAuthVaultIx,
     ]);
+
+    // Create instructions for initializing each pool for the test config
+    const testPoolInstructions = [];
+    for (let i = 0; i < poolsConfig.length; i++) {
+      const poolConfig = poolsConfig[i];
+      const initPoolIx = await sdk.initializePool({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        index: i,
+        lockPeriodDays: poolConfig.lockPeriodDays,
+        yieldRate: poolConfig.yieldRate,
+        maxNftsCap: poolConfig.maxNfts,
+        maxTokensCap: poolConfig.maxTokens,
+      });
+      testPoolInstructions.push(initPoolIx);
+    }
+
+    // Execute pool initialization instructions
+    await createAndProcessTransaction(client, payer, testPoolInstructions);
+    console.log("All test config pools initialized successfully");
 
     // Create main vault with 0 balance since it's not used for admin withdrawals
     createAtaForMint(provider, testVaultAta, tokenMint, BigInt(0));

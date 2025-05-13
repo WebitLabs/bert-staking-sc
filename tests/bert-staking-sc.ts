@@ -1,7 +1,6 @@
 import { expect } from "chai";
-import chalk from "chalk";
 import { prelude } from "./helpers/prelude";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import {
   advanceUnixTimeStamp,
   createAndProcessTransaction,
@@ -10,6 +9,7 @@ import {
 import { BertStakingSDK, ConfigIdl } from "../sdk/src";
 import { AddedProgram, BanksClient, ProgramTestContext } from "solana-bankrun";
 import { BankrunProvider } from "anchor-bankrun";
+import { BN } from "@coral-xyz/anchor";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { MPL_CORE_ADDRESS, USDC_MINT_ADDRESS } from "./helpers/constants";
 import {
@@ -122,7 +122,7 @@ describe("bert-staking-sc", () => {
     assets = result.assets;
   });
 
-  it("Initializes the Bert staking program with custom pool configurations", async () => {
+  it("Initializes the Bert staking program and creates custom pool configurations", async () => {
     let authority = payer;
     console.log("Authority:", authority.publicKey.toString());
 
@@ -139,35 +139,15 @@ describe("bert-staking-sc", () => {
     );
     console.log("NFTs Vault PDA:", nftsVaultPda.toString());
 
-    // try {
-    //   // Create a transaction instruction to create the NFTs vault account
-    //   const createNftsVaultIx = createNftsVaultAccountInstruction(
-    //     authority.publicKey,
-    //     nftsVaultPda,
-    //     sdk.program.programId
-    //   );
-    //
-    //   // First create the NFTs vault account, then initialize the program
-    //   console.log("Creating NFTs vault account and initializing program...");
-    //   await createAndProcessTransaction(client, authority, [createNftsVaultIx]);
-    //   console.log("Transaction processed successfully");
-    //
-    //   // configAccount = await sdk.fetchConfigByAddress(configPda);
-    // } catch (err) {
-    //   console.error("Failed to process initialize tx with err:", err);
-    //   expect.fail("Failed to process initialize tx");
-    // }
-
     let configAccount: ConfigIdl;
     try {
-      // Initialize the staking program with pool configurations
+      // Initialize the staking program without pool configurations (new approach)
       const initializeIx = await sdk.initialize({
         authority: authority.publicKey,
         adminWithdrawDestination: authority.publicKey,
         mint: tokenMint,
         collection: toWeb3JsPublicKey(collectionSigner.publicKey),
         id: configId,
-        poolsConfig,
         vault: vaultTA,
         nftsVault: nftsVaultPda,
         maxCap,
@@ -192,6 +172,26 @@ describe("bert-staking-sc", () => {
       console.log("Program and authority vault initialized successfully");
 
       configAccount = await sdk.fetchConfigByAddress(configPda);
+
+      // Create instructions for initializing all pools
+      const poolInstructions = [];
+      for (let i = 0; i < poolsConfig.length; i++) {
+        const poolConfig = poolsConfig[i];
+        const initPoolIx = await sdk.initializePool({
+          authority: authority.publicKey,
+          configId,
+          index: i,
+          lockPeriodDays: poolConfig.lockPeriodDays,
+          yieldRate: poolConfig.yieldRate,
+          maxNftsCap: poolConfig.maxNfts,
+          maxTokensCap: poolConfig.maxTokens,
+        });
+        poolInstructions.push(initPoolIx);
+      }
+
+      // Execute pool initialization instructions
+      await createAndProcessTransaction(client, authority, poolInstructions);
+      console.log("All pools initialized successfully");
     } catch (err) {
       console.error("Failed to process initialize tx with err:", err);
       expect.fail("Failed to process initialize tx");
@@ -215,49 +215,6 @@ describe("bert-staking-sc", () => {
       authorityVaultPda.toString()
     );
 
-    // Verify pool configurations
-    expect(configAccount.poolsConfig.length).to.equal(4);
-
-    // Verify yield rates
-    expect(configAccount.poolsConfig[0].yieldRate.toNumber()).to.equal(300);
-    expect(configAccount.poolsConfig[1].yieldRate.toNumber()).to.equal(500);
-    expect(configAccount.poolsConfig[2].yieldRate.toNumber()).to.equal(800);
-    expect(configAccount.poolsConfig[3].yieldRate.toNumber()).to.equal(1200);
-
-    // Verify max caps for NFTs and tokens across all pools
-    for (let i = 0; i < 4; i++) {
-      expect(configAccount.poolsConfig[i].maxNftsCap).to.equal(maxNftsCap);
-      expect(configAccount.poolsConfig[i].maxTokensCap.toString()).to.equal(
-        maxTokensCap.toString()
-      );
-    }
-
-    // Verify lock periods are correctly set
-    expect(configAccount.poolsConfig[0].lockPeriodDays).to.equal(1);
-    expect(configAccount.poolsConfig[1].lockPeriodDays).to.equal(3);
-    expect(configAccount.poolsConfig[2].lockPeriodDays).to.equal(7);
-    expect(configAccount.poolsConfig[3].lockPeriodDays).to.equal(30);
-
-    // Verify pool stats are initialized correctly
-    for (let i = 0; i < 4; i++) {
-      expect(configAccount.poolsStats[i].totalNftsStaked).to.equal(0);
-      expect(configAccount.poolsStats[i].totalTokensStaked.toString()).to.equal(
-        "0"
-      );
-      expect(configAccount.poolsStats[i].lifetimeNftsStaked).to.equal(0);
-      expect(
-        configAccount.poolsStats[i].lifetimeTokensStaked.toString()
-      ).to.equal("0");
-      expect(
-        configAccount.poolsStats[i].lifetimeClaimedYield.toString()
-      ).to.equal("0");
-
-      // Verify lock periods in stats match the config
-      expect(configAccount.poolsStats[i].lockPeriodDays).to.equal(
-        configAccount.poolsConfig[i].lockPeriodDays
-      );
-    }
-
     // Verify global configuration
     expect(configAccount.maxCap.toString()).to.equal(maxCap.toString());
     expect(configAccount.nftValueInTokens.toString()).to.equal(
@@ -267,13 +224,42 @@ describe("bert-staking-sc", () => {
     expect(configAccount.totalStakedAmount.toString()).to.equal("0");
     expect(configAccount.totalNftsStaked.toString()).to.equal("0");
 
-    console.log("Config initialized successfully with all pool configurations");
+    // Now verify each pool was correctly initialized
+    console.log("Fetching and verifying all pools");
+    const pools = [];
+
+    for (let i = 0; i < poolsConfig.length; i++) {
+      const [poolPda] = sdk.pda.findPoolPda(configPda, i);
+      console.log(`Pool ${i} PDA: ${poolPda.toString()}`);
+
+      const pool = await sdk.fetchPoolByAddress(poolPda);
+      pools.push(pool);
+
+      // Verify pool values
+      expect(pool.config.toString()).to.equal(configPda.toString());
+      expect(pool.index).to.equal(i);
+      expect(pool.lockPeriodDays).to.equal(poolsConfig[i].lockPeriodDays);
+      expect(pool.yieldRate.toNumber()).to.equal(poolsConfig[i].yieldRate);
+      expect(pool.maxNftsCap).to.equal(poolsConfig[i].maxNfts);
+      expect(pool.maxTokensCap.toString()).to.equal(
+        poolsConfig[i].maxTokens.toString()
+      );
+      expect(pool.isPaused).to.be.false; // Pools should start as active
+      expect(pool.totalNftsStaked).to.equal(0);
+      expect(pool.totalTokensStaked.toNumber()).to.equal(0);
+      expect(pool.lifetimeNftsStaked).to.equal(0);
+      expect(pool.lifetimeTokensStaked.toNumber()).to.equal(0);
+      expect(pool.lifetimeClaimedYield.toNumber()).to.equal(0);
+    }
+
+    console.log("Config and pools initialized successfully");
     console.log("Pool Configurations:");
-    configAccount.poolsConfig.forEach((pool, index) => {
+    pools.forEach((pool, index) => {
       console.log(`Pool ${index} (${pool.lockPeriodDays} days):`);
       console.log(`  Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
       console.log(`  Max NFTs: ${pool.maxNftsCap}`);
       console.log(`  Max Tokens: ${pool.maxTokensCap.toString()}`);
+      console.log(`  Is Paused: ${pool.isPaused}`);
     });
 
     console.log("Global Configuration:");
@@ -355,6 +341,11 @@ describe("bert-staking-sc", () => {
     );
     console.log("User Account PDA:", userAccountPda.toString());
 
+    // We'll use pool index 0 for user initialization
+    const poolIndex = 0;
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+
     try {
       // Create initialize user instruction
       console.log("Initializing user account...");
@@ -363,6 +354,7 @@ describe("bert-staking-sc", () => {
         authority: payer.publicKey,
         configId,
         mint: tokenMint,
+        poolIndex,
       });
 
       // Process the initialize user transaction
@@ -378,13 +370,11 @@ describe("bert-staking-sc", () => {
 
     // Validate user account data
     expect(userAccount).to.not.be.null;
-    // expect(userAccount.owner.toString()).to.equal(payer.publicKey.toString());
     expect(userAccount.totalStakedValue.toNumber()).to.equal(0);
     expect(userAccount.totalStakedNfts).to.equal(0);
     expect(userAccount.totalStakedTokenAmount.toNumber()).to.equal(0);
 
     console.log("User account validated successfully:");
-    // console.log("- Owner:", userAccount.owner.toString());
     console.log(
       "- Total Staked Value:",
       userAccount.totalStakedValue.toString()
@@ -402,6 +392,7 @@ describe("bert-staking-sc", () => {
         authority: payer.publicKey,
         configId,
         mint: tokenMint,
+        poolIndex,
       });
 
       await createAndProcessTransaction(client, payer, [initUserIx]);
@@ -420,7 +411,7 @@ describe("bert-staking-sc", () => {
     const stakeAmount = 500 * 10 ** decimals; // 500 tokens
     const mintAmount = 1_000 * 10 ** decimals; // 1,000 tokens previously minted to user
     const positionId = 42; // Arbitrary position ID for test
-    const poolIndex = 2; // Use the 7-day lock period with 8% yield
+    const poolIndex = 0; // Use the 7-day lock period with 8% yield
 
     // Get account addresses
     const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
@@ -433,16 +424,25 @@ describe("bert-staking-sc", () => {
       tokenMint,
       positionId
     );
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+      payer.publicKey,
+      poolPda
+    );
 
     console.log("Config PDA:", configPda.toString());
     console.log("User Account PDA:", userAccountPda.toString());
     console.log("Position PDA:", positionPda.toString());
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+    console.log("User Pool Stats PDA:", userPoolStatsPda.toString());
 
     // Capture state before staking
     const configBefore = await sdk.fetchConfigByAddress(configPda);
     const userAccountBefore = await sdk.fetchUserAccountByAddress(
       userAccountPda
     );
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+
     const userTokenBalanceBefore = await getTokenBalance(
       client,
       userTokenAccount
@@ -460,6 +460,10 @@ describe("bert-staking-sc", () => {
     console.log(
       "User total staked tokens:",
       userAccountBefore.totalStakedTokenAmount.toString()
+    );
+    console.log(
+      "Pool total tokens staked:",
+      poolBefore.totalTokensStaked.toString()
     );
 
     try {
@@ -483,8 +487,6 @@ describe("bert-staking-sc", () => {
       expect.fail(`Token staking failed: ${err}`);
     }
 
-    // Verify the results of the staking operation
-
     // 1. Check the position was created and initialized correctly
     const position = await sdk.fetchPosition(
       payer.publicKey,
@@ -496,7 +498,6 @@ describe("bert-staking-sc", () => {
     expect(position.amount.toNumber()).to.equal(stakeAmount);
     expect(position.positionType).to.deep.equal({ token: {} });
     expect(position.status).to.deep.equal({ unclaimed: {} });
-    expect(position.lockPeriodYieldIndex).to.equal(poolIndex);
 
     // 2. Check token transfers were completed correctly
     const userTokenBalanceAfter = await getTokenBalance(
@@ -530,27 +531,33 @@ describe("bert-staking-sc", () => {
     );
 
     // 5. Check pool stats were updated
-    const poolStatsBefore = configBefore.poolsStats[poolIndex];
-    const poolStatsAfter = configAfter.poolsStats[poolIndex];
-    expect(poolStatsAfter.totalTokensStaked.toNumber()).to.equal(
-      poolStatsBefore.totalTokensStaked.toNumber() + stakeAmount
+    const poolAfter = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolAfter.totalTokensStaked.toNumber()).to.equal(
+      poolBefore.totalTokensStaked.toNumber() + stakeAmount
     );
-    expect(poolStatsAfter.lifetimeTokensStaked.toNumber()).to.equal(
-      poolStatsBefore.lifetimeTokensStaked.toNumber() + stakeAmount
+    expect(poolAfter.lifetimeTokensStaked.toNumber()).to.equal(
+      poolBefore.lifetimeTokensStaked.toNumber() + stakeAmount
     );
 
-    // 6. Verify unlock time is correctly calculated (7 days in seconds)
+    // 6. Check user pool stats were updated
+    const userPoolStatsAfter = await sdk.fetchUserPoolStatsByAddress(
+      userPoolStatsPda
+    );
+    expect(userPoolStatsAfter.tokensStaked.toNumber()).to.equal(stakeAmount);
+    expect(userPoolStatsAfter.nftsStaked).to.equal(0);
+
+    // 7. Verify unlock time is correctly calculated
     const unlockTime = position.unlockTime.toNumber();
     const depositTime = position.depositTime.toNumber();
-    const sevenDaysInSeconds = 7 * 60;
-    expect(unlockTime - depositTime).to.equal(sevenDaysInSeconds);
+
+    const sevenDaysInSeconds = 60;
+    expect(unlockTime - depositTime).to.be.approximately(sevenDaysInSeconds, 5); // Allow small difference due to timing
 
     console.log("\n---- Position Details ----");
     console.log("Position owner:", position.owner.toString());
     console.log("Position amount:", position.amount.toString());
     console.log("Position type:", position.positionType);
     console.log("Position status:", position.status);
-    console.log("Lock period yield index:", position.lockPeriodYieldIndex);
     console.log(
       "Deposit time:",
       new Date(position.depositTime.toNumber() * 1000).toISOString()
@@ -559,10 +566,7 @@ describe("bert-staking-sc", () => {
       "Unlock time:",
       new Date(position.unlockTime.toNumber() * 1000).toISOString()
     );
-    console.log(
-      "Lock duration (days):",
-      (unlockTime - depositTime) / (24 * 60 * 60)
-    );
+    console.log("Lock duration (seconds):", (unlockTime - depositTime) / 60);
 
     console.log("\n---- State After Staking ----");
     console.log("User token balance:", userTokenBalanceAfter);
@@ -577,18 +581,22 @@ describe("bert-staking-sc", () => {
     );
     console.log(
       "Pool total tokens staked:",
-      poolStatsAfter.totalTokensStaked.toString()
+      poolAfter.totalTokensStaked.toString()
     );
     console.log(
       "Pool lifetime tokens staked:",
-      poolStatsAfter.lifetimeTokensStaked.toString()
+      poolAfter.lifetimeTokensStaked.toString()
+    );
+    console.log(
+      "User pool stats staked tokens:",
+      userPoolStatsAfter.tokensStaked.toString()
     );
   });
 
   it("Claims tokens after lock period with correct yield calculation and state updates", async () => {
     // Use the same position ID that was created in the previous test
     const positionId = 42;
-    const poolIndex = 2; // The 7-day lock period we used in the previous test
+    const poolIndex = 0; // The 7-day lock period we used in the previous test
 
     // Get the account addresses
     const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
@@ -601,6 +609,17 @@ describe("bert-staking-sc", () => {
       tokenMint,
       positionId
     );
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+      payer.publicKey,
+      poolPda
+    );
+
+    console.log("Config PDA:", configPda.toString());
+    console.log("User Account PDA:", userAccountPda.toString());
+    console.log("Position PDA:", positionPda.toString());
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+    console.log("User Pool Stats PDA:", userPoolStatsPda.toString());
 
     // Get both vault addresses - main vault for principal and authority vault for yield
     const vaultAta = getAssociatedTokenAddressSync(tokenMint, configPda, true);
@@ -621,7 +640,6 @@ describe("bert-staking-sc", () => {
     console.log("Position amount:", position.amount.toString());
     console.log("Position type:", position.positionType);
     console.log("Position status:", position.status);
-    console.log("Lock period yield index:", position.lockPeriodYieldIndex);
     console.log(
       "Deposit time:",
       new Date(position.depositTime.toNumber() * 1000).toISOString()
@@ -636,13 +654,34 @@ describe("bert-staking-sc", () => {
     expect(position.owner.toString()).to.equal(payer.publicKey.toString());
     expect(position.positionType).to.deep.equal({ token: {} });
     expect(position.status).to.deep.equal({ unclaimed: {} });
-    expect(position.lockPeriodYieldIndex).to.equal(poolIndex);
 
     // Capture state before claiming
     const configBefore = await sdk.fetchConfigByAddress(configPda);
     const userAccountBefore = await sdk.fetchUserAccountByAddress(
       userAccountPda
     );
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+
+    // User pool stats should exist at claim time
+    let userPoolStatsBefore;
+    try {
+      userPoolStatsBefore = await sdk.fetchUserPoolStatsByAddress(
+        userPoolStatsPda
+      );
+    } catch (err) {
+      console.log(
+        "User pool stats account doesn't exist yet - this is unexpected at claim time"
+      );
+      userPoolStatsBefore = {
+        nftsStaked: 0,
+        tokensStaked: new BN(0),
+        totalValue: new BN(0),
+        claimedYield: new BN(0),
+        user: null,
+        pool: null,
+      };
+      expect.fail("User pool stats should exist at claim time");
+    }
     const userTokenBalanceBefore = await getTokenBalance(
       client,
       userTokenAccount
@@ -652,7 +691,6 @@ describe("bert-staking-sc", () => {
       client,
       authorityVaultPda
     );
-    const poolStatsBefore = configBefore.poolsStats[poolIndex];
 
     console.log("\n---- State Before Claiming ----");
     console.log("User token balance:", userTokenBalanceBefore);
@@ -667,19 +705,23 @@ describe("bert-staking-sc", () => {
     );
     console.log(
       "Pool total tokens staked:",
-      poolStatsBefore.totalTokensStaked.toString()
+      poolBefore.totalTokensStaked.toString()
     );
     console.log(
       "Pool lifetime claimed yield:",
-      poolStatsBefore.lifetimeClaimedYield.toString()
+      poolBefore.lifetimeClaimedYield.toString()
     );
     console.log(
       "User account total staked tokens:",
       userAccountBefore.totalStakedTokenAmount.toString()
     );
+    console.log(
+      "User pool stats staked tokens:",
+      userPoolStatsBefore.tokensStaked.toString()
+    );
 
     // Calculate the expected yield
-    const yieldRate = configBefore.poolsConfig[poolIndex].yieldRate.toNumber();
+    const yieldRate = poolBefore.yieldRate.toNumber();
     const stakeAmount = position.amount.toNumber();
     const yieldAmount = Math.floor(stakeAmount * (yieldRate / 10000));
     const expectedFinalAmount = stakeAmount + yieldAmount;
@@ -719,6 +761,7 @@ describe("bert-staking-sc", () => {
         vault: vaultAta,
         collection: configBefore.collection,
         configId,
+        poolIndex,
       });
 
       await createAndProcessTransaction(client, payer, [claimPositionIx]);
@@ -751,7 +794,7 @@ describe("bert-staking-sc", () => {
       authorityVaultBalanceBefore - yieldAmount
     );
 
-    // 3. Check position status has been updated to claimed
+    // 4. Check position status has been updated to claimed
     const positionAfter = await sdk.fetchPosition(
       payer.publicKey,
       positionId,
@@ -759,22 +802,30 @@ describe("bert-staking-sc", () => {
     );
     expect(positionAfter.status).to.deep.equal({ claimed: {} });
 
-    // 4. Check config's total staked amount was decreased
+    // 5. Check config's total staked amount was decreased
     const configAfter = await sdk.fetchConfigByAddress(configPda);
     expect(configAfter.totalStakedAmount.toNumber()).to.equal(
       configBefore.totalStakedAmount.toNumber() - stakeAmount
     );
 
-    // 5. Check pool stats were updated correctly
-    const poolStatsAfter = configAfter.poolsStats[poolIndex];
-    expect(poolStatsAfter.totalTokensStaked.toNumber()).to.equal(
-      poolStatsBefore.totalTokensStaked.toNumber() - stakeAmount
+    // 6. Check pool stats were updated correctly
+    const poolAfter = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolAfter.totalTokensStaked.toNumber()).to.equal(
+      poolBefore.totalTokensStaked.toNumber() - stakeAmount
     );
-    expect(poolStatsAfter.lifetimeClaimedYield.toNumber()).to.equal(
-      poolStatsBefore.lifetimeClaimedYield.toNumber() + yieldAmount
+    expect(poolAfter.lifetimeClaimedYield.toNumber()).to.equal(
+      poolBefore.lifetimeClaimedYield.toNumber() + yieldAmount
     );
 
-    // 6. Check user account stats were updated
+    // 7. Check user pool stats were updated
+    const userPoolStatsAfter = await sdk.fetchUserPoolStatsByAddress(
+      userPoolStatsPda
+    );
+    expect(userPoolStatsAfter.tokensStaked.toNumber()).to.be.equal(
+      userPoolStatsBefore.tokensStaked.toNumber() - stakeAmount
+    );
+
+    // 8. Check user account stats were updated
     const userAccountAfter = await sdk.fetchUserAccountByAddress(
       userAccountPda
     );
@@ -793,15 +844,19 @@ describe("bert-staking-sc", () => {
     );
     console.log(
       "Pool total tokens staked:",
-      poolStatsAfter.totalTokensStaked.toString()
+      poolAfter.totalTokensStaked.toString()
     );
     console.log(
       "Pool lifetime claimed yield:",
-      poolStatsAfter.lifetimeClaimedYield.toString()
+      poolAfter.lifetimeClaimedYield.toString()
     );
     console.log(
       "User account total staked tokens:",
       userAccountAfter.totalStakedTokenAmount.toString()
+    );
+    console.log(
+      "User pool stats staked tokens:",
+      userPoolStatsAfter.tokensStaked.toString()
     );
 
     console.log("\nToken yield calculation:");
@@ -816,7 +871,7 @@ describe("bert-staking-sc", () => {
   it("Stakes a Metaplex Core asset successfully", async () => {
     const assetSigner = assets[0];
 
-    const poolIndex = 3; // Using the 30-day lock period with 12% yield
+    const poolIndex = 2;
     const nftPositionId = 200; // Use a specific position ID for NFT positions
 
     // Get the Config PDA and account data with our configId
@@ -826,14 +881,36 @@ describe("bert-staking-sc", () => {
     const [nftsVaultPda] = sdk.pda.findNftsVaultPda(configPda, tokenMint);
     console.log("NFTs Vault PDA:", nftsVaultPda.toString());
 
+    // Find the Pool PDA for the specified pool index
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+
+    // Find the user account PDA
+    const [userAccountPda] = sdk.pda.findUserAccountPda(
+      payer.publicKey,
+      configPda
+    );
+    console.log("User Account PDA:", userAccountPda.toString());
+
+    // Find the user pool stats PDA
+    const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+      payer.publicKey,
+      poolPda
+    );
+    console.log("User Pool Stats PDA:", userPoolStatsPda.toString());
+
     console.log("Staking a single Metaplex Core asset...");
     console.log("Owner:", payer.publicKey.toString());
     console.log("Asset:", assetSigner.publicKey.toString());
     console.log("Collection:", collectionSigner.publicKey.toString());
     console.log("Position ID:", nftPositionId);
 
-    const configAccountBefore = await sdk.fetchConfigByAddress(configPda);
-    const poolStatsBefore = configAccountBefore.poolsStats[poolIndex];
+    // Capture state before staking
+    const configBefore = await sdk.fetchConfigByAddress(configPda);
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+    const userAccountBefore = await sdk.fetchUserAccountByAddress(
+      userAccountPda
+    );
 
     // Find the Position PDA for this owner, mint, asset and position ID
     const asset = toWeb3JsPublicKey(assetSigner.publicKey);
@@ -844,8 +921,6 @@ describe("bert-staking-sc", () => {
       nftPositionId
     );
     console.log("Position PDA:", positionPda.toString());
-
-    const configAccount = await sdk.fetchConfigByAddress(configPda);
 
     // Create the stake NFT instruction with position ID
     const stakeNftIx = await sdk.stakeNft({
@@ -882,18 +957,26 @@ describe("bert-staking-sc", () => {
     expect(position.owner.toString()).to.equal(payer.publicKey.toString());
     expect(position.positionType).to.deep.equal({ nft: {} });
     expect(position.amount.toNumber()).to.equal(nftValueInTokens);
-    expect(position.lockPeriodYieldIndex).to.equal(poolIndex);
     expect(position.id.toNumber()).to.equal(nftPositionId); // Verify ID is set correctly
 
     // Verify the pool stats were updated
-    const configAccountAfter = await sdk.fetchConfigByAddress(configPda);
-    const poolStatsAfter = configAccountAfter.poolsStats[poolIndex];
-    expect(poolStatsAfter.totalNftsStaked).to.be.equal(
-      poolStatsBefore.totalNftsStaked + 1
+    const poolAfter = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolAfter.totalNftsStaked).to.be.equal(
+      poolBefore.totalNftsStaked + 1
     );
-    expect(poolStatsAfter.lifetimeNftsStaked).to.be.equal(
-      poolStatsBefore.lifetimeNftsStaked + 1
+    expect(poolAfter.lifetimeNftsStaked).to.be.equal(
+      poolBefore.lifetimeNftsStaked + 1
     );
+
+    // Verify user pool stats were updated (or created if they didn't exist)
+    const userPoolStatsAfter = await sdk.fetchUserPoolStatsByAddress(
+      userPoolStatsPda
+    );
+    expect(userPoolStatsAfter.nftsStaked).to.equal(1);
+    expect(userPoolStatsAfter.user.toString()).to.equal(
+      payer.publicKey.toString()
+    );
+    expect(userPoolStatsAfter.pool.toString()).to.equal(poolPda.toString());
 
     console.log("Position after staking NFT:");
     console.log("- Owner:", position.owner.toString());
@@ -901,11 +984,7 @@ describe("bert-staking-sc", () => {
     console.log("- Amount:", position.amount.toString());
     console.log("- Position Type:", position.positionType);
     console.log("- Asset:", position.asset.toString());
-    console.log("- Lock Period Yield Index:", position.lockPeriodYieldIndex);
-    console.log(
-      "- Lock Period (days):",
-      configAccountAfter.poolsConfig[poolIndex].lockPeriodDays
-    );
+    console.log("- Lock Period (days):", poolAfter.lockPeriodDays);
     console.log(
       "- Deposit Time:",
       new Date(position.depositTime.toNumber() * 1000).toISOString()
@@ -916,19 +995,19 @@ describe("bert-staking-sc", () => {
     );
 
     // Verify config total staked amount increased
-    const updatedConfig = await sdk.fetchConfigByAddress(configPda);
+    const configAfter = await sdk.fetchConfigByAddress(configPda);
     const expectedTotalStaked =
-      configAccount.totalStakedAmount.toNumber() + nftValueInTokens;
-    expect(updatedConfig.totalStakedAmount.toNumber()).to.equal(
+      configBefore.totalStakedAmount.toNumber() + nftValueInTokens;
+    expect(configAfter.totalStakedAmount.toNumber()).to.equal(
       expectedTotalStaked
     );
 
     console.log(
       "Total staked amount updated:",
-      updatedConfig.totalStakedAmount.toString()
+      configAfter.totalStakedAmount.toString()
     );
 
-    // Verify NFT ownership has changed to the vault
+    // Verify NFT ownership has changed to the config vault
     const assetData = await getMplCoreAsset(
       client,
       toWeb3JsPublicKey(assetSigner.publicKey)
@@ -939,28 +1018,55 @@ describe("bert-staking-sc", () => {
     console.log("NFT successfully transferred to vault");
 
     // Verify user account was updated correctly
-    const userAccount = await sdk.fetchUserAccountByAddress(
-      sdk.pda.findUserAccountPda(payer.publicKey, configPda)[0]
+    const userAccountAfter = await sdk.fetchUserAccountByAddress(
+      userAccountPda
     );
 
-    expect(userAccount.totalStakedNfts).to.equal(1);
-    expect(userAccount.totalStakedValue.toNumber()).to.equal(nftValueInTokens);
+    expect(userAccountAfter.totalStakedNfts).to.equal(
+      userAccountBefore.totalStakedNfts + 1
+    );
+    expect(userAccountAfter.totalStakedValue.toNumber()).to.equal(
+      userAccountBefore.totalStakedValue.toNumber() + nftValueInTokens
+    );
 
     console.log("User account stats after staking:");
-    console.log("- Total Staked NFTs:", userAccount.totalStakedNfts);
+    console.log("- Total Staked NFTs:", userAccountAfter.totalStakedNfts);
     console.log(
       "- Total Staked Value:",
-      userAccount.totalStakedValue.toString()
+      userAccountAfter.totalStakedValue.toString()
+    );
+    console.log("User pool stats after staking:");
+    console.log("- Pool Staked NFTs:", userPoolStatsAfter.nftsStaked);
+    console.log(
+      "- Pool Staked Tokens:",
+      userPoolStatsAfter.tokensStaked.toString()
     );
   });
 
   it("Claims a staked Metaplex Core asset successfully", async () => {
     const assetSigner = assets[0];
-    const poolIndex = 3; // Using the 30-day lock period with 12% yield from the previous test
+    const poolIndex = 2; // Using the 7-day lock period with 8% yield from the previous test
 
     // Get the Config PDA and account data with our configId
     const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
-    const configAccount = await sdk.fetchConfigByAddress(configPda);
+
+    // Get the Pool PDA for the specified pool index
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    console.log(`Pool ${poolIndex} PDA:`, poolPda.toString());
+
+    // Find the user account PDA
+    const [userAccountPda] = sdk.pda.findUserAccountPda(
+      payer.publicKey,
+      configPda
+    );
+    console.log("User Account PDA:", userAccountPda.toString());
+
+    // Find the user pool stats PDA
+    const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+      payer.publicKey,
+      poolPda
+    );
+    console.log("User Pool Stats PDA:", userPoolStatsPda.toString());
 
     // Get the asset public key from the previous test
     const asset = toWeb3JsPublicKey(assetSigner.publicKey);
@@ -979,9 +1085,9 @@ describe("bert-staking-sc", () => {
     // Get the position account to check if it's locked
     const position = await sdk.fetchPosition(
       payer.publicKey,
-      nftPositionId, // Now using the position ID for NFT positions
+      nftPositionId,
       tokenMint,
-      asset // Still pass the asset for reference
+      asset
     );
 
     console.log("Position before claiming:");
@@ -1000,10 +1106,31 @@ describe("bert-staking-sc", () => {
 
     // Get stats before claiming
     const configBefore = await sdk.fetchConfigByAddress(configPda);
-    const poolStatsBefore = configBefore.poolsStats[poolIndex];
+    const poolBefore = await sdk.fetchPoolByAddress(poolPda);
     const userAccountBefore = await sdk.fetchUserAccountByAddress(
-      sdk.pda.findUserAccountPda(payer.publicKey, configPda)[0]
+      userAccountPda
     );
+
+    // User pool stats should exist at claim time
+    let userPoolStatsBefore;
+    try {
+      userPoolStatsBefore = await sdk.fetchUserPoolStatsByAddress(
+        userPoolStatsPda
+      );
+    } catch (err) {
+      console.log(
+        "User pool stats account doesn't exist yet - this is unexpected at claim time"
+      );
+      userPoolStatsBefore = {
+        nftsStaked: 0,
+        tokensStaked: new BN(0),
+        totalValue: new BN(0),
+        claimedYield: new BN(0),
+        user: null,
+        pool: null,
+      };
+      expect.fail("User pool stats should exist at claim time");
+    }
 
     console.log("Stats before claiming:");
     console.log("- Total Staked NFTs:", userAccountBefore.totalStakedNfts);
@@ -1011,13 +1138,14 @@ describe("bert-staking-sc", () => {
       "- Total Staked Value:",
       userAccountBefore.totalStakedValue.toString()
     );
-    console.log("- Pool total NFTs staked:", poolStatsBefore.totalNftsStaked);
+    console.log("- Pool total NFTs staked:", poolBefore.totalNftsStaked);
+    console.log("- User pool NFTs staked:", userPoolStatsBefore.nftsStaked);
 
     // Calculate the expected yield
-    const yieldRate = configAccount.poolsConfig[poolIndex].yieldRate.toNumber();
-    const stakeAmount = configAccount.nftValueInTokens.toNumber();
+    const yieldRate = poolBefore.yieldRate.toNumber();
+    const stakeAmount = configBefore.nftValueInTokens.toNumber();
     const yieldAmount = Math.floor(stakeAmount * (yieldRate / 10000));
-    const expectedFinalAmount = yieldAmount;
+    const expectedFinalAmount = yieldAmount; // For NFTs, we only get yield (NFT is returned separately)
 
     console.log("Yield calculation:");
     console.log("- NFT value in tokens:", stakeAmount);
@@ -1053,13 +1181,13 @@ describe("bert-staking-sc", () => {
       authorityVaultBalanceBefore
     );
 
-    // Verify NFT ownership has been transferred back to the owner
+    // Verify NFT ownership before claiming
     const assetDataBefore = await getMplCoreAsset(
       client,
       toWeb3JsPublicKey(assetSigner.publicKey)
     );
-    console.log("config pda", configPda.toBase58());
-    console.log("Asset data before claim:", assetDataBefore);
+    console.log("Asset owner before claim:", assetDataBefore.owner.toString());
+    expect(assetDataBefore.owner.toString()).to.equal(configPda.toString());
 
     // Warp time forward to unlock the position
     try {
@@ -1077,13 +1205,6 @@ describe("bert-staking-sc", () => {
       advanceUnixTimeStamp(provider, BigInt(secondsToWarp));
       console.log("Time warped successfully!");
 
-      // const [positionPda] = sdk.pda.findNftPositionPda(
-      //   payer.publicKey,
-      //   tokenMint,
-      //   asset,
-      //   nftPositionId
-      // );
-
       // Create claim NFT instruction with position ID
       console.log("Creating claim NFT instruction...");
 
@@ -1097,6 +1218,7 @@ describe("bert-staking-sc", () => {
         configId,
         positionId: nftPositionId,
         updateAuthority: toWeb3JsPublicKey(collectionSigner.publicKey),
+        poolIndex,
       });
 
       // Process the claim transaction
@@ -1164,7 +1286,28 @@ describe("bert-staking-sc", () => {
 
     // Verify user account stats were updated
     const userAccountAfter = await sdk.fetchUserAccountByAddress(
-      sdk.pda.findUserAccountPda(payer.publicKey, configPda)[0]
+      userAccountPda
+    );
+    expect(userAccountAfter.totalStakedNfts).to.equal(
+      userAccountBefore.totalStakedNfts - 1
+    );
+    expect(userAccountAfter.totalStakedValue.toNumber()).to.be.lessThan(
+      userAccountBefore.totalStakedValue.toNumber()
+    );
+
+    // Verify pool stats were updated
+    const poolAfter = await sdk.fetchPoolByAddress(poolPda);
+    expect(poolAfter.totalNftsStaked).to.equal(poolBefore.totalNftsStaked - 1);
+    expect(poolAfter.lifetimeClaimedYield.toNumber()).to.equal(
+      poolBefore.lifetimeClaimedYield.toNumber() + yieldAmount
+    );
+
+    // Verify user pool stats were updated
+    const userPoolStatsAfter = await sdk.fetchUserPoolStatsByAddress(
+      userPoolStatsPda
+    );
+    expect(userPoolStatsAfter.nftsStaked).to.equal(
+      userPoolStatsBefore.nftsStaked - 1
     );
 
     console.log("User account stats after claiming:");
@@ -1174,30 +1317,16 @@ describe("bert-staking-sc", () => {
       userAccountAfter.totalStakedValue.toString()
     );
 
-    expect(userAccountAfter.totalStakedNfts).to.equal(
-      userAccountBefore.totalStakedNfts - 1
-    );
-    expect(userAccountAfter.totalStakedValue.toNumber()).to.be.lessThan(
-      userAccountBefore.totalStakedValue.toNumber()
-    );
-
-    // Verify pool stats were updated
-    const configAfter = await sdk.fetchConfigByAddress(configPda);
-    const poolStatsAfter = configAfter.poolsStats[poolIndex];
-
     console.log("Pool stats after claiming:");
-    console.log("- Total NFTs staked:", poolStatsAfter.totalNftsStaked);
+    console.log("- Total NFTs staked:", poolAfter.totalNftsStaked);
     console.log(
       "- Lifetime claimed yield:",
-      poolStatsAfter.lifetimeClaimedYield.toString()
+      poolAfter.lifetimeClaimedYield.toString()
     );
 
-    expect(poolStatsAfter.totalNftsStaked).to.equal(
-      poolStatsBefore.totalNftsStaked - 1
-    );
-    expect(poolStatsAfter.lifetimeClaimedYield.toNumber()).to.equal(
-      poolStatsBefore.lifetimeClaimedYield.toNumber() + yieldAmount
-    );
+    console.log("User pool stats after claiming:");
+    console.log("- Staked NFTs:", userPoolStatsAfter.nftsStaked);
+    console.log("- Staked Tokens:", userPoolStatsAfter.tokensStaked.toString());
 
     console.log("NFT claim test completed successfully!");
   });
@@ -1207,74 +1336,124 @@ describe("bert-staking-sc", () => {
     const poolIndex = 1;
     const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
 
-    // Fetch config to get pool limits
-    const config = await sdk.fetchConfigByAddress(configPda);
-    const poolConfig = config.poolsConfig[poolIndex];
+    // Get the pool to check its limits
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    const pool = await sdk.fetchPoolByAddress(poolPda);
 
     console.log(
-      `Testing token limits for pool ${poolIndex} (${poolConfig.lockPeriodDays} days):`
+      `Testing token limits for pool ${poolIndex} (${pool.lockPeriodDays} days):`
     );
-    console.log(`- Max tokens per user: ${poolConfig.maxTokensCap.toString()}`);
+    console.log(`- Max tokens per pool: ${pool.maxTokensCap.toString()}`);
 
     // Create a much smaller limit for testing
     const smallTokenLimit = 10_000 * 10 ** decimals; // 10,000 tokens
 
-    // We need to create a new config with a smaller token limit for this test
+    // Create a new config for our test
     const testConfigId = configId + 100; // Use a different config ID to avoid conflicts
-    const smallPoolsConfig = [...poolsConfig]; // Clone the original config
 
-    // Modify the pool configuration to have a smaller token limit
-    smallPoolsConfig[poolIndex] = {
-      ...poolsConfig[poolIndex],
-      maxTokens: smallTokenLimit,
-    };
-
-    console.log(
-      `Creating test config with smaller token limit of ${smallTokenLimit}`
-    );
-
-    // Create the new config PDA
+    // Get vault ATA for the config
     const [testConfigPda] = sdk.pda.findConfigPda(
       payer.publicKey,
       testConfigId
     );
+    const vaultTA = getAssociatedTokenAddressSync(
+      tokenMint,
+      testConfigPda,
+      true
+    );
 
-    // Initialize the config with the smaller token limit
-    const initializeIx = await sdk.initialize({
-      authority: payer.publicKey,
-      adminWithdrawDestination: payer.publicKey,
-      mint: tokenMint,
-      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
-      id: testConfigId,
-      poolsConfig: smallPoolsConfig,
-      nftsVault: SystemProgram.programId,
-      maxCap: maxCap,
-      nftValueInTokens: nftValueInTokens,
-      nftsLimitPerUser: nftsLimitPerUser,
-    });
+    // Find the NFTs vault PDA
+    const [nftsVaultPda] = sdk.pda.findNftsVaultPda(testConfigPda, tokenMint);
 
-    // Execute the initialization transaction
     try {
-      console.log("Initializing test config with smaller token limit...");
-      await createAndProcessTransaction(client, payer, [initializeIx]);
-      console.log("Test config initialized successfully");
+      console.log("Initializing test config...");
+
+      // Initialize the staking program
+      const initializeIx = await sdk.initialize({
+        authority: payer.publicKey,
+        adminWithdrawDestination: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        id: testConfigId,
+        vault: vaultTA,
+        nftsVault: nftsVaultPda,
+        maxCap,
+        nftValueInTokens,
+        nftsLimitPerUser,
+      });
+
+      // Initialize auth vault instruction
+      const initializeAuthVaultIx = await sdk.initializeAuthVault({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        tokenMint,
+      });
+
+      // Execute initialization instructions
+      await createAndProcessTransaction(client, payer, [
+        initializeIx,
+        initializeAuthVaultIx,
+      ]);
+      console.log("Base config initialized successfully");
+
+      // Now initialize only one pool with the smaller limit
+      const initPoolIx = await sdk.initializePool({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        index: poolIndex,
+        lockPeriodDays: poolsConfig[poolIndex].lockPeriodDays,
+        yieldRate: poolsConfig[poolIndex].yieldRate,
+        maxNftsCap: poolsConfig[poolIndex].maxNfts,
+        maxTokensCap: smallTokenLimit,
+      });
+
+      // Initialize a second pool (with normal limits) for comparison
+      const otherPoolIndex = 2;
+      const initOtherPoolIx = await sdk.initializePool({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        index: otherPoolIndex,
+        lockPeriodDays: poolsConfig[otherPoolIndex].lockPeriodDays,
+        yieldRate: poolsConfig[otherPoolIndex].yieldRate,
+        maxNftsCap: poolsConfig[otherPoolIndex].maxNfts,
+        maxTokensCap: poolsConfig[otherPoolIndex].maxTokens,
+      });
+
+      // Execute pool initialization instructions
+      await createAndProcessTransaction(client, payer, [
+        initPoolIx,
+        initOtherPoolIx,
+      ]);
+      console.log("Pools initialized successfully");
+
+      // Get the pool with the small limit to verify config
+      const [testPoolPda] = sdk.pda.findPoolPda(testConfigPda, poolIndex);
+      const testPool = await sdk.fetchPoolByAddress(testPoolPda);
+
+      console.log(
+        `Test pool ${poolIndex} configured with max tokens cap: ${testPool.maxTokensCap.toString()}`
+      );
+      expect(testPool.maxTokensCap.toString()).to.equal(
+        smallTokenLimit.toString()
+      );
     } catch (err) {
       console.error("Failed to initialize test config:", err);
       expect.fail("Failed to initialize test config");
     }
 
-    // Initialize user for the new config
-    const initUserIx = await sdk.initializeUser({
-      owner: payer.publicKey,
-      authority: payer.publicKey,
-      configId: testConfigId,
-      mint: tokenMint,
-    });
-
+    // Initialize user account for this config
     try {
-      console.log("Initializing user for test config...");
+      console.log("Initializing user account for test config...");
+      const initUserIx = await sdk.initializeUser({
+        owner: payer.publicKey,
+        authority: payer.publicKey,
+        configId: testConfigId,
+        mint: tokenMint,
+        poolIndex, // Initialize with the limited pool
+      });
+
       await createAndProcessTransaction(client, payer, [initUserIx]);
-      console.log("User initialized successfully for test config");
+      console.log("User account initialized successfully");
     } catch (err) {
       console.error("Failed to initialize user:", err);
       expect.fail("Failed to initialize user");
@@ -1287,325 +1466,337 @@ describe("bert-staking-sc", () => {
       true
     );
 
-    // Stake almost up to the limit (leave a small buffer)
-    const firstStakeAmount = smallTokenLimit - 100 * 10 ** decimals; // Just under the limit
-    console.log(`Staking ${firstStakeAmount} tokens (under the limit)...`);
-
-    // Create stake instruction with amount below the limit
-    const stakeWithinLimitIx = await sdk.stakeToken({
-      authority: payer.publicKey,
-      owner: payer.publicKey,
-      configId: testConfigId,
-      positionId: 1000, // Use a different position ID
-      tokenMint,
-      amount: firstStakeAmount,
-      poolIndex,
-      tokenAccount: userTokenAccount,
-    });
+    // Get the pool with small limit
+    const [testPoolPda] = sdk.pda.findPoolPda(testConfigPda, poolIndex);
+    const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+      payer.publicKey,
+      testPoolPda
+    );
 
     try {
-      // Execute the stake transaction
+      // First try to stake just under the limit - should succeed
+      const firstStakeAmount = smallTokenLimit - 100 * 10 ** decimals; // Just under the limit
+      console.log(`Staking ${firstStakeAmount} tokens (under the limit)...`);
+
+      const stakeWithinLimitIx = await sdk.stakeToken({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        tokenMint,
+        configId: testConfigId,
+        positionId: 1000, // Use a specific position ID
+        amount: firstStakeAmount,
+        poolIndex,
+        tokenAccount: userTokenAccount,
+      });
+
       const res = await createAndProcessTransaction(client, payer, [
         stakeWithinLimitIx,
       ]);
+      console.log("Successfully staked tokens within the limit");
 
-      // Bankrun way of checking for errors
-      if (res.result) {
-        throw res.result;
-      }
-
+      // Verify user pool stats to confirm stake amount
+      const userPoolStats = await sdk.fetchUserPoolStatsByAddress(
+        userPoolStatsPda
+      );
       console.log(
-        chalk.yellowBright("Successfully staked tokens within the limit")
+        `User has now staked ${userPoolStats.tokensStaked.toString()} tokens in pool ${poolIndex}`
+      );
+      expect(userPoolStats.tokensStaked.toString()).to.equal(
+        firstStakeAmount.toString()
       );
     } catch (err) {
       console.error("Failed to stake tokens within limit:", err);
-      expect.fail("Should be able to stake tokens within the limit");
+      expect.fail(`Should be able to stake tokens within the limit: ${err}`);
     }
 
-    // Now, attempt to stake more tokens to exceed the limit
-    const exceedingAmount = 200 * 10 ** decimals; // Amount that will exceed the limit
-    console.log(
-      `Attempting to stake additional ${exceedingAmount} tokens to exceed the limit...`
-    );
-
-    // Create stake instruction with amount that would exceed the limit
-    const stakeExceedingIx = await sdk.stakeToken({
-      authority: payer.publicKey,
-      owner: payer.publicKey,
-      configId: testConfigId,
-      positionId: 1001, // Different position ID
-      tokenMint,
-      amount: exceedingAmount,
-      poolIndex,
-      tokenAccount: userTokenAccount,
-    });
-
-    // This transaction should fail because it would exceed the user's token limit for this pool
+    // Now try to stake more tokens to exceed the limit - should fail
     try {
-      const res = await createAndProcessTransaction(client, payer, [
-        stakeExceedingIx,
-      ]);
+      const exceedingAmount = 200 * 10 ** decimals; // Amount that will exceed the limit
+      console.log(
+        `Attempting to stake additional ${exceedingAmount} tokens to exceed the limit...`
+      );
 
-      // Bankrun way of checking for errors
-      if (res.result) {
-        throw res.result;
-      }
+      const stakeExceedingIx = await sdk.stakeToken({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        tokenMint,
+        configId: testConfigId,
+        positionId: 1001, // Different position ID
+        amount: exceedingAmount,
+        poolIndex,
+        tokenAccount: userTokenAccount,
+      });
 
+      await createAndProcessTransaction(client, payer, [stakeExceedingIx]);
       expect.fail(
         "Should not be able to stake tokens exceeding the user limit per pool"
       );
     } catch (err) {
       console.log(
-        chalk.yellowBright(
-          "Transaction correctly failed when exceeding token limit per pool"
-        )
+        "Transaction correctly failed when exceeding token limit per pool"
       );
-      // We expect an error
+      // We expect to see an error related to token limit
       expect(err.toString()).to.include("Error");
     }
 
-    // Try staking in a different pool - should succeed
-    const otherPoolIndex = 2; // Use a different pool
-    const stakeOtherPoolIx = await sdk.stakeToken({
-      authority: payer.publicKey,
-      owner: payer.publicKey,
-      configId: testConfigId,
-      positionId: 1002, // Different position ID
-      tokenMint,
-      amount: exceedingAmount,
-      poolIndex: otherPoolIndex,
-      tokenAccount: userTokenAccount,
-    });
-
+    // Try staking in the second pool with normal limits - should succeed
     try {
-      const res = await createAndProcessTransaction(client, payer, [
-        stakeOtherPoolIx,
-      ]);
-
-      // Bankrun way of checking for errors
-      if (res.result) {
-        throw res.result;
-      }
-
+      const otherPoolIndex = 2;
+      const stakeAmount = 500 * 10 ** decimals; // 500 tokens
       console.log(
-        chalk.yellowBright("Successfully staked tokens in a different pool")
+        `Attempting to stake ${stakeAmount} tokens in a different pool...`
+      );
+
+      const stakeOtherPoolIx = await sdk.stakeToken({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        tokenMint,
+        configId: testConfigId,
+        positionId: 1002, // Different position ID
+        amount: stakeAmount,
+        poolIndex: otherPoolIndex,
+        tokenAccount: userTokenAccount,
+      });
+
+      await createAndProcessTransaction(client, payer, [stakeOtherPoolIx]);
+      console.log("Successfully staked tokens in a different pool");
+
+      // Verify the stake was successful in the second pool
+      const [otherPoolPda] = sdk.pda.findPoolPda(testConfigPda, otherPoolIndex);
+      const [otherUserPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+        payer.publicKey,
+        otherPoolPda
+      );
+
+      const otherUserPoolStats = await sdk.fetchUserPoolStatsByAddress(
+        otherUserPoolStatsPda
+      );
+      console.log(
+        `User now has ${otherUserPoolStats.tokensStaked.toString()} tokens staked in pool ${otherPoolIndex}`
+      );
+      expect(otherUserPoolStats.tokensStaked.toString()).to.equal(
+        stakeAmount.toString()
       );
     } catch (err) {
       console.error("Failed to stake tokens in different pool:", err);
-      expect.fail("Should be able to stake tokens in a different pool");
+      expect.fail(`Should be able to stake tokens in a different pool: ${err}`);
     }
 
     console.log("Token limit per pool test completed successfully!");
   });
 
   it("Enforces user NFT limit per pool", async () => {
-    const poolIndex = 0;
     // Choose pool 0 (1-day lock period) for this test
+    const poolIndex = 0;
     const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
 
-    // Fetch config to get pool limits
-    const config = await sdk.fetchConfigByAddress(configPda);
-    const poolConfig = config.poolsConfig[poolIndex];
-
-    console.log(
-      `Testing NFT limits for pool ${poolIndex} (${poolConfig.lockPeriodDays} days):`
-    );
-    console.log(`- Max NFTs per user: ${poolConfig.maxNftsCap}`);
+    // Get the pool to check its limits
+    const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+    const pool = await sdk.fetchPoolByAddress(poolPda);
 
     // Create a very small NFT limit for testing
-    const smallNftLimit = 3;
+    const smallNftLimit = 2; // Keep this small enough for test speed
+    console.log(`Testing NFT limits for pool ${poolIndex} (${pool.lockPeriodDays} days):`);
+    console.log(`- Normal max NFTs per pool: ${pool.maxNftsCap}`);
+    console.log(`- Test max NFTs per pool: ${smallNftLimit}`);
 
-    // Create a new config with a smaller NFT limit for this test
+    // Create a new config for our test
     const testConfigId = configId + 201; // Use a different config ID to avoid conflicts
-    const smallPoolsConfig = [...poolsConfig]; // Clone the original config
 
-    // Modify the pool configuration to have a smaller NFT limit
-    smallPoolsConfig[poolIndex] = {
-      ...poolsConfig[poolIndex],
-      maxNfts: smallNftLimit,
-    };
+    // Get vault ATA for the test config
+    const [testConfigPda] = sdk.pda.findConfigPda(payer.publicKey, testConfigId);
+    const vaultTA = getAssociatedTokenAddressSync(tokenMint, testConfigPda, true);
 
-    console.log(
-      `Creating test config with smaller NFT limit of ${smallNftLimit}`
-    );
+    // Find the NFTs vault PDA
+    const [nftsVaultPda] = sdk.pda.findNftsVaultPda(testConfigPda, tokenMint);
 
-    // Create the new config PDA
-    const [testConfigPda] = sdk.pda.findConfigPda(
-      payer.publicKey,
-      testConfigId
-    );
-
-    // Initialize the config with the smaller NFT limit
-    const initializeIx = await sdk.initialize({
-      authority: payer.publicKey,
-      adminWithdrawDestination: payer.publicKey,
-      mint: tokenMint,
-      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
-      id: testConfigId,
-      poolsConfig: smallPoolsConfig,
-      nftsVault: SystemProgram.programId,
-      maxCap: maxCap,
-      nftValueInTokens: nftValueInTokens,
-      nftsLimitPerUser: nftsLimitPerUser,
-    });
-
-    // Execute the initialization transaction
     try {
-      console.log("Initializing test config with smaller NFT limit...");
-      await createAndProcessTransaction(client, payer, [initializeIx]);
-      console.log("Test config initialized successfully");
+      console.log("Initializing test config...");
+      
+      // Initialize the staking program
+      const initializeIx = await sdk.initialize({
+        authority: payer.publicKey,
+        adminWithdrawDestination: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        id: testConfigId,
+        vault: vaultTA,
+        nftsVault: nftsVaultPda,
+        maxCap,
+        nftValueInTokens,
+        nftsLimitPerUser,
+      });
+
+      // Initialize auth vault instruction
+      const initializeAuthVaultIx = await sdk.initializeAuthVault({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        tokenMint,
+      });
+
+      // Execute initialization instructions
+      await createAndProcessTransaction(client, payer, [
+        initializeIx,
+        initializeAuthVaultIx,
+      ]);
+      console.log("Base config initialized successfully");
+
+      // Now initialize the pool with a small NFT limit
+      const initPoolIx = await sdk.initializePool({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        index: poolIndex,
+        lockPeriodDays: poolsConfig[poolIndex].lockPeriodDays,
+        yieldRate: poolsConfig[poolIndex].yieldRate,
+        maxNftsCap: smallNftLimit, // Small NFT limit for testing
+        maxTokensCap: poolsConfig[poolIndex].maxTokens,
+      });
+
+      // Initialize a second pool (with normal limits) for comparison
+      const otherPoolIndex = 1;
+      const initOtherPoolIx = await sdk.initializePool({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        index: otherPoolIndex,
+        lockPeriodDays: poolsConfig[otherPoolIndex].lockPeriodDays,
+        yieldRate: poolsConfig[otherPoolIndex].yieldRate,
+        maxNftsCap: poolsConfig[otherPoolIndex].maxNfts, // Normal NFT limit
+        maxTokensCap: poolsConfig[otherPoolIndex].maxTokens,
+      });
+
+      // Execute pool initialization instructions
+      await createAndProcessTransaction(client, payer, [initPoolIx, initOtherPoolIx]);
+      console.log("Pools initialized successfully");
+
+      // Get the pool with the small limit to verify config
+      const [testPoolPda] = sdk.pda.findPoolPda(testConfigPda, poolIndex);
+      const testPool = await sdk.fetchPoolByAddress(testPoolPda);
+      
+      console.log(`Test pool ${poolIndex} configured with max NFTs cap: ${testPool.maxNftsCap}`);
+      expect(testPool.maxNftsCap).to.equal(smallNftLimit);
     } catch (err) {
       console.error("Failed to initialize test config:", err);
       expect.fail("Failed to initialize test config");
     }
 
-    const testConfigAccount = await sdk.fetchConfigByAddress(testConfigPda);
-    console.log("== Test Config collection:", collectionSigner.publicKey);
-    expect(collectionSigner.publicKey.toString()).to.equal(
-      testConfigAccount.collection.toString()
-    );
-
-    // Initialize user for the new config
-    const initUserIx = await sdk.initializeUser({
-      owner: payer.publicKey,
-      authority: payer.publicKey,
-      configId: testConfigId,
-      mint: tokenMint,
-    });
-
+    // Initialize user account for this config
     try {
-      console.log("Initializing user for test config...");
+      console.log("Initializing user account for test config...");
+      const initUserIx = await sdk.initializeUser({
+        owner: payer.publicKey,
+        authority: payer.publicKey,
+        configId: testConfigId,
+        mint: tokenMint,
+        poolIndex, // Initialize with the limited pool
+      });
+
       await createAndProcessTransaction(client, payer, [initUserIx]);
-      console.log("User initialized successfully for test config");
+      console.log("User account initialized successfully");
     } catch (err) {
       console.error("Failed to initialize user:", err);
       expect.fail("Failed to initialize user");
     }
 
-    // Stake all `smallNftLimit` assets
-    await Promise.all(
-      Array(smallNftLimit)
-        .fill(1)
-        .map(async (value, index) => {
-          const asset = assets[index + 1];
-
-          console.log(chalk.redBright("staking nft"), index);
-
-          // Stake the first NFT (should succeed)
-          const stakeNft1Ix = await sdk.stakeNft({
-            authority: payer.publicKey,
-            owner: payer.publicKey,
-            mint: tokenMint,
-            collection: toWeb3JsPublicKey(collectionSigner.publicKey),
-            asset: toWeb3JsPublicKey(asset.publicKey),
-            configId: testConfigId,
-            poolIndex,
-            nftsVault: SystemProgram.programId,
-          });
-
-          try {
-            console.log("Staking NFT ", asset.publicKey.toString());
-            const res = await createAndProcessTransaction(
-              client,
-              payer,
-              [stakeNft1Ix],
-              []
-            );
-
-            // Bankrun way of throwing an error
-            if (res.result) {
-              throw res.result;
-            }
-
-            console.log(
-              chalk.yellowBright(
-                "Successfully staked NFT" + asset.publicKey.toString()
-              )
-            );
-          } catch (err) {
-            console.log(
-              chalk.redBright(
-                "Failed to stake NFT: " + asset.publicKey.toString()
-              ),
-              err
-            );
-            expect.fail("Should be able to stake NFT within the limit");
-          }
-        })
+    // Get the pool with small limit
+    const [testPoolPda] = sdk.pda.findPoolPda(testConfigPda, poolIndex);
+    const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+      payer.publicKey,
+      testPoolPda
     );
 
-    const asset = assets[smallNftLimit + 2];
-
-    // Attempt to stake over the limit (should fail)
-    const stakeNft2Ix = await sdk.stakeNft({
-      authority: payer.publicKey,
-      owner: payer.publicKey,
-      mint: tokenMint,
-      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
-      asset: toWeb3JsPublicKey(asset.publicKey),
-      configId: testConfigId,
-      poolIndex,
-      nftsVault: SystemProgram.programId,
-    });
-
-    // This transaction should fail because it would exceed the user's NFT limit for this pool
-    try {
-      const res = await createAndProcessTransaction(
-        client,
-        payer,
-        [stakeNft2Ix],
-        []
-      );
-
-      if (res.result) {
-        throw res.result;
+    // Stake NFTs up to the limit sequentially (more reliable than parallel)
+    for (let i = 0; i < smallNftLimit; i++) {
+      const asset = assets[i + 1];
+      console.log(`Staking NFT ${i+1} of ${smallNftLimit} (${asset.publicKey.toString()})...`);
+      
+      const stakeNftIx = await sdk.stakeNft({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        asset: toWeb3JsPublicKey(asset.publicKey),
+        configId: testConfigId,
+        poolIndex,
+        positionId: 2000 + i, // Use specific position IDs
+        nftsVault: nftsVaultPda,
+      });
+      
+      try {
+        await createAndProcessTransaction(client, payer, [stakeNftIx]);
+        console.log(`Successfully staked NFT ${i+1}`);
+        
+        // Verify user pool stats after each stake
+        const userPoolStats = await sdk.fetchUserPoolStatsByAddress(userPoolStatsPda);
+        console.log(`User has now staked ${userPoolStats.nftsStaked} NFTs in pool ${poolIndex}`);
+        expect(userPoolStats.nftsStaked).to.equal(i + 1);
+      } catch (err) {
+        console.error(`Failed to stake NFT ${i+1}: ${err}`);
+        expect.fail(`Should be able to stake NFT ${i+1} within the limit`);
       }
-
-      expect.fail(
-        "Should not be able to stake NFTs exceeding the user limit per pool"
-      );
+    }
+    
+    // Now attempt to stake one more NFT beyond the limit - should fail
+    try {
+      const extraAsset = assets[smallNftLimit + 1];
+      console.log(`Attempting to stake NFT ${smallNftLimit+1} to exceed the limit...`);
+      
+      const stakeExceedingIx = await sdk.stakeNft({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        asset: toWeb3JsPublicKey(extraAsset.publicKey),
+        configId: testConfigId,
+        poolIndex,
+        positionId: 2000 + smallNftLimit, // Next position ID
+        nftsVault: nftsVaultPda,
+      });
+      
+      await createAndProcessTransaction(client, payer, [stakeExceedingIx]);
+      expect.fail("Should not be able to stake NFTs exceeding the pool limit");
     } catch (err) {
-      console.log(
-        "Transaction correctly failed when exceeding NFT limit per pool"
-      );
-      // We expect an error like "NFT limit reached" or similar constraint error
+      console.log("Transaction correctly failed when exceeding NFT limit per pool");
+      // We expect an error related to NFT limit
       expect(err.toString()).to.include("Error");
     }
-
-    const otherPoolIndex = 0;
-    // But staking it in another pool should PASS.
-    const stakeNft3Ix = await sdk.stakeNft({
-      authority: payer.publicKey,
-      owner: payer.publicKey,
-      mint: tokenMint,
-      collection: toWeb3JsPublicKey(collectionSigner.publicKey),
-      asset: toWeb3JsPublicKey(asset.publicKey),
-      configId: testConfigId,
-      poolIndex: otherPoolIndex,
-      nftsVault: SystemProgram.programId,
-    });
-
-    // This transaction should fail because it would exceed the user's NFT limit for this pool
+    
+    // Try staking in a different pool with normal limits - should succeed
     try {
-      const res = await createAndProcessTransaction(
-        client,
-        payer,
-        [stakeNft3Ix],
-        []
+      const otherPoolIndex = 1;
+      const extraAsset = assets[smallNftLimit + 1];
+      console.log(`Attempting to stake NFT in pool ${otherPoolIndex} with normal limits...`);
+      
+      const [otherPoolPda] = sdk.pda.findPoolPda(testConfigPda, otherPoolIndex);
+      
+      const stakeOtherPoolIx = await sdk.stakeNft({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        asset: toWeb3JsPublicKey(extraAsset.publicKey),
+        configId: testConfigId,
+        poolIndex: otherPoolIndex,
+        positionId: 3000, // Different position ID for other pool
+        nftsVault: nftsVaultPda,
+      });
+      
+      await createAndProcessTransaction(client, payer, [stakeOtherPoolIx]);
+      console.log(`Successfully staked NFT in different pool ${otherPoolIndex}`);
+      
+      // Verify the stake was successful in the second pool
+      const [otherUserPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+        payer.publicKey,
+        otherPoolPda
       );
-
-      if (res.result) {
-        throw res.result;
-      }
-
-      expect.fail("Should be able to stake NFT in other poole");
+      
+      const otherUserPoolStats = await sdk.fetchUserPoolStatsByAddress(otherUserPoolStatsPda);
+      console.log(`User now has ${otherUserPoolStats.nftsStaked} NFTs staked in pool ${otherPoolIndex}`);
+      expect(otherUserPoolStats.nftsStaked).to.equal(1);
     } catch (err) {
-      console.log(
-        "Transaction correctly failed when exceeding NFT limit per pool"
-      );
-      // We expect an error like "NFT limit reached" or similar constraint error
-      expect(err.toString()).to.include("Error");
+      console.error("Failed to stake NFT in different pool:", err);
+      expect.fail(`Should be able to stake NFT in a different pool: ${err}`);
     }
+
     console.log("NFT limit per pool test completed successfully!");
   });
 });

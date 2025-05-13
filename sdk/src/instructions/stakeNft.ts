@@ -45,10 +45,10 @@ export async function stakeNftInstruction({
 
   // Find Pool PDA with the pool index
   const [poolPda] = pda.findPoolPda(configPda, poolIndex);
-  
+
   // Find User Account PDA
   const [userAccountPda] = pda.findUserAccountPda(owner, configPda);
-  
+
   // Find User Pool Stats PDA
   const [userPoolStatsPda] = pda.findUserPoolStatsPda(owner, poolPda);
 

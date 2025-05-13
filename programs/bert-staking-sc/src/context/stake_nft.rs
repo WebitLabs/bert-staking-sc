@@ -46,13 +46,15 @@ pub struct StakeNFT<'info> {
     pub user_account: Box<Account<'info, UserAccountV3>>,
 
     #[account(
-        mut,
+        init_if_needed,
+        payer = owner,
+        space = 8 + UserPoolStatsAccount::INIT_SPACE,
         seeds = [
             b"user_pool_stats",
             owner.key().as_ref(),
             pool.key().as_ref(),
         ],
-        bump = user_pool_stats.bump,
+        bump
     )]
     pub user_pool_stats: Box<Account<'info, UserPoolStatsAccount>>,
 
@@ -70,13 +72,13 @@ pub struct StakeNFT<'info> {
         has_one = owner,
         constraint = asset.update_authority == UpdateAuthority::Collection(collection.key()),
     )]
-    pub asset: Account<'info, BaseAssetV1>,
+    pub asset: Box<Account<'info, BaseAssetV1>>,
 
     ///CHECK: UNUSED!
     pub nft_vault_owner: UncheckedAccount<'info>,
 
     #[account(mut)]
-    pub collection: Account<'info, BaseCollectionV1>,
+    pub collection: Box<Account<'info, BaseCollectionV1>>,
 
     #[account(address = CORE_PROGRAM_ID)]
     /// CHECK: this will be checked by core
@@ -195,6 +197,11 @@ impl<'info> StakeNFT<'info> {
         // Update user pool stats
         user_pool_stats.nfts_staked = new_pool_nfts_staked;
         user_pool_stats.total_value = new_pool_total_value;
+
+        user_pool_stats.user = self.owner.key();
+        user_pool_stats.pool = pool.key();
+
+        user_pool_stats.bump = bumps.user_pool_stats;
 
         // Update global user stats
         let user_account = &mut self.user_account;

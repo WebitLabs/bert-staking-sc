@@ -359,6 +359,7 @@ export class BertStakingSDK {
 
   /**
    * Creates an RPC call to initialize a user account
+   * Note: User pool stats are now initialized during staking operations, not here
    */
   async initializeUserRpc({
     owner,
