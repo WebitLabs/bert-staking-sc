@@ -24,6 +24,18 @@ export function activatePoolCommand(program: Command): void {
 
         // Find the config PDA
         const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        spinner.text = `Config PDA: ${configPda.toString()}`;
+
+        // Find the pool PDA
+        const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+        spinner.text = `Pool PDA: ${poolPda.toString()}`;
+
+        // Fetch current pool state
+        const poolBefore = await sdk.fetchPoolByAddress(poolPda);
+        if (poolBefore && !poolBefore.isPaused) {
+          spinner.warn(`Pool ${poolIndex} is already active!`);
+          return;
+        }
 
         // Use the RPC method to directly execute the transaction
         const txid = await sdk.adminActivatePoolRpc({
@@ -36,21 +48,20 @@ export function activatePoolCommand(program: Command): void {
           `Pool ${poolIndex} activated successfully. Tx: ${txid}`
         );
 
-        // Fetch and display updated config status
+        // Fetch and display updated pool status
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        const config = await sdk.fetchConfigByAddress(configPda);
+        const updatedPool = await sdk.fetchPoolByAddress(poolPda);
 
-        if (config && poolIndex < config.poolsConfig.length) {
+        if (updatedPool) {
           console.log(`\nPool ${poolIndex} Status:`);
-          console.log(`- Paused: ${config.poolsConfig[poolIndex].isPaused}`);
+          console.log(`- Pool PDA: ${poolPda.toString()}`);
+          console.log(`- Paused: ${updatedPool.isPaused ? "Yes" : "No"}`);
+          console.log(`- Lock Period: ${updatedPool.lockPeriodDays} days`);
           console.log(
-            `- Lock Period: ${config.poolsConfig[poolIndex].lockPeriodDays} days`
+            `- Yield Rate: ${updatedPool.yieldRate.toNumber() / 100}%`
           );
-          console.log(
-            `- Yield Rate: ${
-              config.poolsConfig[poolIndex].yieldRate.toNumber() / 100
-            }%`
-          );
+          console.log(`- Max NFTs: ${updatedPool.maxNftsCap}`);
+          console.log(`- Max Tokens: ${updatedPool.maxTokensCap.toString()}`);
         } else {
           console.log(`\nFailed to fetch updated pool status.`);
         }
@@ -60,4 +71,3 @@ export function activatePoolCommand(program: Command): void {
       }
     });
 }
-

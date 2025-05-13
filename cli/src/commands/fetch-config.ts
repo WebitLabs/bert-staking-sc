@@ -87,55 +87,55 @@ export function fetchConfigCommand(program: Command): void {
 
         // Display pools configuration
         console.log("\n=== Pool Configurations ===");
-        config.poolsConfig.forEach((pool, index) => {
-          const poolStats = config.poolsStats[index];
-
-          console.log(`\nPool ${index} (${pool.lockPeriodDays} days):`);
-          console.log(`- Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
-          console.log(`- Paused: ${pool.isPaused ? "Yes" : "No"}`);
-
-          // Max caps
-          const maxNfts = pool.maxNftsCap;
-          const maxTokens = pool.maxTokensCap.toNumber() / 10 ** decimals;
-          console.log(`- Max NFTs: ${maxNfts}`);
-          console.log(`- Max Tokens: ${maxTokens.toLocaleString()}`);
-
-          // Current stats
-          const tokensStaked =
-            poolStats.totalTokensStaked.toNumber() / 10 ** decimals;
-          const nftsStaked = poolStats.totalNftsStaked;
-          console.log(
-            `- Current Tokens Staked: ${tokensStaked.toLocaleString()} (${(
-              (tokensStaked / maxTokens) *
-              100
-            ).toFixed(2)}% of max)`
-          );
-          console.log(
-            `- Current NFTs Staked: ${nftsStaked} (${(
-              (nftsStaked / maxNfts) *
-              100
-            ).toFixed(2)}% of max)`
-          );
-
-          // Lifetime stats
-          const lifetimeTokens =
-            poolStats.lifetimeTokensStaked.toNumber() / 10 ** decimals;
-          const lifetimeNfts = poolStats.lifetimeNftsStaked;
-          const lifetimeYield =
-            poolStats.lifetimeClaimedYield.toNumber() / 10 ** decimals;
-          console.log(
-            `- Lifetime Tokens Staked: ${lifetimeTokens.toLocaleString()}`
-          );
-          console.log(`- Lifetime NFTs Staked: ${lifetimeNfts}`);
-          console.log(
-            `- Lifetime Yield Claimed: ${lifetimeYield.toLocaleString()}`
-          );
-
-          // Calculate APY
-          // const apy =
-          //   (pool.yieldRate.toNumber() / 100) * (365 / pool.lockPeriodDays);
-          // console.log(`- Equivalent APY: ${apy.toFixed(2)}%`);
-        });
+        // config.poolsConfig.forEach((pool, index) => {
+        //   const poolStats = config.poolsStats[index];
+        //
+        //   console.log(`\nPool ${index} (${pool.lockPeriodDays} days):`);
+        //   console.log(`- Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
+        //   console.log(`- Paused: ${pool.isPaused ? "Yes" : "No"}`);
+        //
+        //   // Max caps
+        //   const maxNfts = pool.maxNftsCap;
+        //   const maxTokens = pool.maxTokensCap.toNumber() / 10 ** decimals;
+        //   console.log(`- Max NFTs: ${maxNfts}`);
+        //   console.log(`- Max Tokens: ${maxTokens.toLocaleString()}`);
+        //
+        //   // Current stats
+        //   const tokensStaked =
+        //     poolStats.totalTokensStaked.toNumber() / 10 ** decimals;
+        //   const nftsStaked = poolStats.totalNftsStaked;
+        //   console.log(
+        //     `- Current Tokens Staked: ${tokensStaked.toLocaleString()} (${(
+        //       (tokensStaked / maxTokens) *
+        //       100
+        //     ).toFixed(2)}% of max)`
+        //   );
+        //   console.log(
+        //     `- Current NFTs Staked: ${nftsStaked} (${(
+        //       (nftsStaked / maxNfts) *
+        //       100
+        //     ).toFixed(2)}% of max)`
+        //   );
+        //
+        //   // Lifetime stats
+        //   const lifetimeTokens =
+        //     poolStats.lifetimeTokensStaked.toNumber() / 10 ** decimals;
+        //   const lifetimeNfts = poolStats.lifetimeNftsStaked;
+        //   const lifetimeYield =
+        //     poolStats.lifetimeClaimedYield.toNumber() / 10 ** decimals;
+        //   console.log(
+        //     `- Lifetime Tokens Staked: ${lifetimeTokens.toLocaleString()}`
+        //   );
+        //   console.log(`- Lifetime NFTs Staked: ${lifetimeNfts}`);
+        //   console.log(
+        //     `- Lifetime Yield Claimed: ${lifetimeYield.toLocaleString()}`
+        //   );
+        //
+        //   // Calculate APY
+        //   // const apy =
+        //   //   (pool.yieldRate.toNumber() / 100) * (365 / pool.lockPeriodDays);
+        //   // console.log(`- Equivalent APY: ${apy.toFixed(2)}%`);
+        // });
       } catch (error) {
         ora().fail(`Failed to fetch config: ${error}`);
         console.error(error);

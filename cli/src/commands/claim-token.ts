@@ -48,21 +48,7 @@ export function claimTokenCommand(program: Command): void {
         }
         spinner.text = `Position PDA: ${positionPda.toString()}`;
 
-        // Get user token account
-        const userTokenAccount = getAssociatedTokenAddressSync(
-          tokenMint,
-          wallet.publicKey,
-          false
-        );
-
-        // Get vault account
-        const vaultAta = getAssociatedTokenAddressSync(
-          tokenMint,
-          configPda,
-          true
-        );
-
-        // Fetch position before claiming to get details for display
+        // Fetch position before claiming to get details for display and to get the pool
         let positionBefore;
         try {
           positionBefore = await sdk.fetchPositionByAddress(positionPda);
@@ -97,10 +83,37 @@ export function claimTokenCommand(program: Command): void {
             );
             return;
           }
+
+          // Get the pool PDA from the position
+          spinner.text = `Pool PDA: ${positionBefore.pool.toString()}`;
+
+          // Find User Pool Stats PDA using the owner and pool from the position
+          const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+            wallet.publicKey,
+            positionBefore.pool
+          );
+          spinner.text = `User Pool Stats PDA: ${userPoolStatsPda.toString()}`;
         } catch (err) {
           spinner.warn(`Could not fetch position before claiming: ${err}`);
           // Continue anyway as it might still work
         }
+
+        // Get user token account
+        const userTokenAccount = getAssociatedTokenAddressSync(
+          tokenMint,
+          wallet.publicKey,
+          false
+        );
+
+        // Get vault account
+        const vaultAta = getAssociatedTokenAddressSync(
+          tokenMint,
+          configPda,
+          true
+        );
+
+        const poolIndex = (await sdk.fetchPoolByAddress(positionBefore?.pool!))
+          ?.index;
 
         // Execute claim transaction
         spinner.text = "Claiming tokens...";
@@ -114,6 +127,7 @@ export function claimTokenCommand(program: Command): void {
           tokenAccount: userTokenAccount,
           vault: vaultAta,
           positionId,
+          poolIndex: poolIndex!,
         });
 
         spinner.succeed(`Tokens claimed successfully. Tx: ${txid}`);
@@ -127,19 +141,18 @@ export function claimTokenCommand(program: Command): void {
         );
 
         try {
-          const config = await sdk.fetchConfigByAddress(configPda);
           const position = await sdk.fetchPositionByAddress(positionPda);
 
           if (position && positionBefore) {
             console.log("\nClaim Summary:");
 
-            const poolIndex = positionBefore.lockPeriodYieldIndex;
             const amount = positionBefore.amount.toNumber();
 
-            // Get yield rate from config
-            if (config && poolIndex < config.poolsConfig.length) {
-              const yieldRate =
-                config.poolsConfig[poolIndex].yieldRate.toNumber();
+            // Fetch the pool to get accurate yield rate
+            const pool = await sdk.fetchPoolByAddress(positionBefore.pool);
+
+            if (pool) {
+              const yieldRate = pool.yieldRate.toNumber();
               const yieldAmount = Math.floor(amount * (yieldRate / 10000));
               const totalClaimed = amount + yieldAmount;
 
@@ -161,12 +174,10 @@ export function claimTokenCommand(program: Command): void {
               );
 
               // Show lock period
-              const lockPeriodDays =
-                config.poolsConfig[poolIndex].lockPeriodDays;
-              console.log(`- Lock Period: ${lockPeriodDays} days`);
+              console.log(`- Lock Period: ${pool.lockPeriodDays} days`);
 
               // Calculate APY
-              const apy = (yieldRate / 100) * (365 / lockPeriodDays);
+              const apy = (yieldRate / 100) * (365 / pool.lockPeriodDays);
               console.log(`- Equivalent APY: ${apy.toFixed(2)}%`);
             }
 
@@ -176,6 +187,39 @@ export function claimTokenCommand(program: Command): void {
               }`
             );
             console.log(`Claimed at: ${new Date().toLocaleString()}`);
+
+            // Fetch and show updated user pool stats
+            if (positionBefore.pool) {
+              try {
+                const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+                  wallet.publicKey,
+                  positionBefore.pool
+                );
+
+                const userPoolStats = await sdk.fetchUserPoolStatsByAddress(
+                  userPoolStatsPda
+                );
+
+                if (userPoolStats) {
+                  console.log(`\nUpdated User Pool Stats:`);
+                  console.log(`- PDA: ${userPoolStatsPda.toString()}`);
+                  console.log(`- User: ${userPoolStats.user.toString()}`);
+                  console.log(`- Pool: ${userPoolStats.pool.toString()}`);
+                  console.log(
+                    `- Tokens Staked: ${userPoolStats.tokensStaked.toString()}`
+                  );
+                  console.log(`- NFTs Staked: ${userPoolStats.nftsStaked}`);
+                  console.log(
+                    `- Total Value: ${userPoolStats.totalValue.toString()}`
+                  );
+                  console.log(
+                    `- Claimed Yield: ${userPoolStats.claimedYield.toString()}`
+                  );
+                }
+              } catch (err) {
+                console.log(`Failed to fetch updated user pool stats: ${err}`);
+              }
+            }
           }
         } catch (err) {
           console.log(`\nFailed to fetch updated position details: ${err}`);
@@ -186,4 +230,3 @@ export function claimTokenCommand(program: Command): void {
       }
     });
 }
-

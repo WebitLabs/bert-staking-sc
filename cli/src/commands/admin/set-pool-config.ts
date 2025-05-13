@@ -34,11 +34,23 @@ export function setPoolConfigCommand(program: Command): void {
 
         // Find the config PDA
         const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        spinner.text = `Config PDA: ${configPda.toString()}`;
 
-        // First fetch current config to get the token mint
-        spinner.text = "Fetching current configuration...";
+        // Find the pool PDA
+        const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+        spinner.text = `Pool PDA: ${poolPda.toString()}`;
+
+        // Fetch current pool to get its values
+        spinner.text = "Fetching current pool configuration...";
+        const pool = await sdk.fetchPoolByAddress(poolPda);
+
+        if (!pool) {
+          spinner.fail(`Failed to fetch pool with index ${poolIndex}!`);
+          return;
+        }
+
+        // Fetch the config to get the token mint
         const config = await sdk.fetchConfigByAddress(configPda);
-
         if (!config) {
           spinner.fail("Failed to fetch config!");
           return;
@@ -55,32 +67,31 @@ export function setPoolConfigCommand(program: Command): void {
           maxTokensCap?: BN;
         } = {};
 
-        // Only set values that were provided
+        // Only set values that were provided, otherwise use current pool values
         if (options.lockDays) {
           poolConfig.lockPeriodDays = parseInt(options.lockDays);
-        } else if (config.poolsConfig[poolIndex]) {
-          poolConfig.lockPeriodDays =
-            config.poolsConfig[poolIndex].lockPeriodDays;
+        } else {
+          poolConfig.lockPeriodDays = pool.lockPeriodDays;
         }
 
         if (options.yieldRate) {
           poolConfig.yieldRate = new BN(parseInt(options.yieldRate));
-        } else if (config.poolsConfig[poolIndex]) {
-          poolConfig.yieldRate = config.poolsConfig[poolIndex].yieldRate;
+        } else {
+          poolConfig.yieldRate = pool.yieldRate;
         }
 
         if (options.maxNfts) {
           poolConfig.maxNftsCap = parseInt(options.maxNfts);
-        } else if (config.poolsConfig[poolIndex]) {
-          poolConfig.maxNftsCap = config.poolsConfig[poolIndex].maxNftsCap;
+        } else {
+          poolConfig.maxNftsCap = pool.maxNftsCap;
         }
 
         if (options.maxTokens) {
           poolConfig.maxTokensCap = new BN(
             parseInt(options.maxTokens) * 10 ** decimals
           );
-        } else if (config.poolsConfig[poolIndex]) {
-          poolConfig.maxTokensCap = config.poolsConfig[poolIndex].maxTokensCap;
+        } else {
+          poolConfig.maxTokensCap = pool.maxTokensCap;
         }
 
         // Use the RPC method to directly execute the transaction
@@ -97,28 +108,20 @@ export function setPoolConfigCommand(program: Command): void {
           `Pool ${poolIndex} configuration updated successfully. Tx: ${txid}`
         );
 
-        // Fetch and display updated config status
+        // Fetch and display updated pool status
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        const updatedConfig = await sdk.fetchConfigByAddress(configPda);
+        const updatedPool = await sdk.fetchPoolByAddress(poolPda);
 
-        if (updatedConfig && poolIndex < updatedConfig.poolsConfig.length) {
+        if (updatedPool) {
           console.log(`\nUpdated Pool ${poolIndex} Configuration:`);
+          console.log(`- Pool PDA: ${poolPda.toString()}`);
+          console.log(`- Lock Period: ${updatedPool.lockPeriodDays} days`);
           console.log(
-            `- Lock Period: ${updatedConfig.poolsConfig[poolIndex].lockPeriodDays} days`
+            `- Yield Rate: ${updatedPool.yieldRate.toNumber() / 100}%`
           );
-          console.log(
-            `- Yield Rate: ${
-              updatedConfig.poolsConfig[poolIndex].yieldRate.toNumber() / 100
-            }%`
-          );
-          console.log(
-            `- Max NFTs: ${updatedConfig.poolsConfig[poolIndex].maxNftsCap}`
-          );
-          console.log(
-            `- Max Tokens: ${updatedConfig.poolsConfig[
-              poolIndex
-            ].maxTokensCap.toString()}`
-          );
+          console.log(`- Max NFTs: ${updatedPool.maxNftsCap}`);
+          console.log(`- Max Tokens: ${updatedPool.maxTokensCap.toString()}`);
+          console.log(`- Paused: ${updatedPool.isPaused ? "Yes" : "No"}`);
         } else {
           console.log(`\nFailed to fetch updated pool configuration.`);
         }
@@ -128,4 +131,3 @@ export function setPoolConfigCommand(program: Command): void {
       }
     });
 }
-

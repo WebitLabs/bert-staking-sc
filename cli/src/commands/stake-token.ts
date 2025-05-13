@@ -15,7 +15,7 @@ export function stakeTokenCommand(program: Command): void {
     .description("Stake tokens with automatic user initialization if needed")
     .option("-m, --token-mint <pubkey>", "Token mint address")
     .option("-a, --amount <number>", "Amount of tokens to stake", "100")
-    .option("-p, --pool-index <number>", "Pool index to stake in (0-3)", "2")
+    .option("-p, --pool-index <number>", "Pool index to stake in", "2")
     .option("-id, --config-id <number>", "Config ID", "1")
     .option("-pos, --position-id <number>", "Position ID (optional)", "0")
     .action(async (options) => {
@@ -44,6 +44,10 @@ export function stakeTokenCommand(program: Command): void {
         const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
         spinner.text = `Config PDA: ${configPda.toString()}`;
 
+        // Find Pool PDA
+        const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+        spinner.text = `Pool PDA: ${poolPda.toString()}`;
+
         // Check if user account exists and create it if it doesn't
         const [userAccountPda] = sdk.pda.findUserAccountPda(
           wallet.publicKey,
@@ -68,6 +72,7 @@ export function stakeTokenCommand(program: Command): void {
               authority: wallet.publicKey,
               configId,
               mint: tokenMint,
+              poolIndex,
             });
 
             spinner.text = `User account initialized successfully. Tx: ${initUserTxid}`;
@@ -91,6 +96,13 @@ export function stakeTokenCommand(program: Command): void {
           wallet.publicKey,
           false
         );
+
+        // User pool stats PDA will be created during staking if needed
+        const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+          wallet.publicKey,
+          poolPda
+        );
+        spinner.text = `User Pool Stats PDA: ${userPoolStatsPda.toString()}`;
 
         // Stake the tokens
         spinner.text = `Staking ${options.amount} tokens in pool ${poolIndex}...`;
@@ -139,20 +151,17 @@ export function stakeTokenCommand(program: Command): void {
           console.log(
             `- Status: ${position.status.unclaimed ? "Unclaimed" : "Claimed"}`
           );
-          console.log(`- Pool Index: ${position.lockPeriodYieldIndex}`);
+          console.log(`- Pool: ${position.pool.toString()}`);
 
-          // Get config to show pool details
-          const config = await sdk.fetchConfigByAddress(configPda);
-          if (
-            config &&
-            position.lockPeriodYieldIndex < config.poolsConfig.length
-          ) {
-            const pool = config.poolsConfig[position.lockPeriodYieldIndex];
-            console.log(
-              `\nPool Details (index ${position.lockPeriodYieldIndex}):`
-            );
+          // Fetch the pool to show pool details
+          const pool = await sdk.fetchPoolByAddress(position.pool);
+          if (pool) {
+            console.log(`\nPool Details (index ${poolIndex}):`);
             console.log(`- Lock Period: ${pool.lockPeriodDays} days`);
             console.log(`- Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
+            console.log(`- Max NFTs: ${pool.maxNftsCap}`);
+            console.log(`- Max Tokens: ${pool.maxTokensCap.toString()}`);
+            console.log(`- Paused: ${pool.isPaused ? "Yes" : "No"}`);
           }
 
           console.log(`\nTiming:`);
@@ -166,35 +175,6 @@ export function stakeTokenCommand(program: Command): void {
               position.unlockTime.toNumber() * 1000
             ).toLocaleString()}`
           );
-
-          // Calculate yield amount
-          if (config) {
-            const yieldRate =
-              config.poolsConfig[
-                position.lockPeriodYieldIndex
-              ].yieldRate.toNumber();
-            const yieldAmount =
-              position.amount.toNumber() * (yieldRate / 10000);
-            console.log(`\nYield Calculation:`);
-            console.log(
-              `- Principal: ${(
-                position.amount.toNumber() /
-                10 ** decimals
-              ).toFixed(decimals)} tokens`
-            );
-            console.log(`- Yield Rate: ${yieldRate / 100}%`);
-            console.log(
-              `- Expected Yield: ${(yieldAmount / 10 ** decimals).toFixed(
-                decimals
-              )} tokens`
-            );
-            console.log(
-              `- Total at Unlock: ${(
-                (position.amount.toNumber() + yieldAmount) /
-                10 ** decimals
-              ).toFixed(decimals)} tokens`
-            );
-          }
         } catch (err) {
           console.log(`\nFailed to fetch position details: ${err}`);
         }
@@ -204,4 +184,3 @@ export function stakeTokenCommand(program: Command): void {
       }
     });
 }
-

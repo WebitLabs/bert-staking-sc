@@ -4,6 +4,7 @@ import chalk from "chalk";
 import { initializeCommand } from "./commands/initialize";
 import { fetchConfigCommand } from "./commands/fetch-config";
 import { fetchPositionCommand } from "./commands/fetch-position";
+import { fetchUserPoolStatsCommand } from "./commands/fetch-user-pool-stats";
 import { setupConnection } from "./utils/connection";
 import { stakeTokenCommand } from "./commands/stake-token";
 import { stakeNftCommand } from "./commands/stake-nft";
@@ -43,12 +44,13 @@ initializeCommand(program);
 // Staking commands
 stakeTokenCommand(program);
 stakeNftCommand(program);
-claimTokenCommand(program);
-claimNftCommand(program);
+// claimTokenCommand(program);
+// claimNftCommand(program);
 
 // Query commands
 fetchConfigCommand(program);
 fetchPositionCommand(program);
+fetchUserPoolStatsCommand(program);
 
 // Register admin commands
 registerAdminCommands(program);

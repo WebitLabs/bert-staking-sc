@@ -15,7 +15,7 @@ export function stakeNftCommand(program: Command): void {
     .option("-m, --token-mint <pubkey>", "Token mint address")
     .option("-c, --collection <pubkey>", "Collection address")
     .requiredOption("-a, --asset <pubkey>", "Asset/NFT address to stake")
-    .option("-p, --pool-index <number>", "Pool index to stake in (0-3)", "2")
+    .option("-p, --pool-index <number>", "Pool index to stake in", "2")
     .option("-id, --config-id <number>", "Config ID", "1")
     .option("-pos, --position-id <number>", "Position ID (optional)", "0")
     .action(async (options) => {
@@ -44,6 +44,10 @@ export function stakeNftCommand(program: Command): void {
         // Find config PDA
         const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
         spinner.text = `Config PDA: ${configPda.toString()}`;
+
+        // Find Pool PDA
+        const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
+        spinner.text = `Pool PDA: ${poolPda.toString()}`;
 
         // Get the config to get the collection
         const config = await sdk.fetchConfigByAddress(configPda);
@@ -81,6 +85,7 @@ export function stakeNftCommand(program: Command): void {
               authority: wallet.publicKey,
               configId,
               mint: tokenMint,
+              poolIndex,
             });
 
             spinner.text = `User account initialized successfully. Tx: ${initUserTxid}`;
@@ -101,6 +106,13 @@ export function stakeNftCommand(program: Command): void {
         // Find the NFTs vault PDA
         const [nftsVaultPda] = sdk.pda.findNftsVaultPda(configPda, tokenMint);
         spinner.text = `NFTs Vault PDA: ${nftsVaultPda.toString()}`;
+
+        // User pool stats PDA will be created during staking if needed
+        const [userPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
+          wallet.publicKey,
+          poolPda
+        );
+        spinner.text = `User Pool Stats PDA: ${userPoolStatsPda.toString()}`;
 
         // Stake the NFT
         spinner.text = `Staking NFT ${asset.toString()} in pool ${poolIndex}...`;
@@ -149,7 +161,7 @@ export function stakeNftCommand(program: Command): void {
           console.log(
             `- Status: ${position.status.unclaimed ? "Unclaimed" : "Claimed"}`
           );
-          console.log(`- Pool Index: ${position.lockPeriodYieldIndex}`);
+          console.log(`- Pool: ${position.pool.toString()}`);
 
           // Get the NFT value from config
           if (config) {
@@ -162,17 +174,15 @@ export function stakeNftCommand(program: Command): void {
             );
           }
 
-          // Get config to show pool details
-          if (
-            config &&
-            position.lockPeriodYieldIndex < config.poolsConfig.length
-          ) {
-            const pool = config.poolsConfig[position.lockPeriodYieldIndex];
-            console.log(
-              `\nPool Details (index ${position.lockPeriodYieldIndex}):`
-            );
+          // Fetch the pool to show pool details
+          const pool = await sdk.fetchPoolByAddress(position.pool);
+          if (pool) {
+            console.log(`\nPool Details (index ${poolIndex}):`);
             console.log(`- Lock Period: ${pool.lockPeriodDays} days`);
             console.log(`- Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
+            console.log(`- Max NFTs: ${pool.maxNftsCap}`);
+            console.log(`- Max Tokens: ${pool.maxTokensCap.toString()}`);
+            console.log(`- Paused: ${pool.isPaused ? "Yes" : "No"}`);
           }
 
           console.log(`\nTiming:`);
@@ -187,12 +197,34 @@ export function stakeNftCommand(program: Command): void {
             ).toLocaleString()}`
           );
 
+          // Fetch and display user pool stats
+          try {
+            const userPoolStats = await sdk.fetchUserPoolStatsByAddress(
+              userPoolStatsPda
+            );
+            if (userPoolStats) {
+              console.log(`\nUser Pool Stats:`);
+              console.log(`- PDA: ${userPoolStatsPda.toString()}`);
+              console.log(`- User: ${userPoolStats.user.toString()}`);
+              console.log(`- Pool: ${userPoolStats.pool.toString()}`);
+              console.log(
+                `- Tokens Staked: ${userPoolStats.tokensStaked.toString()}`
+              );
+              console.log(`- NFTs Staked: ${userPoolStats.nftsStaked}`);
+              console.log(
+                `- Total Value: ${userPoolStats.totalValue.toString()}`
+              );
+              console.log(
+                `- Claimed Yield: ${userPoolStats.claimedYield.toString()}`
+              );
+            }
+          } catch (err) {
+            console.log(`Failed to fetch user pool stats: ${err}`);
+          }
+
           // Calculate yield amount
-          if (config) {
-            const yieldRate =
-              config.poolsConfig[
-                position.lockPeriodYieldIndex
-              ].yieldRate.toNumber();
+          if (pool && config) {
+            const yieldRate = pool.yieldRate.toNumber();
             const nftValue = config.nftValueInTokens.toNumber();
             const yieldAmount = nftValue * (yieldRate / 10000);
             const decimals = await getMint(connection, tokenMint).then(
@@ -221,4 +253,3 @@ export function stakeNftCommand(program: Command): void {
       }
     });
 }
-

@@ -102,10 +102,6 @@ export function fetchPositionCommand(program: Command): void {
               }
             }
 
-            console.log(
-              `- Lock Period Index: ${position.lockPeriodYieldIndex}`
-            );
-
             if (position.positionType.nft) {
               console.log(`- NFT Asset: ${position.asset.toString()}`);
             }
@@ -189,7 +185,6 @@ export function fetchPositionCommand(program: Command): void {
             position.unlockTime.toNumber() * 1000
           ).toLocaleString()}`
         );
-        console.log(`- Lock Period Index: ${position.lockPeriodYieldIndex}`);
 
         if (position.positionType.nft) {
           console.log(`- NFT Asset: ${position.asset.toString()}`);

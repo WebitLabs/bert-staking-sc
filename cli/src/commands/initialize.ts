@@ -4,6 +4,7 @@ import { getConnection, getSDK, getWallet } from "../utils/connection";
 import ora from "ora";
 import { COLLECTION, MINT } from "../constants";
 import { getMint } from "@solana/spl-token";
+import { PoolIdl } from "@bert-staking/sdk";
 
 /**
  * Initialize the staking program
@@ -177,13 +178,23 @@ export function initializeCommand(program: Command): void {
         );
         console.log(`- NFT Limit Per User: ${config.nftsLimitPerUser}`);
 
-        // Display pool configurations
+        // Fetch and display the pool PDAs and configurations
+        spinner.text = "Fetching pool configurations...";
+        spinner.start();
+
+        // Short delay to ensure pools are available
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // Fetch pools by config
+        const pools = await sdk.fetchPoolsByConfig(configPda);
+
         console.log("\nPool Configurations:");
-        config.poolsConfig.forEach((pool, index) => {
-          console.log(`- Pool ${index + 1} (${pool.lockPeriodDays} days):`);
+        pools.forEach((pool: PoolIdl, index: number) => {
+          console.log(`- Pool ${index} (${pool.lockPeriodDays} days):`);
           console.log(`  - Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
           console.log(`  - Max NFTs: ${pool.maxNftsCap}`);
           console.log(`  - Max Tokens: ${pool.maxTokensCap.toString()}`);
+          console.log(`  - Paused: ${pool.isPaused ? "Yes" : "No"}`);
         });
       } catch (error) {
         ora().fail(`Failed to initialize program: ${error}`);
