@@ -1119,6 +1119,7 @@ export class BertStakingSDK {
    */
   async adminWithdrawToken({
     authority,
+    configPda,
     configId,
     tokenMint,
     amount,
@@ -1126,6 +1127,7 @@ export class BertStakingSDK {
     adminWithdrawTokenAccount,
   }: {
     authority: PublicKey;
+    configPda?: PublicKey;
     configId?: number;
     tokenMint: PublicKey;
     amount: number | BN;
@@ -1135,6 +1137,7 @@ export class BertStakingSDK {
     return adminWithdrawTokenInstruction({
       program: this.program,
       pda: this.pda,
+      configPda,
       authority,
       configId,
       tokenMint,

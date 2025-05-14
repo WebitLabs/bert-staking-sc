@@ -12,6 +12,7 @@ export type AdminWithdrawTokenParams = {
   program: Program<BertStakingSc>;
   pda: BertStakingPda;
   authority: PublicKey;
+  configPda?: PublicKey;
   configId?: number;
   tokenMint: PublicKey;
   amount: number | BN;
@@ -26,6 +27,7 @@ export async function adminWithdrawTokenInstruction({
   program,
   pda,
   authority,
+  configPda,
   configId = 0,
   tokenMint,
   amount,
@@ -33,14 +35,16 @@ export async function adminWithdrawTokenInstruction({
   adminWithdrawTokenAccount,
 }: AdminWithdrawTokenParams): Promise<TransactionInstruction> {
   // Find Config PDA
-  const [configPda] = pda.findConfigPda(authority, configId);
+  // const [configPda] = pda.findConfigPda(authority, configId);
+
+  const configAddress = configPda || pda.findConfigPda(authority, configId)[0];
 
   // Determine authority vault address if not provided
   const authorityVaultAddress =
-    authorityVault || pda.findAuthorityVaultPda(configPda, tokenMint)[0];
+    authorityVault || pda.findAuthorityVaultPda(configAddress, tokenMint)[0];
 
   // Fetch the config account to get the adminWithdrawDestination
-  const configAccount = await program.account.config.fetch(configPda);
+  const configAccount = await program.account.config.fetch(configAddress);
   const adminWithdrawDestination = configAccount.adminWithdrawDestination;
 
   // Determine admin withdraw token account if not provided
@@ -55,7 +59,7 @@ export async function adminWithdrawTokenInstruction({
     .adminWithdrawTokens(amountBN)
     .accountsStrict({
       authority,
-      config: configPda,
+      config: configAddress,
       authorityVault: authorityVaultAddress,
       adminWithdrawDestination: adminWithdrawToken,
       tokenProgram: TOKEN_PROGRAM_ID,
@@ -63,4 +67,3 @@ export async function adminWithdrawTokenInstruction({
     })
     .instruction();
 }
-

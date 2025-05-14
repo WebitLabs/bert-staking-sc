@@ -701,7 +701,7 @@ describe("bert-staking-sc-admin", () => {
       // Execute token withdrawal with non-admin as authority
       const withdrawIx = await sdk.adminWithdrawToken({
         authority: nonAdminUser.publicKey, // Non-admin user as authority
-        configId,
+        configPda,
         tokenMint,
         amount: withdrawAmount,
         adminWithdrawTokenAccount: nonAdminTokenAccount,
@@ -721,15 +721,15 @@ describe("bert-staking-sc-admin", () => {
             "Transaction correctly failed when non-admin attempted to withdraw"
           )
         );
+
+        expect(res.result.toString()).to.include(
+          "Error processing Instruction 0: custom program error: 0x7d1"
+        );
       }
     } catch (err) {
       // This path is also valid if an error is thrown
-      console.log(
-        chalk.yellowBright(
-          "Transaction correctly failed when non-admin attempted to withdraw"
-        )
-      );
-      expect(err.toString()).to.include("Error");
+
+      expect.fail("Should have failed when non-admin attempts to withdraw");
     }
   });
 
@@ -796,6 +796,9 @@ describe("bert-staking-sc-admin", () => {
             "Transaction correctly failed when withdrawing to incorrect destination"
           )
         );
+        expect(res.result.toString()).to.include(
+          "Error processing Instruction 0: custom program error: 0x7df"
+        );
       }
     } catch (err) {
       // This path is also valid if an error is thrown
@@ -804,7 +807,9 @@ describe("bert-staking-sc-admin", () => {
           "Transaction correctly failed when withdrawing to incorrect destination"
         )
       );
-      expect(err.toString()).to.include("Error");
+      expect.fail(
+        "Should have failed when withdrawing to incorrect destination"
+      );
     }
   });
 
