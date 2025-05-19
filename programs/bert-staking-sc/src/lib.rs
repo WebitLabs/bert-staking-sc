@@ -51,6 +51,7 @@ pub mod bert_staking_sc {
         yield_rate: u64,
         max_nfts_cap: u32,
         max_tokens_cap: u64,
+        max_value_cap: u64,
     ) -> Result<()> {
         ctx.accounts.initialize(
             index,
@@ -58,6 +59,7 @@ pub mod bert_staking_sc {
             yield_rate,
             max_nfts_cap,
             max_tokens_cap,
+            max_value_cap,
             &ctx.bumps,
         )
     }

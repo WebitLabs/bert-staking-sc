@@ -53,6 +53,11 @@ export function initializeCommand(program: Command): void {
       "Maximum tokens per pool",
       "1000000000"
     )
+    .option(
+      "-mv, --max-value <number>",
+      "Maximum total value capacity per pool (tokens + NFTs * NFT value)",
+      "2000000000"
+    )
     .action(async (options) => {
       try {
         const spinner = ora("Initializing BERT staking program...").start();
@@ -89,30 +94,36 @@ export function initializeCommand(program: Command): void {
         spinner.text = `NFTs Vault PDA: ${nftsVaultPda.toString()}`;
 
         // Create pool configurations with custom yield rates
+        const maxValueCap = parseInt(options.maxValue) * 10 ** decimals;
+
         const poolsConfig = [
           {
             lockPeriodDays: 1,
             yieldRate: parseInt(options.pool1Yield),
             maxNfts: parseInt(options.maxNfts),
             maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
+            maxValue: maxValueCap,
           },
           {
             lockPeriodDays: 3,
             yieldRate: parseInt(options.pool3Yield),
             maxNfts: parseInt(options.maxNfts),
             maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
+            maxValue: maxValueCap,
           },
           {
             lockPeriodDays: 7,
             yieldRate: parseInt(options.pool7Yield),
             maxNfts: parseInt(options.maxNfts),
             maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
+            maxValue: maxValueCap,
           },
           {
             lockPeriodDays: 30,
             yieldRate: parseInt(options.pool30Yield),
             maxNfts: parseInt(options.maxNfts),
             maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
+            maxValue: maxValueCap,
           },
         ];
 
@@ -180,6 +191,7 @@ export function initializeCommand(program: Command): void {
               yieldRate: poolConfig.yieldRate,
               maxNftsCap: poolConfig.maxNfts,
               maxTokensCap: poolConfig.maxTokens,
+              maxValueCap: poolConfig.maxValue,
             });
 
             transact.add(initPoolIx);

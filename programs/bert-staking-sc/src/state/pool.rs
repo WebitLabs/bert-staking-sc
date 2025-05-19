@@ -21,6 +21,9 @@ pub struct Pool {
     /// Maximum tokens per user in this pool
     pub max_tokens_cap: u64,
 
+    /// Maximum total value in this pool (tokens + nfts * nft_value)
+    pub max_value_cap: u64,
+
     /// Whether the pool is paused
     pub is_paused: bool,
 
@@ -43,5 +46,5 @@ pub struct Pool {
     pub bump: u8,
 
     /// Padding for future extensions
-    pub _padding: [u8; 64],
+    pub _padding: [u8; 56],
 }

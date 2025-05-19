@@ -28,6 +28,7 @@ const addedPrograms: AddedProgram[] = [
 
 const maxNftsCap = 1000;
 const maxTokensCap = 1_000_000_000_000_000; // 1 Bilion with 6 decimals
+const maxValueCap = 5_000_000_000_000_000; // 5 Bilion with 6 decimals
 
 const poolsConfig = [
   {
@@ -35,24 +36,28 @@ const poolsConfig = [
     yieldRate: 300,
     maxNfts: maxNftsCap,
     maxTokens: maxTokensCap,
+    maxValueCap: maxValueCap,
   },
   {
     lockPeriodDays: 3,
     yieldRate: 500,
     maxNfts: maxNftsCap,
     maxTokens: maxTokensCap,
+    maxValueCap: maxValueCap,
   },
   {
     lockPeriodDays: 7,
     yieldRate: 800,
     maxNfts: maxNftsCap,
     maxTokens: maxTokensCap,
+    maxValueCap: maxValueCap,
   },
   {
     lockPeriodDays: 30,
     yieldRate: 1200,
     maxNfts: maxNftsCap,
     maxTokens: maxTokensCap,
+    maxValueCap: maxValueCap,
   },
 ];
 
@@ -185,6 +190,7 @@ describe("bert-staking-sc", () => {
           yieldRate: poolConfig.yieldRate,
           maxNftsCap: poolConfig.maxNfts,
           maxTokensCap: poolConfig.maxTokens,
+          maxValueCap: poolConfig.maxTokens,
         });
         poolInstructions.push(initPoolIx);
       }
@@ -1405,6 +1411,7 @@ describe("bert-staking-sc", () => {
         yieldRate: poolsConfig[poolIndex].yieldRate,
         maxNftsCap: poolsConfig[poolIndex].maxNfts,
         maxTokensCap: smallTokenLimit,
+        maxValueCap: maxValueCap,
       });
 
       // Initialize a second pool (with normal limits) for comparison
@@ -1417,6 +1424,7 @@ describe("bert-staking-sc", () => {
         yieldRate: poolsConfig[otherPoolIndex].yieldRate,
         maxNftsCap: poolsConfig[otherPoolIndex].maxNfts,
         maxTokensCap: poolsConfig[otherPoolIndex].maxTokens,
+        maxValueCap: poolsConfig[otherPoolIndex].maxValueCap,
       });
 
       // Execute pool initialization instructions
@@ -1596,7 +1604,9 @@ describe("bert-staking-sc", () => {
 
     // Create a very small NFT limit for testing
     const smallNftLimit = 2; // Keep this small enough for test speed
-    console.log(`Testing NFT limits for pool ${poolIndex} (${pool.lockPeriodDays} days):`);
+    console.log(
+      `Testing NFT limits for pool ${poolIndex} (${pool.lockPeriodDays} days):`
+    );
     console.log(`- Normal max NFTs per pool: ${pool.maxNftsCap}`);
     console.log(`- Test max NFTs per pool: ${smallNftLimit}`);
 
@@ -1604,15 +1614,22 @@ describe("bert-staking-sc", () => {
     const testConfigId = configId + 201; // Use a different config ID to avoid conflicts
 
     // Get vault ATA for the test config
-    const [testConfigPda] = sdk.pda.findConfigPda(payer.publicKey, testConfigId);
-    const vaultTA = getAssociatedTokenAddressSync(tokenMint, testConfigPda, true);
+    const [testConfigPda] = sdk.pda.findConfigPda(
+      payer.publicKey,
+      testConfigId
+    );
+    const vaultTA = getAssociatedTokenAddressSync(
+      tokenMint,
+      testConfigPda,
+      true
+    );
 
     // Find the NFTs vault PDA
     const [nftsVaultPda] = sdk.pda.findNftsVaultPda(testConfigPda, tokenMint);
 
     try {
       console.log("Initializing test config...");
-      
+
       // Initialize the staking program
       const initializeIx = await sdk.initialize({
         authority: payer.publicKey,
@@ -1650,6 +1667,7 @@ describe("bert-staking-sc", () => {
         yieldRate: poolsConfig[poolIndex].yieldRate,
         maxNftsCap: smallNftLimit, // Small NFT limit for testing
         maxTokensCap: poolsConfig[poolIndex].maxTokens,
+        maxValueCap: poolsConfig[poolIndex].maxValueCap,
       });
 
       // Initialize a second pool (with normal limits) for comparison
@@ -1662,17 +1680,23 @@ describe("bert-staking-sc", () => {
         yieldRate: poolsConfig[otherPoolIndex].yieldRate,
         maxNftsCap: poolsConfig[otherPoolIndex].maxNfts, // Normal NFT limit
         maxTokensCap: poolsConfig[otherPoolIndex].maxTokens,
+        maxValueCap: poolsConfig[otherPoolIndex].maxValueCap,
       });
 
       // Execute pool initialization instructions
-      await createAndProcessTransaction(client, payer, [initPoolIx, initOtherPoolIx]);
+      await createAndProcessTransaction(client, payer, [
+        initPoolIx,
+        initOtherPoolIx,
+      ]);
       console.log("Pools initialized successfully");
 
       // Get the pool with the small limit to verify config
       const [testPoolPda] = sdk.pda.findPoolPda(testConfigPda, poolIndex);
       const testPool = await sdk.fetchPoolByAddress(testPoolPda);
-      
-      console.log(`Test pool ${poolIndex} configured with max NFTs cap: ${testPool.maxNftsCap}`);
+
+      console.log(
+        `Test pool ${poolIndex} configured with max NFTs cap: ${testPool.maxNftsCap}`
+      );
       expect(testPool.maxNftsCap).to.equal(smallNftLimit);
     } catch (err) {
       console.error("Failed to initialize test config:", err);
@@ -1707,8 +1731,12 @@ describe("bert-staking-sc", () => {
     // Stake NFTs up to the limit sequentially (more reliable than parallel)
     for (let i = 0; i < smallNftLimit; i++) {
       const asset = assets[i + 1];
-      console.log(`Staking NFT ${i+1} of ${smallNftLimit} (${asset.publicKey.toString()})...`);
-      
+      console.log(
+        `Staking NFT ${
+          i + 1
+        } of ${smallNftLimit} (${asset.publicKey.toString()})...`
+      );
+
       const stakeNftIx = await sdk.stakeNft({
         authority: payer.publicKey,
         owner: payer.publicKey,
@@ -1720,26 +1748,32 @@ describe("bert-staking-sc", () => {
         positionId: 2000 + i, // Use specific position IDs
         nftsVault: nftsVaultPda,
       });
-      
+
       try {
         await createAndProcessTransaction(client, payer, [stakeNftIx]);
-        console.log(`Successfully staked NFT ${i+1}`);
-        
+        console.log(`Successfully staked NFT ${i + 1}`);
+
         // Verify user pool stats after each stake
-        const userPoolStats = await sdk.fetchUserPoolStatsByAddress(userPoolStatsPda);
-        console.log(`User has now staked ${userPoolStats.nftsStaked} NFTs in pool ${poolIndex}`);
+        const userPoolStats = await sdk.fetchUserPoolStatsByAddress(
+          userPoolStatsPda
+        );
+        console.log(
+          `User has now staked ${userPoolStats.nftsStaked} NFTs in pool ${poolIndex}`
+        );
         expect(userPoolStats.nftsStaked).to.equal(i + 1);
       } catch (err) {
-        console.error(`Failed to stake NFT ${i+1}: ${err}`);
-        expect.fail(`Should be able to stake NFT ${i+1} within the limit`);
+        console.error(`Failed to stake NFT ${i + 1}: ${err}`);
+        expect.fail(`Should be able to stake NFT ${i + 1} within the limit`);
       }
     }
-    
+
     // Now attempt to stake one more NFT beyond the limit - should fail
     try {
       const extraAsset = assets[smallNftLimit + 1];
-      console.log(`Attempting to stake NFT ${smallNftLimit+1} to exceed the limit...`);
-      
+      console.log(
+        `Attempting to stake NFT ${smallNftLimit + 1} to exceed the limit...`
+      );
+
       const stakeExceedingIx = await sdk.stakeNft({
         authority: payer.publicKey,
         owner: payer.publicKey,
@@ -1751,23 +1785,27 @@ describe("bert-staking-sc", () => {
         positionId: 2000 + smallNftLimit, // Next position ID
         nftsVault: nftsVaultPda,
       });
-      
+
       await createAndProcessTransaction(client, payer, [stakeExceedingIx]);
       expect.fail("Should not be able to stake NFTs exceeding the pool limit");
     } catch (err) {
-      console.log("Transaction correctly failed when exceeding NFT limit per pool");
+      console.log(
+        "Transaction correctly failed when exceeding NFT limit per pool"
+      );
       // We expect an error related to NFT limit
       expect(err.toString()).to.include("Error");
     }
-    
+
     // Try staking in a different pool with normal limits - should succeed
     try {
       const otherPoolIndex = 1;
       const extraAsset = assets[smallNftLimit + 1];
-      console.log(`Attempting to stake NFT in pool ${otherPoolIndex} with normal limits...`);
-      
+      console.log(
+        `Attempting to stake NFT in pool ${otherPoolIndex} with normal limits...`
+      );
+
       const [otherPoolPda] = sdk.pda.findPoolPda(testConfigPda, otherPoolIndex);
-      
+
       const stakeOtherPoolIx = await sdk.stakeNft({
         authority: payer.publicKey,
         owner: payer.publicKey,
@@ -1779,18 +1817,24 @@ describe("bert-staking-sc", () => {
         positionId: 3000, // Different position ID for other pool
         nftsVault: nftsVaultPda,
       });
-      
+
       await createAndProcessTransaction(client, payer, [stakeOtherPoolIx]);
-      console.log(`Successfully staked NFT in different pool ${otherPoolIndex}`);
-      
+      console.log(
+        `Successfully staked NFT in different pool ${otherPoolIndex}`
+      );
+
       // Verify the stake was successful in the second pool
       const [otherUserPoolStatsPda] = sdk.pda.findUserPoolStatsPda(
         payer.publicKey,
         otherPoolPda
       );
-      
-      const otherUserPoolStats = await sdk.fetchUserPoolStatsByAddress(otherUserPoolStatsPda);
-      console.log(`User now has ${otherUserPoolStats.nftsStaked} NFTs staked in pool ${otherPoolIndex}`);
+
+      const otherUserPoolStats = await sdk.fetchUserPoolStatsByAddress(
+        otherUserPoolStatsPda
+      );
+      console.log(
+        `User now has ${otherUserPoolStats.nftsStaked} NFTs staked in pool ${otherPoolIndex}`
+      );
       expect(otherUserPoolStats.nftsStaked).to.equal(1);
     } catch (err) {
       console.error("Failed to stake NFT in different pool:", err);
@@ -1798,5 +1842,278 @@ describe("bert-staking-sc", () => {
     }
 
     console.log("NFT limit per pool test completed successfully!");
+  });
+
+  it("Enforces pool value limit and allows staking after limit increase", async () => {
+    // Use a unique config ID for this test
+    const testConfigId = configId + 300;
+
+    // Set pool parameters
+    const poolIndex = 0;
+    // Set a relatively small value limit for testing
+    const initialValueLimit = 500_000 * 10 ** 6; // 500,000 tokens
+    const updatedValueLimit = 1_000_000 * 10 ** 6; // 1,000,000 tokens
+
+    // Amount to stake - just below the initial limit
+    const firstStakeAmount = 450_000 * 10 ** 6; // 450,000 tokens
+    // Amount that would exceed the initial limit but is under the updated limit
+    const secondStakeAmount = 300_000 * 10 ** 6; // 300,000 tokens
+
+    console.log("\n----- Testing Pool Value Limit -----");
+    console.log(`Initial value limit: ${initialValueLimit}`);
+    console.log(`First stake amount: ${firstStakeAmount}`);
+    console.log(`Second stake amount: ${secondStakeAmount}`);
+    console.log(`Updated value limit: ${updatedValueLimit}`);
+
+    // Step 1: Initialize test config with a pool that has a value limit
+    console.log("\nStep 1: Initializing config with value-limited pool");
+
+    // Get account addresses
+    const authority = payer;
+    const [testConfigPda] = sdk.pda.findConfigPda(
+      authority.publicKey,
+      testConfigId
+    );
+    const vaultTA = getAssociatedTokenAddressSync(
+      tokenMint,
+      testConfigPda,
+      true
+    );
+    const [nftsVaultPda] = sdk.pda.findNftsVaultPda(testConfigPda, tokenMint);
+
+    try {
+      // Initialize the staking program
+      const initializeIx = await sdk.initialize({
+        authority: authority.publicKey,
+        adminWithdrawDestination: authority.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        id: testConfigId,
+        vault: vaultTA,
+        nftsVault: nftsVaultPda,
+        maxCap,
+        nftValueInTokens,
+        nftsLimitPerUser,
+      });
+
+      // Initialize auth vault instruction
+      const initializeAuthVaultIx = await sdk.initializeAuthVault({
+        authority: authority.publicKey,
+        configId: testConfigId,
+        tokenMint,
+      });
+
+      // Execute both instructions
+      await createAndProcessTransaction(client, authority, [
+        initializeIx,
+        initializeAuthVaultIx,
+      ]);
+      console.log("Program and authority vault initialized successfully");
+
+      // Initialize pool with initial value limit
+      const initPoolIx = await sdk.initializePool({
+        authority: authority.publicKey,
+        configId: testConfigId,
+        index: poolIndex,
+        lockPeriodDays: 7,
+        yieldRate: 800,
+        maxNftsCap,
+        maxTokensCap,
+        maxValueCap: initialValueLimit,
+      });
+
+      // Execute pool initialization
+      await createAndProcessTransaction(client, authority, [initPoolIx]);
+      console.log("Pool initialized successfully with value limit");
+    } catch (err) {
+      console.error("Failed to initialize test config:", err);
+      expect.fail("Failed to initialize test config");
+    }
+
+    // Verify pool value limit was set correctly
+    const [testPoolPda] = sdk.pda.findPoolPda(testConfigPda, poolIndex);
+    const initialPool = await sdk.fetchPoolByAddress(testPoolPda);
+
+    expect(initialPool.maxValueCap.toNumber()).to.equal(initialValueLimit);
+    console.log(
+      `Verified pool value limit: ${initialPool.maxValueCap.toString()}`
+    );
+
+    // Step 2: Initialize user account
+    console.log("\nStep 2: Initializing user account");
+    try {
+      const initUserIx = await sdk.initializeUser({
+        owner: payer.publicKey,
+        authority: payer.publicKey,
+        configId: testConfigId,
+        mint: tokenMint,
+        poolIndex,
+      });
+
+      await createAndProcessTransaction(client, payer, [initUserIx]);
+      console.log("User account initialized successfully");
+    } catch (err) {
+      console.error("Failed to initialize user account:", err);
+      expect.fail("User account initialization failed");
+    }
+
+    // Step 3: Stake tokens within the initial value limit
+    console.log("\nStep 3: Staking tokens within initial value limit");
+    try {
+      // Create and execute the stake token instruction
+      const stakeTokenIx = await sdk.stakeToken({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        tokenMint,
+        configId: testConfigId,
+        positionId: 5000, // Unique position ID
+        amount: firstStakeAmount,
+        poolIndex,
+        tokenAccount: userTokenAccount,
+      });
+
+      await createAndProcessTransaction(client, payer, [stakeTokenIx]);
+      console.log(`Successfully staked ${firstStakeAmount} tokens`);
+    } catch (err) {
+      console.error("Failed to stake tokens within value limit:", err);
+      expect.fail(`Token staking failed: ${err}`);
+    }
+
+    // Verify tokens were staked successfully
+    const poolAfterFirstStake = await sdk.fetchPoolByAddress(testPoolPda);
+    expect(poolAfterFirstStake.totalTokensStaked.toNumber()).to.equal(
+      firstStakeAmount
+    );
+    console.log(
+      `Current pool value: ${poolAfterFirstStake.totalTokensStaked.toString()}`
+    );
+
+    // Step 4: Try to stake more tokens that would exceed the initial value limit
+    console.log(
+      "\nStep 4: Attempting to stake more tokens exceeding initial value limit"
+    );
+    try {
+      // This should fail since it would exceed the value limit
+      const stakeTokenIx = await sdk.stakeToken({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        tokenMint,
+        configId: testConfigId,
+        positionId: 5001, // Different position ID
+        amount: secondStakeAmount,
+        poolIndex,
+        tokenAccount: userTokenAccount,
+      });
+
+      await createAndProcessTransaction(client, payer, [stakeTokenIx]);
+      expect.fail(
+        "Should not be able to stake tokens exceeding the pool value limit"
+      );
+    } catch (err) {
+      console.log(
+        "Transaction correctly failed when exceeding the pool value limit"
+      );
+      // Verify the error is related to the value limit
+      expect(err.toString()).to.include("Error");
+    }
+
+    // Verify pool state didn't change
+    const poolAfterFailedStake = await sdk.fetchPoolByAddress(testPoolPda);
+    expect(poolAfterFailedStake.totalTokensStaked.toNumber()).to.equal(
+      firstStakeAmount
+    );
+    console.log(
+      `Pool value unchanged after failed stake: ${poolAfterFailedStake.totalTokensStaked.toString()}`
+    );
+
+    // Step 5: Increase the pool value limit
+    console.log("\nStep 5: Increasing pool value limit");
+    try {
+      // First pause the pool (required before config changes)
+      const pausePoolIx = await sdk.adminPausePool({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        poolIndex,
+      });
+
+      // Use admin function to update the pool configuration with a higher value limit
+      const setPoolConfigIx = await sdk.adminSetPoolConfig({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        poolIndex,
+        poolConfigArgs: {
+          lockPeriodDays: initialPool.lockPeriodDays,
+          yieldRate: initialPool.yieldRate.toNumber(),
+          maxNftsCap: initialPool.maxNftsCap,
+          maxTokensCap: initialPool.maxTokensCap.toNumber(),
+          maxValueCap: updatedValueLimit,
+        },
+      });
+
+      // Then reactivate the pool
+      const activatePoolIx = await sdk.adminActivatePool({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        poolIndex,
+      });
+
+      await createAndProcessTransaction(client, payer, [
+        pausePoolIx,
+        setPoolConfigIx,
+        activatePoolIx,
+      ]);
+      console.log("Pool value limit increased successfully");
+    } catch (err) {
+      console.error("Failed to update pool value limit:", err);
+      expect.fail(`Pool config update failed: ${err}`);
+    }
+
+    // Verify pool value limit was updated
+    const poolAfterUpdate = await sdk.fetchPoolByAddress(testPoolPda);
+    expect(poolAfterUpdate.maxValueCap.toNumber()).to.equal(updatedValueLimit);
+    console.log(
+      `Pool value limit updated to: ${poolAfterUpdate.maxValueCap.toString()}`
+    );
+
+    // Step 6: Now stake additional tokens (should succeed with the new limit)
+    console.log(
+      "\nStep 6: Staking additional tokens with increased value limit"
+    );
+    try {
+      const stakeTokenIx = await sdk.stakeToken({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        tokenMint,
+        configId: testConfigId,
+        positionId: 5002, // Different position ID
+        amount: secondStakeAmount,
+        poolIndex,
+        tokenAccount: userTokenAccount,
+      });
+
+      await createAndProcessTransaction(client, payer, [stakeTokenIx]);
+      console.log(`Successfully staked additional ${secondStakeAmount} tokens`);
+    } catch (err) {
+      console.error("Failed to stake tokens after limit increase:", err);
+      expect.fail(`Token staking failed after limit increase: ${err}`);
+    }
+
+    // Verify additional tokens were staked successfully
+    const poolAfterSecondStake = await sdk.fetchPoolByAddress(testPoolPda);
+    const expectedTotal = firstStakeAmount + secondStakeAmount;
+
+    expect(poolAfterSecondStake.totalTokensStaked.toNumber()).to.equal(
+      expectedTotal
+    );
+    console.log(
+      `Final pool value: ${poolAfterSecondStake.totalTokensStaked.toString()}`
+    );
+    console.log(`Total staked: ${expectedTotal}`);
+
+    // Verify the total is below the new limit but would have exceeded the old limit
+    expect(expectedTotal).to.be.lessThan(updatedValueLimit);
+    expect(expectedTotal).to.be.greaterThan(initialValueLimit);
+
+    console.log("\nPool value limit test completed successfully!");
   });
 });

@@ -1659,6 +1659,10 @@ export type BertStakingSc = {
         {
           "name": "maxTokensCap",
           "type": "u64"
+        },
+        {
+          "name": "maxValueCap",
+          "type": "u64"
         }
       ]
     },
@@ -2578,6 +2582,11 @@ export type BertStakingSc = {
       "code": 6021,
       "name": "unauthorized",
       "msg": "Unauthorized Operation"
+    },
+    {
+      "code": 6022,
+      "name": "poolValueLimitReached",
+      "msg": "Pool value limit reached"
     }
   ],
   "types": [
@@ -2814,6 +2823,13 @@ export type BertStakingSc = {
             "type": "u64"
           },
           {
+            "name": "maxValueCap",
+            "docs": [
+              "Maximum total value in this pool (tokens + nfts * nft_value)"
+            ],
+            "type": "u64"
+          },
+          {
             "name": "isPaused",
             "docs": [
               "Whether the pool is paused"
@@ -2870,7 +2886,7 @@ export type BertStakingSc = {
             "type": {
               "array": [
                 "u8",
-                64
+                56
               ]
             }
           }
@@ -2896,6 +2912,10 @@ export type BertStakingSc = {
           },
           {
             "name": "maxTokensCap",
+            "type": "u64"
+          },
+          {
+            "name": "maxValueCap",
             "type": "u64"
           }
         ]

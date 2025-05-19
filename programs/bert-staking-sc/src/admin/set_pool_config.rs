@@ -51,6 +51,7 @@ impl<'info> AdminSetPoolConfig<'info> {
 
         pool.max_tokens_cap = pool_config_args.max_tokens_cap;
         pool.max_nfts_cap = pool_config_args.max_nfts_cap;
+        pool.max_value_cap = pool_config_args.max_value_cap;
         pool.yield_rate = pool_config_args.yield_rate;
         pool.lock_period_days = pool_config_args.lock_period_days;
 

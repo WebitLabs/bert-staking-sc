@@ -6,6 +6,7 @@ pub struct PoolConfigArgs {
     pub yield_rate: u64,       // Yield rate in basis points
     pub max_nfts_cap: u32,     // Maximum amount of NFTs that can be staked / user
     pub max_tokens_cap: u64,   // Maximum amount of tokens that can be staked / user
+    pub max_value_cap: u64,    // Maximum combined value (tokens + nfts * nft_value) in the pool
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]

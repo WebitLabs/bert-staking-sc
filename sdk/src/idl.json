@@ -1653,6 +1653,10 @@
         {
           "name": "max_tokens_cap",
           "type": "u64"
+        },
+        {
+          "name": "max_value_cap",
+          "type": "u64"
         }
       ]
     },
@@ -2572,6 +2576,11 @@
       "code": 6021,
       "name": "Unauthorized",
       "msg": "Unauthorized Operation"
+    },
+    {
+      "code": 6022,
+      "name": "PoolValueLimitReached",
+      "msg": "Pool value limit reached"
     }
   ],
   "types": [
@@ -2808,6 +2817,13 @@
             "type": "u64"
           },
           {
+            "name": "max_value_cap",
+            "docs": [
+              "Maximum total value in this pool (tokens + nfts * nft_value)"
+            ],
+            "type": "u64"
+          },
+          {
             "name": "is_paused",
             "docs": [
               "Whether the pool is paused"
@@ -2864,7 +2880,7 @@
             "type": {
               "array": [
                 "u8",
-                64
+                56
               ]
             }
           }
@@ -2890,6 +2906,10 @@
           },
           {
             "name": "max_tokens_cap",
+            "type": "u64"
+          },
+          {
+            "name": "max_value_cap",
             "type": "u64"
           }
         ]

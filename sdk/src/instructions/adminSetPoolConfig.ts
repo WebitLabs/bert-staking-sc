@@ -34,6 +34,11 @@ export async function adminSetPoolConfigInstruction({
     typeof poolConfigArgs.maxTokensCap === "number"
       ? new BN(poolConfigArgs.maxTokensCap)
       : poolConfigArgs.maxTokensCap;
+  const maxValueCap =
+    typeof poolConfigArgs.maxValueCap === "number"
+      ? new BN(poolConfigArgs.maxValueCap)
+      : poolConfigArgs.maxValueCap;
+
   const yieldRate =
     typeof poolConfigArgs.yieldRate === "number"
       ? new BN(poolConfigArgs.yieldRate)
@@ -42,6 +47,7 @@ export async function adminSetPoolConfigInstruction({
   const configArgs = {
     ...poolConfigArgs,
     maxTokensCap,
+    maxValueCap,
     yieldRate,
   };
 

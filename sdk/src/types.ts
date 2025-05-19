@@ -26,6 +26,7 @@ export interface PoolConfigArgs {
   yieldRate: number;
   maxNftsCap: number;
   maxTokensCap: number | BN;
+  maxValueCap: number | BN;
 }
 
 /**

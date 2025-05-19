@@ -10,7 +10,8 @@ use anchor_lang::prelude::*;
     lock_period_days: u16,
     yield_rate: u64,
     max_nfts_cap: u32,
-    max_tokens_cap: u64
+    max_tokens_cap: u64,
+    max_value_cap: u64
 )]
 pub struct InitializePool<'info> {
     #[account(mut)]
@@ -46,6 +47,7 @@ impl<'info> InitializePool<'info> {
         yield_rate: u64,
         max_nfts_cap: u32,
         max_tokens_cap: u64,
+        max_value_cap: u64,
         bumps: &InitializePoolBumps,
     ) -> Result<()> {
         let pool = &mut self.pool;
@@ -56,6 +58,7 @@ impl<'info> InitializePool<'info> {
         pool.yield_rate = yield_rate;
         pool.max_nfts_cap = max_nfts_cap;
         pool.max_tokens_cap = max_tokens_cap;
+        pool.max_value_cap = max_value_cap;
         pool.is_paused = false;
 
         // Initialize statistics

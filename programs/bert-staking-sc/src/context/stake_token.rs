@@ -121,6 +121,27 @@ impl<'info> StakeToken<'info> {
             StakingError::UserTokensLimitCapReached
         );
 
+        // Calculate new total value for the pool (current + amount being staked)
+        let new_pool_value = pool
+            .total_tokens_staked
+            .checked_add(amount)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Add the value from NFTs in the pool
+        let nft_value = (pool.total_nfts_staked as u64)
+            .checked_mul(config.nft_value_in_tokens)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        let total_pool_value = new_pool_value
+            .checked_add(nft_value)
+            .ok_or(StakingError::ArithmeticOverflow)?;
+
+        // Check if the new value exceeds the pool's max value cap
+        require!(
+            total_pool_value <= pool.max_value_cap,
+            StakingError::PoolValueLimitReached
+        );
+
         // Create a position for the staked tokens
         let position = &mut self.position;
         position.owner = self.owner.key();

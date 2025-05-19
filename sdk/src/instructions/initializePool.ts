@@ -12,6 +12,7 @@ export type InitializePoolParams = {
   yieldRate: number | BN;
   maxNftsCap: number;
   maxTokensCap: number | BN;
+  maxValueCap: number | BN;
 };
 
 /**
@@ -27,12 +28,15 @@ export async function initializePoolInstruction({
   yieldRate,
   maxNftsCap,
   maxTokensCap,
+  maxValueCap,
 }: InitializePoolParams): Promise<web3.TransactionInstruction> {
   // Convert numeric values to BN if needed
   const yieldRateBN =
     typeof yieldRate === "number" ? new BN(yieldRate) : yieldRate;
   const maxTokensCapBN =
     typeof maxTokensCap === "number" ? new BN(maxTokensCap) : maxTokensCap;
+  const maxValueCapBN =
+    typeof maxValueCap === "number" ? new BN(maxValueCap) : maxValueCap;
 
   // Find Config PDA with the provided ID
   const [configPda] = pda.findConfigPda(authority, configId);
@@ -46,7 +50,8 @@ export async function initializePoolInstruction({
       lockPeriodDays,
       yieldRateBN,
       maxNftsCap,
-      maxTokensCapBN
+      maxTokensCapBN,
+      maxValueCapBN
     )
     .accountsStrict({
       authority,
@@ -56,4 +61,3 @@ export async function initializePoolInstruction({
     })
     .instruction();
 }
-

@@ -67,4 +67,7 @@ pub enum StakingError {
 
     #[msg("Unauthorized Operation")]
     Unauthorized,
+    
+    #[msg("Pool value limit reached")]
+    PoolValueLimitReached,
 }

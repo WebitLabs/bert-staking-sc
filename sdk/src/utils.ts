@@ -62,6 +62,7 @@ export interface PoolConfigParams {
   yieldRate: number | BN;
   maxNfts: number;
   maxTokens: number | BN;
+  maxValueCap: number | BN;
   isPaused?: boolean;
 }
 

@@ -196,6 +196,7 @@ export class BertStakingSDK {
     nftsVault,
     maxNftsCap,
     maxTokensCap,
+    maxValueCap,
     maxCap,
     nftValueInTokens,
     nftsLimitPerUser,
@@ -211,6 +212,7 @@ export class BertStakingSDK {
     nftsVault?: PublicKey;
     maxNftsCap?: number;
     maxTokensCap?: number | BN;
+    maxValueCap?: number | BN;
     defaultYieldRate?: number | BN;
     maxCap: number | BN;
     nftValueInTokens: number | BN;
@@ -267,6 +269,7 @@ export class BertStakingSDK {
           yieldRate: poolConfig.yieldRate,
           maxNftsCap: poolConfig.maxNfts || maxNftsCap || 1000,
           maxTokensCap: poolConfig.maxTokens || maxTokensCap || 1000000000,
+          maxValueCap: poolConfig.maxValueCap || maxValueCap || 100000000000,
         });
 
         tx.add(initPoolIx);
@@ -285,6 +288,7 @@ export class BertStakingSDK {
         yieldRate: defaultYieldRate,
         maxNftsCap: maxNftsCap || 1000,
         maxTokensCap: maxTokensCap || 1000000000,
+        maxValueCap: maxValueCap || 10000000000,
       });
 
       tx.add(initPoolIx);
@@ -335,6 +339,7 @@ export class BertStakingSDK {
     yieldRate,
     maxNftsCap,
     maxTokensCap,
+    maxValueCap,
   }: {
     authority: PublicKey;
     configId?: number;
@@ -343,6 +348,7 @@ export class BertStakingSDK {
     yieldRate: number | BN;
     maxNftsCap: number;
     maxTokensCap: number | BN;
+    maxValueCap: number | BN;
   }): Promise<TransactionInstruction> {
     return initializePoolInstruction({
       program: this.program,
@@ -354,6 +360,7 @@ export class BertStakingSDK {
       yieldRate,
       maxNftsCap,
       maxTokensCap,
+      maxValueCap,
     });
   }
 
@@ -409,6 +416,7 @@ export class BertStakingSDK {
     yieldRate,
     maxNftsCap,
     maxTokensCap,
+    maxValueCap,
   }: {
     authority: PublicKey;
     configId?: number;
@@ -417,6 +425,7 @@ export class BertStakingSDK {
     yieldRate: number | BN;
     maxNftsCap: number;
     maxTokensCap: number | BN;
+    maxValueCap: number | BN;
   }): Promise<string> {
     const ix = await initializePoolInstruction({
       program: this.program,
@@ -428,6 +437,7 @@ export class BertStakingSDK {
       yieldRate,
       maxNftsCap,
       maxTokensCap,
+      maxValueCap,
     });
 
     const tx = new Transaction();

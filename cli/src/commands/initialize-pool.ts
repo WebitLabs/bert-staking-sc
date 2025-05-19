@@ -28,6 +28,11 @@ export function initializePoolCommand(program: Command): void {
       "Maximum tokens capacity for the pool",
       "1000000000"
     )
+    .option(
+      "-mv, --max-value <number>",
+      "Maximum total value capacity for the pool (tokens + NFTs * NFT value)",
+      "2000000000"
+    )
     .action(async (options) => {
       try {
         const spinner = ora("Initializing staking pool...").start();
@@ -84,6 +89,7 @@ export function initializePoolCommand(program: Command): void {
         const yieldRate = parseInt(options.yieldRate);
         const maxNftsCap = parseInt(options.maxNfts);
         const maxTokensCap = parseInt(options.maxTokens) * 10 ** decimals;
+        const maxValueCap = parseInt(options.maxValue) * 10 ** decimals;
 
         // Find the Pool PDA for this index
         const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
@@ -115,6 +121,7 @@ export function initializePoolCommand(program: Command): void {
             yieldRate,
             maxNftsCap,
             maxTokensCap,
+            maxValueCap,
           });
 
           spinner.succeed(`Pool ${poolIndex} initialized successfully`);
@@ -137,7 +144,16 @@ export function initializePoolCommand(program: Command): void {
           console.log(`- Lock Period: ${pool.lockPeriodDays} days`);
           console.log(`- Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
           console.log(`- Max NFTs: ${pool.maxNftsCap}`);
-          console.log(`- Max Tokens: ${pool.maxTokensCap.toString()}`);
+          console.log(
+            `- Max Tokens: ${
+              pool.maxTokensCap.toNumber() / 10 ** decimals
+            } tokens`
+          );
+          console.log(
+            `- Max Value: ${
+              pool.maxValueCap.toNumber() / 10 ** decimals
+            } tokens`
+          );
           console.log(`- Paused: ${pool.isPaused ? "Yes" : "No"}`);
           console.log(
             `- Equivalent APY: ${(
@@ -175,4 +191,3 @@ export function initializePoolCommand(program: Command): void {
       }
     });
 }
-

@@ -110,13 +110,20 @@ export function fetchConfigCommand(program: Command): void {
             // Max caps
             const maxNfts = pool.maxNftsCap;
             const maxTokens = pool.maxTokensCap.toNumber() / 10 ** decimals;
+            const maxValue = pool.maxValueCap.toNumber() / 10 ** decimals;
             console.log(`- Max NFTs: ${maxNfts}`);
             console.log(`- Max Tokens: ${maxTokens.toLocaleString()}`);
+            console.log(
+              `- Max Total Value: ${maxValue.toLocaleString()} (tokens + NFTs × NFT value)`
+            );
 
             // Current stats
             const tokensStaked =
               pool.totalTokensStaked.toNumber() / 10 ** decimals;
             const nftsStaked = pool.totalNftsStaked;
+            const nftValueInTokens = nftsStaked * nftValue;
+            const currentPoolValue = tokensStaked + nftValueInTokens;
+
             console.log(
               `- Current Tokens Staked: ${tokensStaked.toLocaleString()} (${
                 maxTokens > 0
@@ -128,6 +135,13 @@ export function fetchConfigCommand(program: Command): void {
               `- Current NFTs Staked: ${nftsStaked} (${
                 maxNfts > 0 ? ((nftsStaked / maxNfts) * 100).toFixed(2) : 0
               }% of max)`
+            );
+            console.log(
+              `- Current Total Value: ${currentPoolValue.toLocaleString()} (${
+                maxValue > 0
+                  ? ((currentPoolValue / maxValue) * 100).toFixed(2)
+                  : 0
+              }% of max) [tokens + (${nftsStaked} NFTs × ${nftValue} tokens)]`
             );
 
             // Lifetime stats
