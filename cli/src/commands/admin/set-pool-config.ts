@@ -1,28 +1,29 @@
-import { Command } from "commander";
-import { getConnection, getSDK, getWallet } from "../../utils/connection";
-import ora from "ora";
-import { getMint } from "@solana/spl-token";
-import { BN } from "@coral-xyz/anchor";
+import { Command } from 'commander';
+import { getConnection, getSDK, getWallet } from '../../utils/connection';
+import ora from 'ora';
+import { getMint } from '@solana/spl-token';
+import { BN } from '@coral-xyz/anchor';
 
 /**
  * Command to update pool configuration
  */
 export function setPoolConfigCommand(program: Command): void {
   program
-    .command("admin:set-pool-config")
+    .command('admin:set-pool-config')
     .description("Update a staking pool's configuration (pool must be paused)")
-    .requiredOption("-i, --pool-index <number>", "Pool index to update")
-    .option("-id, --config-id <number>", "Config ID", "1")
-    .option("-l, --lock-days <number>", "Lock period in days")
+    .requiredOption('-i, --pool-index <number>', 'Pool index to update')
+    .option('-id, --config-id <number>', 'Config ID', '1')
+    .option('-l, --lock-days <number>', 'Lock period in days')
     .option(
-      "-y, --yield-rate <number>",
-      "Yield rate in basis points (e.g., 500 = 5%)"
+      '-y, --yield-rate <number>',
+      'Yield rate in basis points (e.g., 500 = 5%)'
     )
-    .option("-mn, --max-nfts <number>", "Maximum NFTs allowed in this pool")
-    .option("-mt, --max-tokens <number>", "Maximum tokens allowed in this pool")
+    .option('-mn, --max-nfts <number>', 'Maximum NFTs allowed in this pool')
+    .option('-mt, --max-tokens <number>', 'Maximum tokens allowed in this pool')
+    .option('-mv, --max-value <number>', 'Maximum value allowed in this pool')
     .action(async (options) => {
       try {
-        const spinner = ora("Updating pool configuration...").start();
+        const spinner = ora('Updating pool configuration...').start();
 
         const sdk = getSDK();
         const wallet = getWallet();
@@ -41,7 +42,7 @@ export function setPoolConfigCommand(program: Command): void {
         spinner.text = `Pool PDA: ${poolPda.toString()}`;
 
         // Fetch current pool to get its values
-        spinner.text = "Fetching current pool configuration...";
+        spinner.text = 'Fetching current pool configuration...';
         const pool = await sdk.fetchPoolByAddress(poolPda);
 
         if (!pool) {
@@ -52,7 +53,7 @@ export function setPoolConfigCommand(program: Command): void {
         // Fetch the config to get the token mint
         const config = await sdk.fetchConfigByAddress(configPda);
         if (!config) {
-          spinner.fail("Failed to fetch config!");
+          spinner.fail('Failed to fetch config!');
           return;
         }
 
@@ -65,6 +66,7 @@ export function setPoolConfigCommand(program: Command): void {
           yieldRate?: BN;
           maxNftsCap?: number;
           maxTokensCap?: BN;
+          maxValueCap?: BN;
         } = {};
 
         // Only set values that were provided, otherwise use current pool values
@@ -94,14 +96,22 @@ export function setPoolConfigCommand(program: Command): void {
           poolConfig.maxTokensCap = pool.maxTokensCap;
         }
 
+        if (options.maxValue) {
+          poolConfig.maxValueCap = new BN(
+            parseInt(options.maxValue) * 10 ** decimals
+          );
+        } else {
+          poolConfig.maxValueCap = pool.maxValueCap;
+        }
+
         // Use the RPC method to directly execute the transaction
-        spinner.text = "Sending transaction to update pool configuration...";
+        spinner.text = 'Sending transaction to update pool configuration...';
 
         const txid = await sdk.adminSetPoolConfigRpc({
           authority: wallet.publicKey,
           configId,
           poolIndex,
-          poolConfigArgs: poolConfig as any,
+          poolConfigArgs: poolConfig as any
         });
 
         spinner.succeed(
@@ -121,7 +131,7 @@ export function setPoolConfigCommand(program: Command): void {
           );
           console.log(`- Max NFTs: ${updatedPool.maxNftsCap}`);
           console.log(`- Max Tokens: ${updatedPool.maxTokensCap.toString()}`);
-          console.log(`- Paused: ${updatedPool.isPaused ? "Yes" : "No"}`);
+          console.log(`- Paused: ${updatedPool.isPaused ? 'Yes' : 'No'}`);
         } else {
           console.log(`\nFailed to fetch updated pool configuration.`);
         }
