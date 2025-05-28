@@ -13,9 +13,11 @@ A Solana program for staking tokens and NFTs with configurable yield rates and l
 
 ### Prerequisites
 
-- Rust & Cargo (latest stable)
-- Node.js & Yarn
-- Solana CLI tools
+- Rust & Cargo (1.81.0)
+- Anchor (anchor-cli 0.30.1)
+- Node.js (v22.11.0) & Yarn (1.22.22)
+- Npm: 11.1.0
+- Solana CLI tools (solana-cli 2.1.5)
 
 ### Build the Program
 
@@ -142,10 +144,12 @@ ts-node ./src/index.ts admin:withdraw-tokens --amount 1000 --token-mint <TOKEN_M
 ### Yield Management
 
 The protocol maintains two separate token vaults:
+
 1. **Main Vault** - Stores user-deposited principal tokens
 2. **Authority Vault** - Stores yield tokens that are used to pay rewards
 
 When users claim their positions:
+
 1. The principal is returned from the main vault
 2. The yield is paid from the authority vault
 
@@ -266,4 +270,3 @@ await sdk.adminSetPoolConfigRpc({
   },
 });
 ```
-
