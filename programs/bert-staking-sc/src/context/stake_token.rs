@@ -147,7 +147,7 @@ impl<'info> StakeToken<'info> {
         position.owner = self.owner.key();
         position.pool = pool.key();
         position.deposit_time = Clock::get()?.unix_timestamp;
-        position.amount = position.amount.checked_add(amount).unwrap();
+        position.amount = amount;
         position.position_type = PositionType::Token;
         position.asset = self.mint.key();
         position.id = id;
