@@ -11,8 +11,11 @@ pub enum StakingError {
     #[msg("Maximum staking capacity reached")]
     MaxCapReached,
 
-    #[msg("NFT limit per user reached")]
+    #[msg("NFT limit per user for this pool reached")]
     NftLimitReached,
+
+    #[msg("Global NFT limit per user reached")]
+    GlobalNftLimitReached,
 
     #[msg("Invalid staking amount")]
     InvalidAmount,
@@ -67,7 +70,7 @@ pub enum StakingError {
 
     #[msg("Unauthorized Operation")]
     Unauthorized,
-    
+
     #[msg("Pool value limit reached")]
     PoolValueLimitReached,
 }

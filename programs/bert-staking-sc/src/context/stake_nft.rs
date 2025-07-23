@@ -140,6 +140,11 @@ impl<'info> StakeNFT<'info> {
             StakingError::NftLimitReached
         );
 
+        require!(
+            new_user_nfts_staked <= config.nfts_limit_per_user as u32,
+            StakingError::GlobalNftLimitReached
+        );
+
         // Calculate new total value for the pool (new NFT value + existing value)
         let new_nft_value = (pool.total_nfts_staked as u64 + 1)
             .checked_mul(config.nft_value_in_tokens)

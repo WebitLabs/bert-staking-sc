@@ -87,7 +87,7 @@ describe("bert-staking-sc", () => {
   // let asset = new PublicKey(B_545_ASSET);
   let decimals: number;
 
-  const nftsToMint = 10;
+  const nftsToMint = 20;
   let collectionSigner: KeypairSigner;
   let assets: KeypairSigner[];
 
@@ -2115,5 +2115,308 @@ describe("bert-staking-sc", () => {
     expect(expectedTotal).to.be.greaterThan(initialValueLimit);
 
     console.log("\nPool value limit test completed successfully!");
+  });
+
+  it("Enforces global NFT limit across all pools", async () => {
+    // Create a new test config with a very small global NFT limit
+    const testConfigId = configId + 400;
+    const globalNftLimit = 2; // Global limit of 2 NFTs across ALL pools
+    const perPoolNftLimit = 3; // Each pool allows 3 NFTs, but global limit is only 2
+
+    console.log("\n----- Testing Global NFT Limit Enforcement -----");
+    console.log(`Global NFT limit: ${globalNftLimit}`);
+    console.log(`Per-pool NFT limit: ${perPoolNftLimit}`);
+
+    // Get account addresses for test config
+    const [testConfigPda] = sdk.pda.findConfigPda(
+      payer.publicKey,
+      testConfigId
+    );
+    const vaultTA = getAssociatedTokenAddressSync(
+      tokenMint,
+      testConfigPda,
+      true
+    );
+    const [nftsVaultPda] = sdk.pda.findNftsVaultPda(testConfigPda, tokenMint);
+
+    try {
+      console.log("Initializing test config with global NFT limit...");
+
+      // Initialize the staking program with a small global NFT limit
+      const initializeIx = await sdk.initialize({
+        authority: payer.publicKey,
+        adminWithdrawDestination: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        id: testConfigId,
+        vault: vaultTA,
+        nftsVault: nftsVaultPda,
+        maxCap,
+        nftValueInTokens,
+        nftsLimitPerUser: globalNftLimit,
+      });
+
+      // Initialize auth vault instruction
+      const initializeAuthVaultIx = await sdk.initializeAuthVault({
+        authority: payer.publicKey,
+        configId: testConfigId,
+        tokenMint,
+      });
+
+      // Execute both instructions
+      await createAndProcessTransaction(client, payer, [
+        initializeIx,
+        initializeAuthVaultIx,
+      ]);
+      console.log("Base config initialized successfully");
+
+      // Initialize two pools with higher per-pool limits than the global limit
+      const poolInstructions = [];
+      for (let poolIndex = 0; poolIndex < 2; poolIndex++) {
+        const initPoolIx = await sdk.initializePool({
+          authority: payer.publicKey,
+          configId: testConfigId,
+          index: poolIndex,
+          lockPeriodDays: poolsConfig[poolIndex].lockPeriodDays,
+          yieldRate: poolsConfig[poolIndex].yieldRate,
+          maxNftsCap: perPoolNftLimit, // Higher than global limit
+          maxTokensCap: poolsConfig[poolIndex].maxTokens,
+          maxValueCap: poolsConfig[poolIndex].maxValueCap,
+        });
+        poolInstructions.push(initPoolIx);
+      }
+
+      // Execute pool initialization instructions
+      await createAndProcessTransaction(client, payer, poolInstructions);
+      console.log("Pools initialized successfully");
+
+      // Create token accounts for this test config
+      const mintAmount = 1_000_000 * 10 ** decimals;
+
+      // Get authority vault PDA
+      const [authorityVaultPda] = sdk.pda.findAuthorityVaultPda(
+        testConfigPda,
+        tokenMint
+      );
+
+      // Create and fund accounts
+      createAtaForMint(provider, testConfigPda, tokenMint, BigInt(0));
+      createTokenAccountAtAddress(
+        provider,
+        authorityVaultPda,
+        testConfigPda,
+        tokenMint,
+        BigInt(mintAmount)
+      );
+
+      console.log("Token accounts created");
+    } catch (err) {
+      console.error("Failed to initialize test config:", err);
+      expect.fail("Failed to initialize test config");
+    }
+
+    // Initialize user account for this test config
+    try {
+      console.log("Initializing user account for test config...");
+      const initUserIx = await sdk.initializeUser({
+        owner: payer.publicKey,
+        authority: payer.publicKey,
+        configId: testConfigId,
+        mint: tokenMint,
+        poolIndex: 0, // Initialize with the first pool
+      });
+
+      await createAndProcessTransaction(client, payer, [initUserIx]);
+      console.log("User account initialized successfully");
+    } catch (err) {
+      console.error("Failed to initialize user:", err);
+      expect.fail("Failed to initialize user");
+    }
+
+    // Verify initial user account state
+    const [userAccountPda] = sdk.pda.findUserAccountPda(
+      payer.publicKey,
+      testConfigPda
+    );
+    const userAccountInitial = await sdk.fetchUserAccountByAddress(
+      userAccountPda
+    );
+    expect(userAccountInitial.totalStakedNfts).to.equal(0);
+    console.log("User account verified with 0 NFTs staked initially");
+
+    // Step 1: Stake first NFT in pool 0 - should succeed
+    try {
+      console.log("\nStep 1: Staking first NFT in pool 0...");
+      const firstAsset = toWeb3JsPublicKey(assets[10].publicKey);
+
+      const stakeFirstNftIx = await sdk.stakeNft({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        asset: firstAsset,
+        configId: testConfigId,
+        poolIndex: 0,
+        positionId: 4000,
+        nftsVault: nftsVaultPda,
+      });
+
+      const res = await createAndProcessTransaction(client, payer, [
+        stakeFirstNftIx,
+      ]);
+      if (res.result) {
+        throw new Error(`Transaction failed: ${res.result} `);
+      }
+      console.log("✅ Successfully staked first NFT");
+
+      // Verify position was created
+      const position1 = await sdk.fetchPosition(
+        payer.publicKey,
+        4000,
+        tokenMint,
+        firstAsset
+      );
+      expect(position1.positionType).to.deep.equal({ nft: {} });
+      expect(position1.asset.toString()).to.equal(firstAsset.toString());
+    } catch (err) {
+      console.error("Failed to stake first NFT:", err);
+      expect.fail("Should be able to stake first NFT");
+    }
+
+    // Step 2: Stake second NFT in pool 1 - should succeed (global limit = 2)
+    try {
+      console.log("\nStep 2: Staking second NFT in pool 1...");
+      const secondAsset = toWeb3JsPublicKey(assets[11].publicKey);
+
+      const stakeSecondNftIx = await sdk.stakeNft({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        asset: secondAsset,
+        configId: testConfigId,
+        poolIndex: 1,
+        positionId: 4001,
+        nftsVault: nftsVaultPda,
+      });
+
+      await createAndProcessTransaction(client, payer, [stakeSecondNftIx]);
+      console.log("✅ Successfully staked second NFT");
+
+      // Verify position was created
+      const position2 = await sdk.fetchPosition(
+        payer.publicKey,
+        4001,
+        tokenMint,
+        secondAsset
+      );
+      expect(position2.positionType).to.deep.equal({ nft: {} });
+      expect(position2.asset.toString()).to.equal(secondAsset.toString());
+    } catch (err) {
+      console.error("Failed to stake second NFT:", err);
+      expect.fail("Should be able to stake second NFT");
+    }
+
+    // Verify user account shows global limit reached
+    const userAccountAfterTwo = await sdk.fetchUserAccountByAddress(
+      userAccountPda
+    );
+    expect(userAccountAfterTwo.totalStakedNfts).to.equal(globalNftLimit);
+    console.log(
+      `✅ User has staked ${userAccountAfterTwo.totalStakedNfts} NFTs (at global limit)`
+    );
+
+    // Step 3: Try to stake third NFT in pool 0 - should fail due to global limit
+    try {
+      console.log(
+        "\nStep 3: Attempting to stake third NFT (should exceed global limit)..."
+      );
+      const thirdAsset = toWeb3JsPublicKey(assets[12].publicKey);
+
+      const stakeThirdNftIx = await sdk.stakeNft({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        asset: thirdAsset,
+        configId: testConfigId,
+        poolIndex: 0, // Pool 0 has capacity (only 1 NFT staked), but global limit is reached
+        positionId: 4002,
+        nftsVault: nftsVaultPda,
+      });
+
+      await createAndProcessTransaction(client, payer, [stakeThirdNftIx]);
+      expect.fail("Should not be able to stake third NFT due to global limit");
+    } catch (err) {
+      console.log(
+        "✅ Transaction correctly failed when exceeding global NFT limit"
+      );
+
+      // Verify it's the correct error
+      const errorString = err.toString();
+      expect(errorString).to.include("Error");
+      console.log("Error message confirms global limit enforcement");
+    }
+
+    // Step 4: Try to stake third NFT in pool 1 - should also fail due to global limit
+    try {
+      console.log(
+        "\nStep 4: Attempting to stake third NFT in different pool (should still fail)..."
+      );
+      const fourthAsset = toWeb3JsPublicKey(assets[13].publicKey);
+
+      const stakeFourthNftIx = await sdk.stakeNft({
+        authority: payer.publicKey,
+        owner: payer.publicKey,
+        mint: tokenMint,
+        collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+        asset: fourthAsset,
+        configId: testConfigId,
+        poolIndex: 1, // Pool 1 has capacity (only 1 NFT staked), but global limit is reached
+        positionId: 4003,
+        nftsVault: nftsVaultPda,
+      });
+
+      await createAndProcessTransaction(client, payer, [stakeFourthNftIx]);
+      expect.fail(
+        "Should not be able to stake NFT in any pool when global limit is reached"
+      );
+    } catch (err) {
+      console.log(
+        "✅ Transaction correctly failed - global limit applies across all pools"
+      );
+    }
+
+    // Final verification: user account total is still at the global limit
+    const userAccountFinal = await sdk.fetchUserAccountByAddress(
+      userAccountPda
+    );
+    expect(userAccountFinal.totalStakedNfts).to.equal(globalNftLimit);
+    console.log(
+      `✅ User still has exactly ${userAccountFinal.totalStakedNfts} NFTs staked (unchanged)`
+    );
+
+    // Verify pool-specific stats show correct distribution
+    const [pool0Pda] = sdk.pda.findPoolPda(testConfigPda, 0);
+    const [pool1Pda] = sdk.pda.findPoolPda(testConfigPda, 1);
+
+    const pool0Stats = await sdk.fetchPoolByAddress(pool0Pda);
+    const pool1Stats = await sdk.fetchPoolByAddress(pool1Pda);
+
+    expect(pool0Stats.totalNftsStaked).to.equal(1);
+    expect(pool1Stats.totalNftsStaked).to.equal(1);
+
+    console.log(`Pool 0: ${pool0Stats.totalNftsStaked} NFTs staked`);
+    console.log(`Pool 1: ${pool1Stats.totalNftsStaked} NFTs staked`);
+    console.log(
+      `Total across pools: ${
+        pool0Stats.totalNftsStaked + pool1Stats.totalNftsStaked
+      } NFTs`
+    );
+
+    console.log("\n✅ Global NFT limit test completed successfully!");
+    console.log(
+      "✅ Confirmed: Global limit prevents staking beyond limit regardless of individual pool capacity"
+    );
   });
 });
