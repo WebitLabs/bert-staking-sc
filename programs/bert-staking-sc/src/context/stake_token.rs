@@ -122,7 +122,7 @@ impl<'info> StakeToken<'info> {
         );
 
         // Calculate new total value for the pool (current + amount being staked)
-        let new_pool_value = pool
+        let new_pool_total_tokens_staked = pool
             .total_tokens_staked
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
@@ -132,7 +132,7 @@ impl<'info> StakeToken<'info> {
             .checked_mul(config.nft_value_in_tokens)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        let total_pool_value = new_pool_value
+        let total_pool_value = new_pool_total_tokens_staked
             .checked_add(nft_value)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
@@ -181,10 +181,7 @@ impl<'info> StakeToken<'info> {
         config.total_staked_amount = new_total;
 
         // Update pool statistics
-        pool.total_tokens_staked = pool
-            .total_tokens_staked
-            .checked_add(amount)
-            .ok_or(StakingError::ArithmeticOverflow)?;
+        pool.total_tokens_staked = new_pool_total_tokens_staked;
 
         pool.lifetime_tokens_staked = pool
             .lifetime_tokens_staked

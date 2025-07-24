@@ -94,7 +94,7 @@ pub struct StakeNFT<'info> {
 
 impl<'info> StakeNFT<'info> {
     pub fn stake_nft(&mut self, id: u64, bumps: &StakeNFTBumps) -> Result<()> {
-        let config_account_info = &self.config.to_account_info().clone();
+        let config_account_info = &self.config.to_account_info();
         let config = &mut self.config;
         let pool = &mut self.pool;
         let user_pool_stats = &mut self.user_pool_stats;

@@ -111,10 +111,8 @@ impl<'info> ClaimPositionToken<'info> {
 
         // Calculate yield based on position type and pool config
         let position_amount = position.amount;
-        let yield_rate = pool.yield_rate;
-        let base_amount = position_amount;
-        let yield_value = (base_amount as u128)
-            .checked_mul(yield_rate as u128)
+        let yield_value = (position_amount as u128)
+            .checked_mul(pool.yield_rate as u128)
             .ok_or(StakingError::ArithmeticOverflow)?
             .checked_div(10000)
             .ok_or(StakingError::ArithmeticOverflow)?
@@ -149,7 +147,7 @@ impl<'info> ClaimPositionToken<'info> {
                 },
                 signer_seeds,
             ),
-            base_amount,
+            position_amount,
         )?;
 
         // 2. Transfer yield from authority vault
