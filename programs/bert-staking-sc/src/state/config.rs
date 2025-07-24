@@ -9,34 +9,6 @@ pub struct PoolConfigArgs {
     pub max_value_cap: u64,    // Maximum combined value (tokens + nfts * nft_value) in the pool
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]
-pub struct PoolConfig {
-    pub lock_period_days: u16, // The lock period in days
-    pub yield_rate: u64,       // Yield rate in basis points (e.g., 500 = 5%)
-    pub max_nfts_cap: u32,     // Maximum amount of NFTs that can be staked / user
-    pub max_tokens_cap: u64,   // Maximum amount of tokens that can be staked / user
-
-    pub is_paused: bool,
-
-    /// Padding
-    pub _padding: [u8; 63],
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]
-pub struct PoolStats {
-    pub lock_period_days: u16, // The lock period in days
-
-    pub total_nfts_staked: u32,
-    pub total_tokens_staked: u64,
-
-    pub lifetime_nfts_staked: u32,
-    pub lifetime_tokens_staked: u64,
-    pub lifetime_claimed_yield: u64,
-
-    /// Padding
-    pub _padding: [u8; 64],
-}
-
 #[account]
 #[derive(InitSpace, Debug)]
 pub struct Config {

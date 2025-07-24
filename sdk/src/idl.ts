@@ -2480,111 +2480,71 @@ export type BertStakingSc = {
     },
     {
       "code": 6001,
-      "name": "positionAlreadyClaimed",
-      "msg": "The staking position has already been claimed"
+      "name": "nftLimitReached",
+      "msg": "NFT limit per user for this pool reached"
     },
     {
       "code": 6002,
-      "name": "maxCapReached",
-      "msg": "Maximum staking capacity reached"
+      "name": "globalNftLimitReached",
+      "msg": "Global NFT limit per user reached"
     },
     {
       "code": 6003,
-      "name": "nftLimitReached",
-      "msg": "NFT limit per user reached"
-    },
-    {
-      "code": 6004,
       "name": "invalidAmount",
       "msg": "Invalid staking amount"
     },
     {
-      "code": 6005,
+      "code": 6004,
       "name": "arithmeticOverflow",
       "msg": "Arithmetic overflow"
     },
     {
-      "code": 6006,
-      "name": "invalidLockPeriodAndYield",
-      "msg": "Invalid lock period and yield"
-    },
-    {
-      "code": 6007,
+      "code": 6005,
       "name": "invalidPositionType",
       "msg": "Invalid position type"
     },
     {
-      "code": 6008,
-      "name": "invalidNftMint",
-      "msg": "Invalid Nft Mint"
-    },
-    {
-      "code": 6009,
-      "name": "alreadyStaked",
-      "msg": "Already staked"
-    },
-    {
-      "code": 6010,
+      "code": 6006,
       "name": "userTokensLimitCapReached",
       "msg": "Tokens limit per user reached"
     },
     {
-      "code": 6011,
-      "name": "assetNotStaked",
-      "msg": "Asset Not Staked"
-    },
-    {
-      "code": 6012,
-      "name": "attributesNotInitialized",
-      "msg": "Attributes Not Initialized"
-    },
-    {
-      "code": 6013,
-      "name": "invalidTimestamp",
-      "msg": "Invalid Timestamp"
-    },
-    {
-      "code": 6014,
-      "name": "invalidAdminAmount",
-      "msg": "Invalid Admin Amount"
-    },
-    {
-      "code": 6015,
+      "code": 6007,
       "name": "poolAlreadyPaused",
       "msg": "Pool paused"
     },
     {
-      "code": 6016,
+      "code": 6008,
       "name": "poolAlreadyActive",
       "msg": "Pool is already active"
     },
     {
-      "code": 6017,
+      "code": 6009,
       "name": "invalidPoolPauseState",
       "msg": "You can only set pool config if the pool is paused"
     },
     {
-      "code": 6018,
+      "code": 6010,
       "name": "insufficientYieldFunds",
       "msg": "Insufficient funds in yield vault for rewards"
     },
     {
-      "code": 6019,
+      "code": 6011,
       "name": "authorityVaultAlreadyInitialized",
       "msg": "Authority vault already initialized"
     },
     {
-      "code": 6020,
+      "code": 6012,
       "name": "authorityVaultNotInitialized",
       "msg": "Authority vault not initialized"
     },
     {
-      "code": 6021,
+      "code": 6013,
       "name": "unauthorized",
       "msg": "Unauthorized Operation"
     },
     {
-      "code": 6022,
+      "code": 6014,
       "name": "poolValueLimitReached",
       "msg": "Pool value limit reached"
     }

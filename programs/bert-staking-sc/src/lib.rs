@@ -64,11 +64,6 @@ pub mod bert_staking_sc {
         )
     }
 
-    // pub fn initialize_user_pool_stats(ctx: Context<InitializeUserPoolStats>) -> Result<()> {
-    //     ctx.accounts
-    //         .initialize(*ctx.bumps.get("user_pool_stats").unwrap())
-    // }
-
     pub fn stake_nft(ctx: Context<StakeNFT>, id: u64) -> Result<()> {
         ctx.accounts.stake_nft(id, &ctx.bumps)
     }

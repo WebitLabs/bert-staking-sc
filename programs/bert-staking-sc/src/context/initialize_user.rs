@@ -33,18 +33,6 @@ pub struct InitializeUser<'info> {
     )]
     pub user_account: Account<'info, UserAccountV3>,
 
-    // #[account(
-    //     init,
-    //     payer = owner,
-    //     space = 8 + UserPoolStatsAccount::INIT_SPACE,
-    //     seeds = [
-    //         b"user_pool_stats",
-    //         owner.key().as_ref(),
-    //         pool.key().as_ref(),
-    //     ],
-    //     bump
-    // )]
-    // pub user_pool_stats: Account<'info, UserPoolStatsAccount>,
     pub mint: InterfaceAccount<'info, Mint>,
 
     pub system_program: Program<'info, System>,
@@ -62,16 +50,6 @@ impl<'info> InitializeUser<'info> {
             bump: bumps.user_account,
             _padding: [0; 64],
         });
-
-        // Initialize user pool stats
-        // let user_pool_stats = &mut self.user_pool_stats;
-        // user_pool_stats.user = self.owner.key();
-        // user_pool_stats.pool = self.pool.key();
-        // user_pool_stats.tokens_staked = 0;
-        // user_pool_stats.nfts_staked = 0;
-        // user_pool_stats.total_value = 0;
-        // user_pool_stats.claimed_yield = 0;
-        // user_pool_stats.bump = bumps.user_pool_stats;
 
         Ok(())
     }

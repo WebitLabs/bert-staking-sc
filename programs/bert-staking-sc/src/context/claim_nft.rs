@@ -6,7 +6,7 @@ use anchor_spl::{
 };
 
 use mpl_core::{
-    accounts::{BaseAssetV1, BaseCollectionV1},
+    accounts::BaseAssetV1,
     instructions::TransferV1CpiBuilder,
     types::UpdateAuthority,
     ID as CORE_PROGRAM_ID,
