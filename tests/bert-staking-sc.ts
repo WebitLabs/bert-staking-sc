@@ -417,7 +417,7 @@ describe("bert-staking-sc", () => {
     const stakeAmount = 500 * 10 ** decimals; // 500 tokens
     const mintAmount = 1_000 * 10 ** decimals; // 1,000 tokens previously minted to user
     const positionId = 42; // Arbitrary position ID for test
-    const poolIndex = 0; // Use the 7-day lock period with 8% yield
+    const poolIndex = 0; // Use the 1-day lock period with 3% yield
 
     // Get account addresses
     const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
@@ -556,8 +556,8 @@ describe("bert-staking-sc", () => {
     const unlockTime = position.unlockTime.toNumber();
     const depositTime = position.depositTime.toNumber();
 
-    const sevenDaysInSeconds = 60;
-    expect(unlockTime - depositTime).to.be.approximately(sevenDaysInSeconds, 5); // Allow small difference due to timing
+    const oneDayInSeconds = 86400;
+    expect(unlockTime - depositTime).to.be.approximately(oneDayInSeconds, 5); // Allow small difference due to timing
 
     console.log("\n---- Position Details ----");
     console.log("Position owner:", position.owner.toString());
@@ -572,7 +572,7 @@ describe("bert-staking-sc", () => {
       "Unlock time:",
       new Date(position.unlockTime.toNumber() * 1000).toISOString()
     );
-    console.log("Lock duration (seconds):", (unlockTime - depositTime) / 60);
+    console.log("Lock duration (seconds):", unlockTime - depositTime);
 
     console.log("\n---- State After Staking ----");
     console.log("User token balance:", userTokenBalanceAfter);
@@ -602,7 +602,7 @@ describe("bert-staking-sc", () => {
   it("Claims tokens after lock period with correct yield calculation and state updates", async () => {
     // Use the same position ID that was created in the previous test
     const positionId = 42;
-    const poolIndex = 0; // The 7-day lock period we used in the previous test
+    const poolIndex = 0; // The 1-day lock period we used in the previous test
 
     // Get the account addresses
     const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);

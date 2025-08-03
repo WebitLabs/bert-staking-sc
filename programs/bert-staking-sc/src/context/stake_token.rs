@@ -156,7 +156,7 @@ impl<'info> StakeToken<'info> {
 
         // Calculate unlock time (current time + lock_time in seconds)
         let lock_days = pool.lock_period_days;
-        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 60); // Convert days to seconds
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 86400);
         position.status = PositionStatus::Unclaimed;
 
         // Transfer tokens from user to program
