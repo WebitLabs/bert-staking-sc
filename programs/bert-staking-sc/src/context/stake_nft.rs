@@ -94,7 +94,7 @@ pub struct StakeNFT<'info> {
 
 impl<'info> StakeNFT<'info> {
     pub fn stake_nft(&mut self, id: u64, bumps: &StakeNFTBumps) -> Result<()> {
-        let config_account_info = &self.config.to_account_info().clone();
+        let config_account_info = &self.config.to_account_info();
         let config = &mut self.config;
         let pool = &mut self.pool;
         let user_pool_stats = &mut self.user_pool_stats;
@@ -140,6 +140,11 @@ impl<'info> StakeNFT<'info> {
             StakingError::NftLimitReached
         );
 
+        require!(
+            new_user_nfts_staked <= config.nfts_limit_per_user as u32,
+            StakingError::GlobalNftLimitReached
+        );
+
         // Calculate new total value for the pool (new NFT value + existing value)
         let new_nft_value = (pool.total_nfts_staked as u64 + 1)
             .checked_mul(config.nft_value_in_tokens)
@@ -176,7 +181,7 @@ impl<'info> StakeNFT<'info> {
 
         // Calculate unlock time (current time + lock_time in seconds)
         let lock_days = pool.lock_period_days;
-        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 60); // Convert days to seconds
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 86400);
         position.status = PositionStatus::Unclaimed;
 
         // Transfer The asset:

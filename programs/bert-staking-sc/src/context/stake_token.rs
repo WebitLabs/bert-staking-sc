@@ -122,7 +122,7 @@ impl<'info> StakeToken<'info> {
         );
 
         // Calculate new total value for the pool (current + amount being staked)
-        let new_pool_value = pool
+        let new_pool_total_tokens_staked = pool
             .total_tokens_staked
             .checked_add(amount)
             .ok_or(StakingError::ArithmeticOverflow)?;
@@ -132,7 +132,7 @@ impl<'info> StakeToken<'info> {
             .checked_mul(config.nft_value_in_tokens)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
-        let total_pool_value = new_pool_value
+        let total_pool_value = new_pool_total_tokens_staked
             .checked_add(nft_value)
             .ok_or(StakingError::ArithmeticOverflow)?;
 
@@ -147,7 +147,7 @@ impl<'info> StakeToken<'info> {
         position.owner = self.owner.key();
         position.pool = pool.key();
         position.deposit_time = Clock::get()?.unix_timestamp;
-        position.amount = position.amount.checked_add(amount).unwrap();
+        position.amount = amount;
         position.position_type = PositionType::Token;
         position.asset = self.mint.key();
         position.id = id;
@@ -156,7 +156,7 @@ impl<'info> StakeToken<'info> {
 
         // Calculate unlock time (current time + lock_time in seconds)
         let lock_days = pool.lock_period_days;
-        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 60); // Convert days to seconds
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 86400);
         position.status = PositionStatus::Unclaimed;
 
         // Transfer tokens from user to program
@@ -181,10 +181,7 @@ impl<'info> StakeToken<'info> {
         config.total_staked_amount = new_total;
 
         // Update pool statistics
-        pool.total_tokens_staked = pool
-            .total_tokens_staked
-            .checked_add(amount)
-            .ok_or(StakingError::ArithmeticOverflow)?;
+        pool.total_tokens_staked = new_pool_total_tokens_staked;
 
         pool.lifetime_tokens_staked = pool
             .lifetime_tokens_staked

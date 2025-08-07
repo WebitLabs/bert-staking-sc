@@ -6,7 +6,7 @@ use anchor_spl::{
 };
 
 use mpl_core::{
-    accounts::{BaseAssetV1, BaseCollectionV1},
+    accounts::BaseAssetV1,
     instructions::TransferV1CpiBuilder,
     types::UpdateAuthority,
     ID as CORE_PROGRAM_ID,
@@ -137,11 +137,13 @@ impl<'info> ClaimPositionNft<'info> {
         let position_amount = position.amount;
         let yield_rate = pool.yield_rate;
         let base_amount = position_amount;
-        let yield_value = base_amount
-            .checked_mul(yield_rate)
+        let yield_value = (base_amount as u128)
+            .checked_mul(yield_rate as u128)
             .ok_or(StakingError::ArithmeticOverflow)?
-            .checked_div(10000) // Basis points conversion (e.g., 500 = 5%)
-            .ok_or(StakingError::ArithmeticOverflow)?;
+            .checked_div(10000)
+            .ok_or(StakingError::ArithmeticOverflow)?
+            .try_into()
+            .map_err(|_| StakingError::ArithmeticOverflow)?;
 
         // Prepare common values for transfers
         let bump = config.bump;

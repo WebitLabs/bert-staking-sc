@@ -6,10 +6,16 @@ use anchor_spl::{
 
 use crate::state::*;
 
+// Hardcoded admin pubkey.
+const ADMIN_PUBKEY: Pubkey = pubkey!("5JLFk731zxTAkTbsZMr6YRFqooV9yDbv18gnRwhUoQ2h");
+
 #[derive(Accounts)]
 #[instruction(id: u64)]
 pub struct Initialize<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        address = ADMIN_PUBKEY @ StakingError::Unauthorized
+    )]
     pub authority: Signer<'info>,
 
     #[account(
