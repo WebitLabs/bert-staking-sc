@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
+    "lib": ["es2020", "dom"],
     "declaration": true,
     "outDir": "./dist",
     "rootDir": "./src",
@@ -13,7 +14,7 @@
     "resolveJsonModule": true
   },
   "files": ["./src/idl.json"],
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  // "files": ["./src/idl.json", "./src/index.ts"],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }
-

@@ -1,10 +1,10 @@
 import { Command } from "commander";
 import { PublicKey } from "@solana/web3.js";
 import { getConnection, getSDK, getWallet } from "../utils/connection";
-import { PositionIdl } from "../../../sdk/src";
 import ora from "ora";
 import { getMint } from "@solana/spl-token";
 import { MINT } from "../constants";
+import { PositionIdl } from "@bert-staking/sdk";
 
 /**
  * Fetch position command implementation
@@ -57,7 +57,7 @@ export function fetchPositionCommand(program: Command): void {
             `Found ${positions.length} position(s) for ${owner.toString()}:`
           );
 
-          positions.forEach((position, index) => {
+          positions.forEach((position: PositionIdl, index: number) => {
             const positionAmount = position.amount.toNumber() / 10 ** decimals;
 
             console.log(`\nPosition #${index + 1}:`);
