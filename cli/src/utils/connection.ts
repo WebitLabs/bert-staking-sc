@@ -18,8 +18,7 @@ const ENDPOINTS = {
 };
 
 // Default program ID
-// const DEFAULT_PROGRAM_ID = "G4ZJJ4vytqbUsUiGst52seNZ48t2EQMxJ6eQ4sQcBrYZ";
-const DEFAULT_PROGRAM_ID = "5SBAWmpeag75vcgPvnSxbibQQoKguZaa5KDdR8TBjC1N";
+const DEFAULT_PROGRAM_ID = "BcTJUjVtpYZ2mozwHxGZdJRfQbEfCoZyEqwus8W2cajq";
 
 // Global connection object
 let connection: Connection;
