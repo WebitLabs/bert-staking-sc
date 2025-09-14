@@ -1,66 +1,117 @@
-import { Command } from "commander";
-import { PublicKey, Transaction } from "@solana/web3.js";
-import { getConnection, getSDK, getWallet } from "../utils/connection";
-import ora from "ora";
-import { COLLECTION, MINT } from "../constants";
-import { getAssociatedTokenAddressSync, getMint } from "@solana/spl-token";
-import { PoolIdl } from "@bert-staking/sdk";
+import { Command } from 'commander';
+import { PublicKey, Transaction } from '@solana/web3.js';
+import { getConnection, getSDK, getWallet } from '../utils/connection';
+import ora from 'ora';
+import { COLLECTION, MINT } from '../constants';
+import { getAssociatedTokenAddressSync, getMint } from '@solana/spl-token';
+import { PoolIdl } from '@bert-staking/sdk';
+import { BN } from 'bn.js';
 
 /**
  * Initialize the staking program
  */
 export function initializeCommand(program: Command): void {
   program
-    .command("initialize")
-    .description("Initialize the BERT staking program")
-    .option("-m, --mint <pubkey>", "Token mint address")
-    .option("-c, --collection <pubkey>", "NFT collection address")
-    .option("-id, --config-id <number>", "Config ID", "1")
+    .command('initialize')
+    .description('Initialize the BERT staking program')
+    .option('-m, --mint <pubkey>', 'Token mint address')
+    .option('-c, --collection <pubkey>', 'NFT collection address')
+    .option('-id, --config-id <number>', 'Config ID', '1')
     .option(
-      "-a, --admin-withdraw-destination <pubkey>",
-      "Admin withdraw destination wallet"
+      '-a, --admin-withdraw-destination <pubkey>',
+      'Admin withdraw destination wallet'
     )
     .option(
-      "-cap, --max-cap <amount>",
-      "Maximum staking capacity in tokens",
-      "1000000000"
+      '-cap, --max-cap <amount>',
+      'Maximum staking capacity in tokens',
+      '1000000000'
     )
-    .option("-nv, --nft-value <amount>", "NFT value in tokens", "100000")
-    .option("-nl, --nft-limit <number>", "NFT limit per user", "5")
+    .option('-nv, --nft-value <amount>', 'NFT value in tokens', '100000')
+    .option('-nl, --nft-limit <number>', 'NFT limit per user', '5')
     .option(
-      "-p1, --pool1-yield <number>",
-      "Yield rate for 1-day pool (basis points, e.g. 300 = 3%)",
-      "500"
-    )
-    .option(
-      "-p3, --pool3-yield <number>",
-      "Yield rate for 3-day pool (basis points)",
-      "800"
+      '-p1-ld, --pool1-lock-days <number>',
+      'Lock period for pool 1 (days)',
+      '10'
     )
     .option(
-      "-p7, --pool7-yield <number>",
-      "Yield rate for 7-day pool (basis points)",
-      "1200"
+      '-p1-y, --pool1-yield <number>',
+      'Yield rate for pool 1 (basis points, e.g. 300 = 3%)',
+      '500'
     )
     .option(
-      "-p30, --pool30-yield <number>",
-      "Yield rate for 30-day pool (basis points)",
-      "1800"
-    )
-    .option("-mn, --max-nfts <number>", "Maximum NFTs per pool", "1000")
-    .option(
-      "-mt, --max-tokens <number>",
-      "Maximum tokens per pool",
-      "1000000000"
+      '-p1-mv, --pool1-max-value <number>',
+      'Max total value for pool 1 (tokens + NFTs * NFT value)',
+      '2000000000'
     )
     .option(
-      "-mv, --max-value <number>",
-      "Maximum total value capacity per pool (tokens + NFTs * NFT value)",
-      "2000000000"
+      '-p1-mt, --pool1-max-tokens <number>',
+      'Maximum user tokens capacity for each pool',
+      '1000000000'
     )
+    .option(
+      '-p2-ld, --pool2-lock-days <number>',
+      'Lock period for pool 2 (days)',
+      '20'
+    )
+    .option(
+      '-p2-y, --pool2-yield <number>',
+      'Yield rate for pool 2 (basis points, e.g. 300 = 3%)',
+      '700'
+    )
+    .option(
+      '-p2-mv, --pool2-max-value <number>',
+      'Max total value for pool 2 (tokens + NFTs * NFT value)',
+      '2000000000'
+    )
+    .option(
+      '-p2-mt, --pool2-max-tokens <number>',
+      'Maximum user tokens capacity for pool 2',
+      '1000000000'
+    )
+    .option(
+      '-p3-ld, --pool3-lock-days <number>',
+      'Lock period for pool 3 (days)',
+      '30'
+    )
+    .option(
+      '-p3-y, --pool3-yield <number>',
+      'Yield rate for pool 3 (basis points, e.g. 300 = 3%)',
+      '900'
+    )
+    .option(
+      '-p3-mv, --pool3-max-value <number>',
+      'Max total value for pool 3 (tokens + NFTs * NFT value)',
+      '2000000000'
+    )
+    .option(
+      '-p3-mt, --pool3-max-tokens <number>',
+      'Maximum user tokens capacity for pool 3',
+      '1000000000'
+    )
+    .option(
+      '-p4-ld, --pool4-lock-days <number>',
+      'Lock period for pool 4 (days)',
+      '60'
+    )
+    .option(
+      '-p4-y, --pool4-yield <number>',
+      'Yield rate for pool 4 (basis points, e.g. 300 = 3%)',
+      '1200'
+    )
+    .option(
+      '-p4-mv, --pool4-max-value <number>',
+      'Max total value for pool 4 (tokens + NFTs * NFT value)',
+      '2000000000'
+    )
+    .option(
+      '-p4-mt, --pool4-max-tokens <number>',
+      'Maximum user tokens capacity for pool 4',
+      '1000000000'
+    )
+    .option('-mn, --max-nfts <number>', 'Maximum NFTs per pool', '1000')
     .action(async (options) => {
       try {
-        const spinner = ora("Initializing BERT staking program...").start();
+        const spinner = ora('Initializing BERT staking program...').start();
 
         const sdk = getSDK();
         const wallet = getWallet();
@@ -94,38 +145,37 @@ export function initializeCommand(program: Command): void {
         spinner.text = `NFTs Vault PDA: ${nftsVaultPda.toString()}`;
 
         // Create pool configurations with custom yield rates
-        const maxValueCap = parseInt(options.maxValue) * 10 ** decimals;
-
         const poolsConfig = [
           {
-            lockPeriodDays: 1,
-            yieldRate: parseInt(options.pool1Yield),
+            lockPeriodDays: parseInt(options.pool1LockDays),
+            yieldRate: parseFloat(options.pool1Yield),
             maxNfts: parseInt(options.maxNfts),
-            maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
-            maxValue: maxValueCap,
+            maxTokens: parseInt(options.pool1MaxTokens) * 10 ** decimals,
+            maxValue: parseInt(options.pool1MaxValue) * 10 ** decimals
           },
           {
-            lockPeriodDays: 3,
-            yieldRate: parseInt(options.pool3Yield),
+            lockPeriodDays: parseInt(options.pool2LockDays),
+            yieldRate: parseFloat(options.pool2Yield),
             maxNfts: parseInt(options.maxNfts),
-            maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
-            maxValue: maxValueCap,
+            maxTokens: parseInt(options.pool2MaxTokens) * 10 ** decimals,
+            maxValue: parseInt(options.pool2MaxValue) * 10 ** decimals
           },
           {
-            lockPeriodDays: 7,
-            yieldRate: parseInt(options.pool7Yield),
+            lockPeriodDays: parseInt(options.pool3LockDays),
+            yieldRate: parseFloat(options.pool3Yield),
             maxNfts: parseInt(options.maxNfts),
-            maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
-            maxValue: maxValueCap,
+            maxTokens: parseInt(options.pool3MaxTokens) * 10 ** decimals,
+            maxValue: parseInt(options.pool3MaxValue) * 10 ** decimals
           },
           {
-            lockPeriodDays: 30,
-            yieldRate: parseInt(options.pool30Yield),
+            lockPeriodDays: parseInt(options.pool4LockDays),
+            yieldRate: parseFloat(options.pool4Yield),
             maxNfts: parseInt(options.maxNfts),
-            maxTokens: parseInt(options.maxTokens) * 10 ** decimals,
-            maxValue: maxValueCap,
-          },
+            maxTokens: parseInt(options.pool4MaxTokens) * 10 ** decimals,
+            maxValue: parseInt(options.pool4MaxValue) * 10 ** decimals
+          }
         ];
+        console.log('Pools Config:', poolsConfig);
 
         // Convert values for on-chain representation
         const maxCap = parseInt(options.maxCap) * 10 ** decimals;
@@ -133,10 +183,21 @@ export function initializeCommand(program: Command): void {
         const nftsLimitPerUser = parseInt(options.nftLimit);
 
         // 1. INITIALIZE THE BASIC CONFIG (split into individual steps)
-        spinner.text = "Step 1: Creating basic config...";
+        spinner.text = 'Step 1: Creating basic config...';
 
         let transact = new Transaction();
 
+        console.log({
+          id: configId,
+          authority: wallet.publicKey,
+          adminWithdrawDestination,
+          mint,
+          collection,
+          nftsVault: nftsVaultPda,
+          maxCap,
+          nftValueInTokens,
+          nftsLimitPerUser
+        });
         // Create and send the initialize instruction for main config only
         try {
           // Create initialize instruction
@@ -149,7 +210,7 @@ export function initializeCommand(program: Command): void {
             nftsVault: nftsVaultPda,
             maxCap,
             nftValueInTokens,
-            nftsLimitPerUser,
+            nftsLimitPerUser
           });
 
           transact.add(initIx);
@@ -165,7 +226,7 @@ export function initializeCommand(program: Command): void {
           const authVaultIx = await sdk.initializeAuthVault({
             authority: wallet.publicKey,
             configId,
-            tokenMint: mint,
+            tokenMint: mint
           });
 
           transact.add(authVaultIx);
@@ -191,7 +252,7 @@ export function initializeCommand(program: Command): void {
               yieldRate: poolConfig.yieldRate,
               maxNftsCap: poolConfig.maxNfts,
               maxTokensCap: poolConfig.maxTokens,
-              maxValueCap: poolConfig.maxValue,
+              maxValueCap: poolConfig.maxValue
             });
 
             transact.add(initPoolIx);
@@ -213,7 +274,7 @@ export function initializeCommand(program: Command): void {
             await provider.sendAndConfirm(transact);
           }
         } catch (err) {
-          console.log("Program failed to initialize. Err:", err);
+          console.log('Program failed to initialize. Err:', err);
           spinner.fail(`Program failed to initialize.`);
           return;
         }
@@ -221,7 +282,7 @@ export function initializeCommand(program: Command): void {
         spinner.succeed(`Program initialized successfully`);
 
         // Fetch and display config
-        spinner.text = "Fetching program config...";
+        spinner.text = 'Fetching program config...';
         spinner.start();
 
         // Short delay to ensure config is available
@@ -229,11 +290,11 @@ export function initializeCommand(program: Command): void {
 
         const config = await sdk.fetchConfigByAddress(configPda);
         if (!config) {
-          spinner.fail("Failed to fetch program config!");
+          spinner.fail('Failed to fetch program config!');
           return;
         }
 
-        spinner.succeed("Program configuration: " + configPda.toBase58());
+        spinner.succeed('Program configuration: ' + configPda.toBase58());
 
         console.log(`- Authority: ${config.authority.toString()}`);
         console.log(`- Token Mint: ${config.mint.toString()}`);
@@ -241,7 +302,7 @@ export function initializeCommand(program: Command): void {
         console.log(`- Vault: ${config.vault.toString()}`);
         console.log(
           `- Authority Vault: ${
-            config.authorityVault?.toString() || "Not initialized"
+            config.authorityVault?.toString() || 'Not initialized'
           }`
         );
         console.log(
@@ -255,7 +316,7 @@ export function initializeCommand(program: Command): void {
         console.log(`- NFT Limit Per User: ${config.nftsLimitPerUser}`);
 
         // Fetch and display the pool PDAs and configurations
-        spinner.text = "Fetching pool configurations...";
+        spinner.text = 'Fetching pool configurations...';
         spinner.start();
 
         // Short delay to ensure pools are available
@@ -264,13 +325,13 @@ export function initializeCommand(program: Command): void {
         // Fetch pools by config
         const pools = await sdk.fetchPoolsByConfig(configPda);
 
-        console.log("\nPool Configurations:");
+        console.log('\nPool Configurations:');
         pools.forEach((pool: PoolIdl, index: number) => {
           console.log(`- Pool ${index} (${pool.lockPeriodDays} days):`);
           console.log(`  - Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
           console.log(`  - Max NFTs: ${pool.maxNftsCap}`);
           console.log(`  - Max Tokens: ${pool.maxTokensCap.toString()}`);
-          console.log(`  - Paused: ${pool.isPaused ? "Yes" : "No"}`);
+          console.log(`  - Paused: ${pool.isPaused ? 'Yes' : 'No'}`);
         });
       } catch (error) {
         ora().fail(`Failed to initialize program: ${error}`);
