@@ -30,7 +30,7 @@ export type InitializeParams = {
 
 /**
  * Create an instruction to initialize the staking program config
- * 
+ *
  * Note: With the new architecture, pools are initialized separately using initializePool
  * after config initialization
  */
@@ -48,30 +48,41 @@ export async function initializeInstruction({
   nftValueInTokens,
   nftsLimitPerUser,
 }: InitializeParams): Promise<web3.TransactionInstruction> {
+  console.log("initializeInstruction 1 with maxCapBN", maxCap);
+
   // Convert numbers to BN if needed
-  const maxCapBN = typeof maxCap === "number" ? new BN(maxCap) : maxCap;
+  const maxCapBN = typeof maxCap === "number" ? new BN(maxCap.toString()) : maxCap;
+
+  console.log(
+    "initializeInstruction 2 with nftValueInTokens",
+    nftValueInTokens
+  );
+
   const nftValueInTokensBN =
     typeof nftValueInTokens === "number"
-      ? new BN(nftValueInTokens)
+      ? new BN(nftValueInTokens.toString())
       : nftValueInTokens;
+
+  console.log("initializeInstruction 2");
 
   // Find Config PDA with the provided ID
   const [configPda] = pda.findConfigPda(authority, id);
 
+  console.log("initializeInstruction 3");
+
   // Get token accounts
   const vaultTA = vault || getAssociatedTokenAddressSync(mint, configPda, true);
+
+  console.log("initializeInstruction 4");
 
   // Create the NFTs vault PDA (if not provided)
   const nftsVaultPDA = nftsVault || pda.findNftsVaultPda(configPda, mint)[0];
 
+  console.log("initializeInstruction 5");
+
   // Initialize with just the basic config values - pools are initialized separately
   return program.methods
-    .initialize(
-      new BN(id),
-      maxCapBN,
-      nftValueInTokensBN,
-      nftsLimitPerUser
-    )
+    .initialize(new BN(id), maxCapBN, nftValueInTokensBN, nftsLimitPerUser)
     .accountsStrict({
       authority,
       config: configPda,
