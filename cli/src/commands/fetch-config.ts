@@ -101,10 +101,14 @@ export function fetchConfigCommand(program: Command): void {
         if (!pools || pools.length === 0) {
           console.log('No pools found for this configuration.');
         } else {
-          for (let i = 0; i < pools.length; i++) {
+          for (
+            let i = 0;
+            i < pools.sort((a, b) => a.index - b.index).length;
+            i++
+          ) {
             const pool = pools[i];
 
-            console.log(`\nPool ${i} (${pool.lockPeriodDays} days):`);
+            console.log(`\nPool ${i + 1} (${pool.lockPeriodDays} days):`);
             // console.log(`- PDA: ${pool..toString() || "N/A"}`);
             console.log(`- Config: ${pool.config.toString()}`);
             console.log(`- Index: ${pool.index}`);
