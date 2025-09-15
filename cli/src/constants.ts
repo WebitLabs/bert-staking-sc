@@ -1,2 +1,2 @@
-export const MINT = "Fdsq1yNuCbYX1WcjGz5Sui1td1X1dMdQG6Rm2dj4SWqo";
-export const COLLECTION = "CzRzvEAdk41fJegTxhChq8ox5ncRasJayucqVmcwWmTN";
+export const MINT = 'HgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump';
+export const COLLECTION = 'AYh4yso4fZUVHEMMpS3wXxwZt1TgYnbFPb5c4y5LDFFS';
