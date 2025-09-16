@@ -12,6 +12,7 @@ dist
 tsconfig.tsbuildinfo
 
 admin.json
+admin_old.json
 
 .env
 k.txt
