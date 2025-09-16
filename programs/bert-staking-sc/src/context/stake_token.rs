@@ -117,7 +117,7 @@ impl<'info> StakeToken<'info> {
 
         // Check user has not exceeded the pool's max token cap
         require!(
-            new_user_total_value <= pool.max_tokens_cap,
+            new_pool_total_value <= pool.max_tokens_cap,
             StakingError::UserTokensLimitCapReached
         );
 
