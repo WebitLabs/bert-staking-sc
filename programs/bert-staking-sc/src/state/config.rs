@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+pub const SCALING_FACTOR: u32 = 100_000_000;
+
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]
 pub struct PoolConfigArgs {
     pub lock_period_days: u16, // The lock period in days

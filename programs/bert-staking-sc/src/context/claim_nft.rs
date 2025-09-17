@@ -6,9 +6,7 @@ use anchor_spl::{
 };
 
 use mpl_core::{
-    accounts::BaseAssetV1,
-    instructions::TransferV1CpiBuilder,
-    types::UpdateAuthority,
+    accounts::BaseAssetV1, instructions::TransferV1CpiBuilder, types::UpdateAuthority,
     ID as CORE_PROGRAM_ID,
 };
 
@@ -140,7 +138,7 @@ impl<'info> ClaimPositionNft<'info> {
         let yield_value = (base_amount as u128)
             .checked_mul(yield_rate as u128)
             .ok_or(StakingError::ArithmeticOverflow)?
-            .checked_div(10000)
+            .checked_div(SCALING_FACTOR as u128)
             .ok_or(StakingError::ArithmeticOverflow)?
             .try_into()
             .map_err(|_| StakingError::ArithmeticOverflow)?;

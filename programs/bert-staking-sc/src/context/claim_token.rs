@@ -114,7 +114,7 @@ impl<'info> ClaimPositionToken<'info> {
         let yield_value = (position_amount as u128)
             .checked_mul(pool.yield_rate as u128)
             .ok_or(StakingError::ArithmeticOverflow)?
-            .checked_div(10000)
+            .checked_div(SCALING_FACTOR as u128)
             .ok_or(StakingError::ArithmeticOverflow)?
             .try_into()
             .map_err(|_| StakingError::ArithmeticOverflow)?;
