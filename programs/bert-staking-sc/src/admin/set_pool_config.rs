@@ -8,7 +8,7 @@ pub struct AdminSetPoolConfig<'info> {
 
     #[account(
         mut,
-        has_one = authority,
+        has_one = authority @ StakingError::Unauthorized,
         seeds = [b"config", config.id.to_le_bytes().as_ref()],
         bump = config.bump,
     )]

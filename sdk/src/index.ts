@@ -26,6 +26,8 @@ import {
   adminPausePoolInstruction,
   adminActivatePoolInstruction,
   adminWithdrawTokenInstruction,
+  proposeAdminTransferInstruction,
+  acceptAdminTransferInstruction,
 } from "./instructions";
 
 // Import account functions
@@ -1184,6 +1186,118 @@ export class BertStakingSDK {
       amount,
       authorityVault,
       adminWithdrawTokenAccount,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+    tx.feePayer = authority;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
+   * Creates an instruction to propose admin transfer
+   */
+  async proposeAdminTransfer({
+    authority,
+    newAdmin,
+    configId,
+  }: {
+    authority: PublicKey;
+    newAdmin: PublicKey;
+    configId?: number;
+  }): Promise<TransactionInstruction> {
+    return proposeAdminTransferInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      newAdmin,
+      configId,
+    });
+  }
+
+  /**
+   * Creates an RPC call to propose admin transfer
+   */
+  async proposeAdminTransferRpc({
+    authority,
+    newAdmin,
+    configId,
+  }: {
+    authority: PublicKey;
+    newAdmin: PublicKey;
+    configId?: number;
+  }): Promise<string> {
+    const ix = await proposeAdminTransferInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      newAdmin,
+      configId,
+    });
+
+    const tx = new Transaction();
+
+    const latestBlockhash = await this.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = latestBlockhash.blockhash;
+    tx.feePayer = authority;
+
+    tx.add(ix);
+
+    if (this.provider.sendAndConfirm) {
+      return await this.provider.sendAndConfirm(tx);
+    }
+
+    return "";
+  }
+
+  /**
+   * Creates an instruction to accept admin transfer
+   */
+  async acceptAdminTransfer({
+    authority,
+    oldAuthority,
+    configId,
+  }: {
+    authority: PublicKey;
+    oldAuthority: PublicKey;
+    configId?: number;
+  }): Promise<TransactionInstruction> {
+    return acceptAdminTransferInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      oldAuthority,
+      configId,
+    });
+  }
+
+  /**
+   * Creates an RPC call to accept admin transfer
+   */
+  async acceptAdminTransferRpc({
+    authority,
+    oldAuthority,
+    configId,
+  }: {
+    authority: PublicKey;
+    oldAuthority: PublicKey;
+    configId?: number;
+  }): Promise<string> {
+    const ix = await acceptAdminTransferInstruction({
+      program: this.program,
+      pda: this.pda,
+      authority,
+      oldAuthority,
+      configId,
     });
 
     const tx = new Transaction();

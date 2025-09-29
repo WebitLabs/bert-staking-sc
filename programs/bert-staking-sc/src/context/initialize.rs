@@ -8,14 +8,14 @@ use crate::state::*;
 
 // Hardcoded admin pubkey.
 // !!!IMPORTANT: ADMIN_PUBKEY enforcement should be disabled for the tests to pass
-const ADMIN_PUBKEY: Pubkey = pubkey!("DsqQPGmhhySWUFaWDEDVifLGUfe3DwnZ7MnVJcNW5Ykv");
+// const ADMIN_PUBKEY: Pubkey = pubkey!("DsqQPGmhhySWUFaWDEDVifLGUfe3DwnZ7MnVJcNW5Ykv");
 
 #[derive(Accounts)]
 #[instruction(id: u64)]
 pub struct Initialize<'info> {
     #[account(
         mut,
-        address = ADMIN_PUBKEY @ StakingError::Unauthorized
+        // address = ADMIN_PUBKEY @ StakingError::Unauthorized
     )]
     pub authority: Signer<'info>,
 

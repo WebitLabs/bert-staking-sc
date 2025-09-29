@@ -8,3 +8,4 @@ export * from "./claimTokenPosition";
 export * from "./claimNftPosition";
 export * from "./adminSetPoolConfig";
 export * from "./adminWithdrawToken";
+export * from "./adminTransfer";

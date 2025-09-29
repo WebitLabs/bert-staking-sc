@@ -124,4 +124,16 @@ export class BertStakingPda {
       this.programId
     );
   }
+
+  /**
+   * Find the Proposed Admin PDA
+   * @param config The config PDA
+   * @returns The Proposed Admin PDA and bump
+   */
+  findProposedAdminPda(config: PublicKey): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("propose_admin"), config.toBuffer()],
+      this.programId
+    );
+  }
 }

@@ -14,6 +14,92 @@ export type BertStakingSc = {
   },
   "instructions": [
     {
+      "name": "acceptAdmin",
+      "discriminator": [
+        112,
+        42,
+        45,
+        90,
+        116,
+        181,
+        13,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "proposedAdmin"
+          ]
+        },
+        {
+          "name": "oldAuthority",
+          "writable": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposedAdmin",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  101,
+                  95,
+                  97,
+                  100,
+                  109,
+                  105,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "adminActivatePool",
       "discriminator": [
         120,
@@ -49,11 +135,6 @@ export type BertStakingSc = {
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "config"
               },
               {
                 "kind": "account",
@@ -131,11 +212,6 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "config.authority",
-                "account": "config"
-              },
-              {
-                "kind": "account",
                 "path": "config.id",
                 "account": "config"
               }
@@ -207,11 +283,6 @@ export type BertStakingSc = {
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "config"
               },
               {
                 "kind": "account",
@@ -294,11 +365,6 @@ export type BertStakingSc = {
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "config"
               },
               {
                 "kind": "account",
@@ -494,11 +560,6 @@ export type BertStakingSc = {
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "config"
               },
               {
                 "kind": "account",
@@ -926,11 +987,6 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "config.authority",
-                "account": "config"
-              },
-              {
-                "kind": "account",
                 "path": "config.id",
                 "account": "config"
               }
@@ -1339,10 +1395,6 @@ export type BertStakingSc = {
                 ]
               },
               {
-                "kind": "account",
-                "path": "authority"
-              },
-              {
                 "kind": "arg",
                 "path": "id"
               }
@@ -1521,11 +1573,6 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "config.authority",
-                "account": "config"
-              },
-              {
-                "kind": "account",
                 "path": "config.id",
                 "account": "config"
               }
@@ -1701,11 +1748,6 @@ export type BertStakingSc = {
               },
               {
                 "kind": "account",
-                "path": "config.authority",
-                "account": "config"
-              },
-              {
-                "kind": "account",
                 "path": "config.id",
                 "account": "config"
               }
@@ -1776,6 +1818,92 @@ export type BertStakingSc = {
       "args": []
     },
     {
+      "name": "proposeAdmin",
+      "discriminator": [
+        121,
+        214,
+        199,
+        212,
+        87,
+        39,
+        117,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposedAdmin",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  101,
+                  95,
+                  97,
+                  100,
+                  109,
+                  105,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "newAdmin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "stakeNft",
       "discriminator": [
         38,
@@ -1811,11 +1939,6 @@ export type BertStakingSc = {
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "config"
               },
               {
                 "kind": "account",
@@ -2030,11 +2153,6 @@ export type BertStakingSc = {
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "config"
               },
               {
                 "kind": "account",
@@ -2443,6 +2561,19 @@ export type BertStakingSc = {
         48,
         31,
         36
+      ]
+    },
+    {
+      "name": "proposedAdmin",
+      "discriminator": [
+        148,
+        7,
+        199,
+        145,
+        40,
+        48,
+        109,
+        70
       ]
     },
     {
@@ -3008,6 +3139,31 @@ export type BertStakingSc = {
               "array": [
                 "u8",
                 64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "proposedAdmin",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                30
               ]
             }
           }

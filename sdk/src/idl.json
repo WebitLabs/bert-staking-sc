@@ -8,6 +8,92 @@
   },
   "instructions": [
     {
+      "name": "accept_admin",
+      "discriminator": [
+        112,
+        42,
+        45,
+        90,
+        116,
+        181,
+        13,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "proposed_admin"
+          ]
+        },
+        {
+          "name": "old_authority",
+          "writable": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "Config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposed_admin",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  101,
+                  95,
+                  97,
+                  100,
+                  109,
+                  105,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "admin_activate_pool",
       "discriminator": [
         120,
@@ -43,11 +129,6 @@
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
               },
               {
                 "kind": "account",
@@ -125,11 +206,6 @@
               },
               {
                 "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
-              },
-              {
-                "kind": "account",
                 "path": "config.id",
                 "account": "Config"
               }
@@ -201,11 +277,6 @@
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
               },
               {
                 "kind": "account",
@@ -288,11 +359,6 @@
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
               },
               {
                 "kind": "account",
@@ -488,11 +554,6 @@
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
               },
               {
                 "kind": "account",
@@ -920,11 +981,6 @@
               },
               {
                 "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
-              },
-              {
-                "kind": "account",
                 "path": "config.id",
                 "account": "Config"
               }
@@ -1333,10 +1389,6 @@
                 ]
               },
               {
-                "kind": "account",
-                "path": "authority"
-              },
-              {
                 "kind": "arg",
                 "path": "id"
               }
@@ -1515,11 +1567,6 @@
               },
               {
                 "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
-              },
-              {
-                "kind": "account",
                 "path": "config.id",
                 "account": "Config"
               }
@@ -1695,11 +1742,6 @@
               },
               {
                 "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
-              },
-              {
-                "kind": "account",
                 "path": "config.id",
                 "account": "Config"
               }
@@ -1770,6 +1812,92 @@
       "args": []
     },
     {
+      "name": "propose_admin",
+      "discriminator": [
+        121,
+        214,
+        199,
+        212,
+        87,
+        39,
+        117,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.id",
+                "account": "Config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposed_admin",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  101,
+                  95,
+                  97,
+                  100,
+                  109,
+                  105,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "stake_nft",
       "discriminator": [
         38,
@@ -1805,11 +1933,6 @@
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
               },
               {
                 "kind": "account",
@@ -2024,11 +2147,6 @@
                   105,
                   103
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "config.authority",
-                "account": "Config"
               },
               {
                 "kind": "account",
@@ -2437,6 +2555,19 @@
         48,
         31,
         36
+      ]
+    },
+    {
+      "name": "ProposedAdmin",
+      "discriminator": [
+        148,
+        7,
+        199,
+        145,
+        40,
+        48,
+        109,
+        70
       ]
     },
     {
@@ -3002,6 +3133,31 @@
               "array": [
                 "u8",
                 64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposedAdmin",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                30
               ]
             }
           }

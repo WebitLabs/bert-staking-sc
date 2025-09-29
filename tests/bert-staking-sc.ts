@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { prelude } from "./helpers/prelude";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import {
   advanceUnixTimeStamp,
   createAndProcessTransaction,
@@ -1836,6 +1836,307 @@ describe("bert-staking-sc", () => {
     }
 
     console.log("NFT limit per pool test completed successfully!");
+  });
+
+  describe("Admin Transfer Functionality", () => {
+    let newAdmin: Keypair;
+    let proposedAdminPda: PublicKey;
+    const transferTestConfigId = configId + 250; // Use unique config ID for transfer tests
+
+    before("Setup for admin transfer tests", async () => {
+      newAdmin = Keypair.generate();
+      console.log(`New admin: ${newAdmin.publicKey.toString()}`);
+
+      // Fund new admin for transaction fees using proper pattern
+      const fundNewAdminIx = SystemProgram.transfer({
+        fromPubkey: payer.publicKey,
+        toPubkey: newAdmin.publicKey,
+        lamports: 1000000000, // 1 SOL
+      });
+
+      await createAndProcessTransaction(client, payer, [fundNewAdminIx]);
+      console.log("Funded new admin with SOL");
+
+      // Initialize a config for transfer testing
+      const [transferConfigPda] = sdk.pda.findConfigPda(transferTestConfigId);
+
+      try {
+        const initializeIx = await sdk.initialize({
+          authority: payer.publicKey,
+          adminWithdrawDestination: payer.publicKey,
+          mint: tokenMint,
+          collection: toWeb3JsPublicKey(collectionSigner.publicKey),
+          id: transferTestConfigId,
+          maxCap,
+          nftValueInTokens,
+          nftsLimitPerUser,
+        });
+
+        await createAndProcessTransaction(client, payer, [initializeIx]);
+        console.log(`Initialized transfer test config: ${transferConfigPda.toString()}`);
+      } catch (err) {
+        console.log("Transfer test config already exists, continuing...");
+      }
+    });
+
+    it("Proposes admin transfer successfully", async () => {
+      console.log("\n--- Testing Admin Transfer Proposal ---");
+
+      try {
+        const [transferConfigPda] = sdk.pda.findConfigPda(transferTestConfigId);
+
+        // Find proposed admin PDA using SDK
+        [proposedAdminPda] = sdk.pda.findProposedAdminPda(transferConfigPda);
+
+        console.log(`Proposed admin PDA: ${proposedAdminPda.toString()}`);
+        console.log(`New admin pubkey: ${newAdmin.publicKey.toString()}`);
+
+        // Create propose admin instruction using SDK
+        const proposeAdminIx = await sdk.proposeAdminTransfer({
+          authority: payer.publicKey,
+          newAdmin: newAdmin.publicKey,
+          configId: transferTestConfigId,
+        });
+
+        // Execute transaction
+        await createAndProcessTransaction(client, payer, [proposeAdminIx]);
+
+        // Verify proposed admin account was created
+        const proposedAdminAccount = await sdk.program.account.proposedAdmin.fetch(proposedAdminPda);
+        expect(proposedAdminAccount.authority.toString()).to.equal(newAdmin.publicKey.toString());
+
+        console.log("✅ Admin transfer proposal successful");
+        console.log(`Proposed admin authority: ${proposedAdminAccount.authority.toString()}`);
+
+      } catch (err) {
+        console.error("Failed to propose admin transfer:", err);
+        throw err;
+      }
+    });
+
+    it("Accepts admin transfer successfully", async () => {
+      console.log("\n--- Testing Admin Transfer Acceptance ---");
+
+      try {
+        const [transferConfigPda] = sdk.pda.findConfigPda(transferTestConfigId);
+
+        // Fetch current config to verify current authority
+        const configBefore = await sdk.program.account.config.fetch(transferConfigPda);
+        console.log(`Current authority: ${configBefore.authority.toString()}`);
+        expect(configBefore.authority.toString()).to.equal(payer.publicKey.toString());
+
+        // Create accept admin instruction using SDK (must be signed by new admin)
+        const acceptAdminIx = await sdk.acceptAdminTransfer({
+          authority: newAdmin.publicKey,
+          oldAuthority: payer.publicKey,
+          configId: transferTestConfigId,
+        });
+
+        // Execute transaction signed by new admin
+        await createAndProcessTransaction(client, newAdmin, [acceptAdminIx]);
+
+        // Verify authority transfer
+        const configAfter = await sdk.program.account.config.fetch(transferConfigPda);
+        expect(configAfter.authority.toString()).to.equal(newAdmin.publicKey.toString());
+
+        console.log("✅ Admin transfer completed successfully");
+        console.log(`New authority: ${configAfter.authority.toString()}`);
+
+        // Verify proposed admin account was closed
+        try {
+          await sdk.program.account.proposedAdmin.fetch(proposedAdminPda);
+          throw new Error("Proposed admin account should have been closed");
+        } catch (err) {
+          if (err.message.includes("Account does not exist") || err.message.includes("Could not find")) {
+            console.log("✅ Proposed admin account was properly closed");
+          } else {
+            throw err;
+          }
+        }
+
+      } catch (err) {
+        console.error("Failed to accept admin transfer:", err);
+        throw err;
+      }
+    });
+
+    it("Verifies admin functionality works after transfer", async () => {
+      console.log("\n--- Testing Admin Functionality After Transfer ---");
+
+      try {
+        const [transferConfigPda] = sdk.pda.findConfigPda(transferTestConfigId);
+
+        // Initialize a pool for testing admin functions
+        const poolIndex = 0;
+        const initializePoolIx = await sdk.initializePool({
+          authority: newAdmin.publicKey, // Use new admin
+          configId: transferTestConfigId,
+          index: poolIndex,
+          lockPeriodDays: 7,
+          yieldRate: 500,
+          maxNftsCap: 100,
+          maxTokensCap: new BN(1000000000),
+          maxValueCap: new BN(2000000000),
+        });
+
+        await createAndProcessTransaction(client, newAdmin, [initializePoolIx]);
+
+        console.log("✅ New admin can initialize pools");
+
+        // Test pausing a pool
+        const pausePoolIx = await sdk.adminPausePool({
+          authority: newAdmin.publicKey,
+          configId: transferTestConfigId,
+          poolIndex,
+        });
+
+        await createAndProcessTransaction(client, newAdmin, [pausePoolIx]);
+
+        // Verify pool is paused
+        const [poolPda] = sdk.pda.findPoolPda(transferConfigPda, poolIndex);
+        const poolAfterPause = await sdk.program.account.pool.fetch(poolPda);
+        expect(poolAfterPause.isPaused).to.be.true;
+
+        console.log("✅ New admin can pause pools");
+
+        // Test activating the pool again
+        const activatePoolIx = await sdk.adminActivatePool({
+          authority: newAdmin.publicKey,
+          configId: transferTestConfigId,
+          poolIndex,
+        });
+
+        await createAndProcessTransaction(client, newAdmin, [activatePoolIx]);
+
+        // Verify pool is active
+        const poolAfterActivate = await sdk.program.account.pool.fetch(poolPda);
+        expect(poolAfterActivate.isPaused).to.be.false;
+
+        console.log("✅ New admin can activate pools");
+        console.log("✅ All admin functionality works after transfer");
+
+      } catch (err) {
+        console.error("Failed admin functionality test after transfer:", err);
+        throw err;
+      }
+    });
+
+    it("Verifies old admin can no longer perform admin functions", async () => {
+      console.log("\n--- Testing Old Admin Lockout ---");
+
+      try {
+        const [transferConfigPda] = sdk.pda.findConfigPda(transferTestConfigId);
+        const poolIndex = 0;
+        const [poolPda] = sdk.pda.findPoolPda(transferConfigPda, poolIndex);
+
+        // First verify that the authority has indeed been transferred
+        const configAfterTransfer = await sdk.program.account.config.fetch(transferConfigPda);
+        console.log(`Config authority after transfer: ${configAfterTransfer.authority.toString()}`);
+        console.log(`Old admin (payer): ${payer.publicKey.toString()}`);
+        console.log(`New admin: ${newAdmin.publicKey.toString()}`);
+
+        // Verify pool exists
+        const pool = await sdk.program.account.pool.fetch(poolPda);
+        console.log(`Pool exists: ${pool.index}, isPaused: ${pool.isPaused}`);
+
+        // Try to use old admin to pause a pool (should fail)
+        const pausePoolIx = await sdk.adminPausePool({
+          authority: payer.publicKey, // Old admin
+          configId: transferTestConfigId,
+          poolIndex,
+        });
+
+        try {
+          const res = await createAndProcessTransaction(client, payer, [pausePoolIx]); // Old admin
+
+          // In bankrun, we check if the result contains an error
+          if (!res.result) {
+            expect.fail("Should have failed when old admin attempts admin operation");
+          } else {
+            console.log("✅ Old admin correctly locked out from admin functions");
+            console.log(`Error: ${res.result.toString()}`);
+          }
+        } catch (err) {
+          // This is also a valid path if an error is thrown
+          console.log("✅ Old admin correctly locked out from admin functions");
+          console.log(`Error: ${err.message}`);
+        }
+
+      } catch (err) {
+        console.error("Unexpected error in old admin lockout test:", err);
+        throw err;
+      }
+    });
+
+    it("Performs complex admin operations with transferred admin", async () => {
+      console.log("\n--- Testing Complex Admin Operations After Transfer ---");
+
+      try {
+        const [transferConfigPda] = sdk.pda.findConfigPda(transferTestConfigId);
+        const poolIndex = 0;
+        const [poolPda] = sdk.pda.findPoolPda(transferConfigPda, poolIndex);
+
+        // Test 1: Pause pool, modify config, then reactivate (complex workflow)
+        console.log("Testing complex admin workflow: pause -> configure -> activate");
+
+        // Pause the pool first
+        const pausePoolIx = await sdk.adminPausePool({
+          authority: newAdmin.publicKey,
+          configId: transferTestConfigId,
+          poolIndex,
+        });
+
+        await createAndProcessTransaction(client, newAdmin, [pausePoolIx]);
+
+        // Modify pool configuration while paused
+        const newPoolConfig: PoolConfigArgs = {
+          lockPeriodDays: 14, // Changed from 7 to 14
+          yieldRate: new BN(800), // Changed from 500 to 800
+          maxNftsCap: 200, // Changed from 100 to 200
+          maxTokensCap: new BN(2000000000), // Changed from 1B to 2B
+          maxValueCap: new BN(4000000000), // Changed from 2B to 4B
+        };
+
+        const setPoolConfigIx = await sdk.adminSetPoolConfig({
+          authority: newAdmin.publicKey,
+          configId: transferTestConfigId,
+          poolIndex,
+          poolConfigArgs: newPoolConfig,
+        });
+
+        await createAndProcessTransaction(client, newAdmin, [setPoolConfigIx]);
+
+        // Verify configuration changes
+        const poolAfterConfig = await sdk.program.account.pool.fetch(poolPda);
+        expect(poolAfterConfig.lockPeriodDays).to.equal(14);
+        expect(poolAfterConfig.yieldRate.toString()).to.equal("800");
+        expect(poolAfterConfig.maxNftsCap).to.equal(200);
+        expect(poolAfterConfig.maxTokensCap.toString()).to.equal("2000000000");
+        expect(poolAfterConfig.maxValueCap.toString()).to.equal("4000000000");
+
+        console.log("✅ New admin can modify pool configuration");
+
+        // Reactivate the pool
+        const activatePoolIx = await sdk.adminActivatePool({
+          authority: newAdmin.publicKey,
+          configId: transferTestConfigId,
+          poolIndex,
+        });
+
+        await createAndProcessTransaction(client, newAdmin, [activatePoolIx]);
+
+        // Verify pool is active
+        const poolAfterActivate = await sdk.program.account.pool.fetch(poolPda);
+        expect(poolAfterActivate.isPaused).to.be.false;
+
+        console.log("✅ Complex admin workflow completed successfully");
+        console.log("✅ Admin transfer functionality fully validated");
+
+      } catch (err) {
+        console.error("Failed complex admin operations test:", err);
+        throw err;
+      }
+    });
   });
 
   it("Enforces pool value limit and allows staking after limit increase", async () => {
