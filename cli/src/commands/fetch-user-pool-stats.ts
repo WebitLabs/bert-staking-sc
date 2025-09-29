@@ -34,7 +34,7 @@ export function fetchUserPoolStatsCommand(program: Command): void {
           : wallet.publicKey;
 
         // Find Config PDA
-        const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        const [configPda] = sdk.pda.findConfigPda(configId);
         spinner.text = `Config PDA: ${configPda.toString()}`;
 
         // Find Pool PDA

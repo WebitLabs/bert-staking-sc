@@ -41,7 +41,7 @@ export function stakeTokenCommand(program: Command): void {
         const amount = parseFloat(options.amount) * 10 ** decimals;
 
         // Find config PDA
-        const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        const [configPda] = sdk.pda.findConfigPda(configId);
         spinner.text = `Config PDA: ${configPda.toString()}`;
 
         // Find Pool PDA

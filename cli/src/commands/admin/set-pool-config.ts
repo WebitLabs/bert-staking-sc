@@ -34,7 +34,7 @@ export function setPoolConfigCommand(program: Command): void {
         const configId = parseInt(options.configId);
 
         // Find the config PDA
-        const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        const [configPda] = sdk.pda.findConfigPda(configId);
         spinner.text = `Config PDA: ${configPda.toString()}`;
 
         // Find the pool PDA

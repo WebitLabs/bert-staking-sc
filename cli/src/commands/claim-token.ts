@@ -32,7 +32,7 @@ export function claimTokenCommand(program: Command): void {
           : new PublicKey(MINT);
 
         // Find config PDA
-        const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        const [configPda] = sdk.pda.findConfigPda(configId);
         spinner.text = `Config PDA: ${configPda.toString()}`;
 
         // Get position PDA

@@ -30,7 +30,7 @@ export function withdrawTokensCommand(program: Command): void {
         const configId = parseInt(options.configId);
 
         // Find the config PDA
-        const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        const [configPda] = sdk.pda.findConfigPda(configId);
 
         // Fetch current config
         spinner.text = "Fetching configuration...";

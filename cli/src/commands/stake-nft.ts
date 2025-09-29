@@ -42,7 +42,7 @@ export function stakeNftCommand(program: Command): void {
         const asset = new PublicKey(options.asset);
 
         // Find config PDA
-        const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        const [configPda] = sdk.pda.findConfigPda(configId);
         spinner.text = `Config PDA: ${configPda.toString()}`;
 
         // Find Pool PDA

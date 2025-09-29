@@ -50,7 +50,7 @@ export function claimNftCommand(program: Command): void {
         const updateAuthority = new PublicKey(options.updateAuthority);
 
         // Find config PDA
-        const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        const [configPda] = sdk.pda.findConfigPda(configId);
         spinner.text = `Config PDA: ${configPda.toString()}`;
 
         // Get position PDA

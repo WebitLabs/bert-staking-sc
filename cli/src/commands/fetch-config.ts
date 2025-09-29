@@ -38,7 +38,7 @@ export function fetchConfigCommand(program: Command): void {
         if (options.config) {
           configPda = new PublicKey(options.config);
         } else {
-          [configPda] = sdk.pda.findConfigPda(authority, configId);
+          [configPda] = sdk.pda.findConfigPda(configId);
         }
         spinner.text = `Config PDA: ${configPda.toString()}`;
 

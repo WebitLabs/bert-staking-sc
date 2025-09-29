@@ -136,7 +136,7 @@ export function initializeCommand(program: Command): void {
         spinner.text = `Initializing with config ID: ${configId}`;
 
         // Find the config PDA
-        const [configPda] = sdk.pda.findConfigPda(wallet.publicKey, configId);
+        const [configPda] = sdk.pda.findConfigPda(configId);
         spinner.text = `Config PDA: ${configPda.toString()}`;
 
         // Find the NFTs vault PDA
