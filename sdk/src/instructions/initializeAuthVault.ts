@@ -24,7 +24,7 @@ export async function initializeAuthVaultInstruction({
   tokenMint,
 }: InitializeAuthVaultParams): Promise<web3.TransactionInstruction> {
   // Find Config PDA with the provided ID
-  const [configPda] = pda.findConfigPda(authority, configId);
+  const [configPda] = pda.findConfigPda(configId);
 
   // Find the authority vault PDA
   const [authVaultPda] = pda.findAuthorityVaultPda(configPda, tokenMint);

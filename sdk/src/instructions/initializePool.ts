@@ -39,7 +39,7 @@ export async function initializePoolInstruction({
     typeof maxValueCap === "number" ? new BN(maxValueCap) : maxValueCap;
 
   // Find Config PDA with the provided ID
-  const [configPda] = pda.findConfigPda(authority, configId);
+  const [configPda] = pda.findConfigPda(configId);
 
   // Find Pool PDA
   const [poolPda] = pda.findPoolPda(configPda, index);

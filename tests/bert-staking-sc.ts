@@ -131,7 +131,7 @@ describe("bert-staking-sc", () => {
     let authority = payer;
     console.log("Authority:", authority.publicKey.toString());
 
-    const [configPda] = sdk.pda.findConfigPda(authority.publicKey, configId);
+    const [configPda] = sdk.pda.findConfigPda(configId);
     console.log("Config PDA:", configPda.toString());
 
     // Get vault ATA for the config
@@ -281,7 +281,7 @@ describe("bert-staking-sc", () => {
       const owner = payer.publicKey;
       const mint = tokenMint;
 
-      const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+      const [configPda] = sdk.pda.findConfigPda(configId);
 
       // Create the ATAs with some tokens for the user, main vault, and authority vault
       const mintAmount = 1_000_000_000 * 10 ** decimals;
@@ -337,7 +337,7 @@ describe("bert-staking-sc", () => {
 
   it("Initializes a user account successfully", async () => {
     // Use the configured configId
-    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+    const [configPda] = sdk.pda.findConfigPda(configId);
     console.log("Config PDA:", configPda.toString());
 
     // Find user account PDA
@@ -420,7 +420,7 @@ describe("bert-staking-sc", () => {
     const poolIndex = 0; // Use the 1-day lock period with 3% yield
 
     // Get account addresses
-    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+    const [configPda] = sdk.pda.findConfigPda(configId);
     const [userAccountPda] = sdk.pda.findUserAccountPda(
       payer.publicKey,
       configPda
@@ -605,7 +605,7 @@ describe("bert-staking-sc", () => {
     const poolIndex = 0; // The 1-day lock period we used in the previous test
 
     // Get the account addresses
-    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+    const [configPda] = sdk.pda.findConfigPda(configId);
     const [userAccountPda] = sdk.pda.findUserAccountPda(
       payer.publicKey,
       configPda
@@ -881,7 +881,7 @@ describe("bert-staking-sc", () => {
     const nftPositionId = 200; // Use a specific position ID for NFT positions
 
     // Get the Config PDA and account data with our configId
-    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+    const [configPda] = sdk.pda.findConfigPda(configId);
 
     // Find the NFTs vault PDA
     const [nftsVaultPda] = sdk.pda.findNftsVaultPda(configPda, tokenMint);
@@ -1054,7 +1054,7 @@ describe("bert-staking-sc", () => {
     const poolIndex = 2; // Using the 7-day lock period with 8% yield from the previous test
 
     // Get the Config PDA and account data with our configId
-    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+    const [configPda] = sdk.pda.findConfigPda(configId);
 
     // Get the Pool PDA for the specified pool index
     const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
@@ -1340,7 +1340,7 @@ describe("bert-staking-sc", () => {
   it("Enforces user token limit per pool", async () => {
     // Choose pool 1 (3-day lock period) for this test
     const poolIndex = 1;
-    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+    const [configPda] = sdk.pda.findConfigPda(configId);
 
     // Get the pool to check its limits
     const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
@@ -1358,10 +1358,7 @@ describe("bert-staking-sc", () => {
     const testConfigId = configId + 100; // Use a different config ID to avoid conflicts
 
     // Get vault ATA for the config
-    const [testConfigPda] = sdk.pda.findConfigPda(
-      payer.publicKey,
-      testConfigId
-    );
+    const [testConfigPda] = sdk.pda.findConfigPda(testConfigId);
     const vaultTA = getAssociatedTokenAddressSync(
       tokenMint,
       testConfigPda,
@@ -1596,7 +1593,7 @@ describe("bert-staking-sc", () => {
   it("Enforces user NFT limit per pool", async () => {
     // Choose pool 0 (1-day lock period) for this test
     const poolIndex = 0;
-    const [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+    const [configPda] = sdk.pda.findConfigPda(configId);
 
     // Get the pool to check its limits
     const [poolPda] = sdk.pda.findPoolPda(configPda, poolIndex);
@@ -1614,10 +1611,7 @@ describe("bert-staking-sc", () => {
     const testConfigId = configId + 201; // Use a different config ID to avoid conflicts
 
     // Get vault ATA for the test config
-    const [testConfigPda] = sdk.pda.findConfigPda(
-      payer.publicKey,
-      testConfigId
-    );
+    const [testConfigPda] = sdk.pda.findConfigPda(testConfigId);
     const vaultTA = getAssociatedTokenAddressSync(
       tokenMint,
       testConfigPda,
@@ -1870,10 +1864,7 @@ describe("bert-staking-sc", () => {
 
     // Get account addresses
     const authority = payer;
-    const [testConfigPda] = sdk.pda.findConfigPda(
-      authority.publicKey,
-      testConfigId
-    );
+    const [testConfigPda] = sdk.pda.findConfigPda(testConfigId);
     const vaultTA = getAssociatedTokenAddressSync(
       tokenMint,
       testConfigPda,
@@ -2128,10 +2119,7 @@ describe("bert-staking-sc", () => {
     console.log(`Per-pool NFT limit: ${perPoolNftLimit}`);
 
     // Get account addresses for test config
-    const [testConfigPda] = sdk.pda.findConfigPda(
-      payer.publicKey,
-      testConfigId
-    );
+    const [testConfigPda] = sdk.pda.findConfigPda(testConfigId);
     const vaultTA = getAssociatedTokenAddressSync(
       tokenMint,
       testConfigPda,

@@ -37,7 +37,7 @@ export async function adminWithdrawTokenInstruction({
   // Find Config PDA
   // const [configPda] = pda.findConfigPda(authority, configId);
 
-  const configAddress = configPda || pda.findConfigPda(authority, configId)[0];
+  const configAddress = configPda || pda.findConfigPda(configId)[0];
 
   // Determine authority vault address if not provided
   const authorityVaultAddress =

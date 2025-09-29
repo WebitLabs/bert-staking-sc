@@ -48,7 +48,7 @@ export async function claimNftPositionInstruction({
   poolIndex,
 }: ClaimNftPositionParams): Promise<web3.TransactionInstruction> {
   // Get authority from config using the configId
-  const [configPda] = sdk.pda.findConfigPda(authority, configId);
+  const [configPda] = sdk.pda.findConfigPda(configId);
   const [userPda] = sdk.pda.findUserAccountPda(owner, configPda);
 
   // Calculate position PDA if not provided

@@ -113,7 +113,7 @@ describe("bert-staking-sc-admin", () => {
   it("Initializes the staking program and creates pool configurations", async () => {
     console.log("Authority:", payer.publicKey.toString());
 
-    [configPda] = sdk.pda.findConfigPda(payer.publicKey, configId);
+    [configPda] = sdk.pda.findConfigPda(configId);
     console.log("Config PDA:", configPda.toString());
 
     // Get vault ATA for the config
@@ -835,10 +835,7 @@ describe("bert-staking-sc-admin", () => {
 
     // Create a new test config with a lower vault balance and some tokens marked as staked
     const testConfigId = configId + 100;
-    const [testConfigPda] = sdk.pda.findConfigPda(
-      payer.publicKey,
-      testConfigId
-    );
+    const [testConfigPda] = sdk.pda.findConfigPda(testConfigId);
     const testVaultAta = getAssociatedTokenAddressSync(
       tokenMint,
       testConfigPda,

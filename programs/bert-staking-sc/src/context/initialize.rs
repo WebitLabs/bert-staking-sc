@@ -7,6 +7,7 @@ use anchor_spl::{
 use crate::state::*;
 
 // Hardcoded admin pubkey.
+// !!!IMPORTANT: ADMIN_PUBKEY enforcement should be disabled for the tests to pass
 const ADMIN_PUBKEY: Pubkey = pubkey!("DsqQPGmhhySWUFaWDEDVifLGUfe3DwnZ7MnVJcNW5Ykv");
 
 #[derive(Accounts)]
@@ -22,7 +23,7 @@ pub struct Initialize<'info> {
         init,
         payer = authority,
         space = 8 + Config::INIT_SPACE,
-        seeds = [b"config", authority.key().as_ref(), id.to_le_bytes().as_ref()],
+        seeds = [b"config", id.to_le_bytes().as_ref()],
         bump
     )]
     pub config: Box<Account<'info, Config>>,

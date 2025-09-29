@@ -42,7 +42,7 @@ export async function stakeTokenInstruction({
   const amountBN = typeof amount === "number" ? new BN(amount) : amount;
 
   // Find Config PDA with the provided ID
-  const [configPda] = pda.findConfigPda(authority, configId);
+  const [configPda] = pda.findConfigPda(configId);
 
   // Find User Account PDA
   const [userAccountPda] = pda.findUserAccountPda(owner, configPda);

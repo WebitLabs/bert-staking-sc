@@ -41,7 +41,7 @@ export async function stakeNftInstruction({
   coreProgram = CORE_PROGRAM_ID,
 }: StakeNftParams): Promise<web3.TransactionInstruction> {
   // Find Config PDA with the provided ID
-  const [configPda] = pda.findConfigPda(authority, configId);
+  const [configPda] = pda.findConfigPda(configId);
 
   // Find Pool PDA with the pool index
   const [poolPda] = pda.findPoolPda(configPda, poolIndex);

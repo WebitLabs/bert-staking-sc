@@ -1,19 +1,19 @@
-import { Program } from "@coral-xyz/anchor";
+import { Program, BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { ConfigIdl } from "../types";
 import { BertStakingSc } from "../idl";
 
 /**
- * Fetch the Config account for a given authority
+ * Fetch the Config account for a given ID
  */
 export async function fetchConfigRpc(
-  authority: PublicKey,
+  id: number = 0,
   program: Program<BertStakingSc>
 ): Promise<ConfigIdl | null> {
   try {
     // Find Config PDA
     const [configPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("config"), authority.toBuffer()],
+      [Buffer.from("config"), new BN(id).toArrayLike(Buffer, "le", 8)],
       program.programId
     );
 

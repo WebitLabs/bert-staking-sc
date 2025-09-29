@@ -1,9 +1,9 @@
 import { PublicKey, Umi } from "@metaplex-foundation/umi";
-import { publicKey } from "@metaplex-foundation/umi/serializers";
+import { u64 } from "@metaplex-foundation/umi/serializers";
 
-export function findBertConfigPda(umi: Umi, authority: PublicKey) {
+export function findBertConfigPda(umi: Umi, id: number = 0) {
   return umi.eddsa.findPda(umi.programs.getPublicKey("bertStakingSc"), [
     Buffer.from("config"),
-    publicKey().serialize(authority),
+    u64().serialize(BigInt(id)),
   ]);
 }

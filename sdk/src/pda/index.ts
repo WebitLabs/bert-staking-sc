@@ -8,16 +8,14 @@ export class BertStakingPda {
   constructor(public programId: PublicKey) {}
 
   /**
-   * Find the Config PDA for a given authority and ID
-   * @param authority The authority public key
-   * @param id Optional ID for the config (defaults to 0)
+   * Find the Config PDA for a given ID
+   * @param id ID for the config (defaults to 0)
    * @returns The Config PDA and bump
    */
-  findConfigPda(authority: PublicKey, id: number = 0): [PublicKey, number] {
+  findConfigPda(id: number = 0): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [
         Buffer.from("config"),
-        authority.toBuffer(),
         new BN(id).toArrayLike(Buffer, "le", 8),
       ],
       this.programId

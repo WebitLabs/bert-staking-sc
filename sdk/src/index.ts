@@ -850,10 +850,10 @@ export class BertStakingSDK {
   }
 
   /**
-   * Fetches a config account for a given authority
+   * Fetches a config account for a given ID
    */
-  async fetchConfig(authority: PublicKey) {
-    return fetchConfigRpc(authority, this.program);
+  async fetchConfig(id: number = 0) {
+    return fetchConfigRpc(id, this.program);
   }
 
   /**

@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+// !!!IMPORTANT: Change this to be 10_000 for the tests to pass.
 pub const SCALING_FACTOR: u64 = 10_000_000_000;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, InitSpace, Debug)]

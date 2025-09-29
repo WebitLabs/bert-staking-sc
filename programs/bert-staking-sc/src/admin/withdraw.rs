@@ -15,7 +15,7 @@ pub struct AdminWithdrawToken<'info> {
     #[account(
         has_one = authority,
         has_one = authority_vault,
-        seeds = [b"config", config.authority.key().as_ref(), config.id.to_le_bytes().as_ref()],
+        seeds = [b"config", config.id.to_le_bytes().as_ref()],
         bump = config.bump,
     )]
     pub config: Account<'info, Config>,
@@ -51,7 +51,7 @@ impl<'info> AdminWithdrawToken<'info> {
         let authority = config.authority.key();
 
         let id = config.id.to_le_bytes();
-        let seeds = &[b"config".as_ref(), authority.as_ref(), id.as_ref(), &[bump]];
+        let seeds = &[b"config".as_ref(), id.as_ref(), &[bump]];
         let signer_seeds = &[&seeds[..]];
 
         // Transfer from authority vault to destination

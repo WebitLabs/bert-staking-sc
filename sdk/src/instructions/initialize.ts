@@ -66,7 +66,7 @@ export async function initializeInstruction({
   console.log("initializeInstruction 2");
 
   // Find Config PDA with the provided ID
-  const [configPda] = pda.findConfigPda(authority, id);
+  const [configPda] = pda.findConfigPda(id);
 
   console.log("initializeInstruction 3");
 

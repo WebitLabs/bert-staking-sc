@@ -25,7 +25,7 @@ export async function adminSetPoolConfigInstruction({
   poolConfigArgs,
 }: AdminSetPoolConfigParams): Promise<TransactionInstruction> {
   // Find Config PDA
-  const [configPda] = pda.findConfigPda(authority, configId);
+  const [configPda] = pda.findConfigPda(configId);
 
   // Find Pool PDA
   const [poolPda] = pda.findPoolPda(configPda, poolIndex);
@@ -75,7 +75,7 @@ export async function adminPausePoolInstruction({
   "poolConfigArgs"
 >): Promise<TransactionInstruction> {
   // Find Config PDA
-  const [configPda] = pda.findConfigPda(authority, configId);
+  const [configPda] = pda.findConfigPda(configId);
 
   // Find Pool PDA
   const [poolPda] = pda.findPoolPda(configPda, poolIndex);
@@ -104,7 +104,7 @@ export async function adminActivatePoolInstruction({
   "poolConfigArgs"
 >): Promise<TransactionInstruction> {
   // Find Config PDA
-  const [configPda] = pda.findConfigPda(authority, configId);
+  const [configPda] = pda.findConfigPda(configId);
 
   // Find Pool PDA
   const [poolPda] = pda.findPoolPda(configPda, poolIndex);

@@ -28,7 +28,7 @@ export async function initializeUserInstruction({
   const authorityKey = authority || owner;
 
   // Find the config PDA
-  const [configPda] = pda.findConfigPda(authorityKey, configId);
+  const [configPda] = pda.findConfigPda(configId);
 
   // Find the pool PDA
   const [poolPda] = pda.findPoolPda(configPda, poolIndex);
