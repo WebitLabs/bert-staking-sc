@@ -97,4 +97,12 @@ pub mod bert_staking_sc {
     ) -> Result<()> {
         ctx.accounts.admin_set_pool_config(config_params)
     }
+
+    pub fn propose_admin(ctx: Context<ProposeAdminTransfer>, new_admin: Pubkey) -> Result<()> {
+        ctx.accounts.propose_admin(&new_admin, &ctx.bumps)
+    }
+
+    pub fn accept_admin(ctx: Context<AcceptAdminTransfer>) -> Result<()> {
+        ctx.accounts.accept_admin()
+    }
 }
