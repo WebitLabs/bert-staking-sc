@@ -31,11 +31,17 @@ export function acceptAdminCommand(program: Command): void {
         // Check if there's a pending proposal
         let proposalAccount;
         try {
-          proposalAccount = await sdk.program.account.proposedAdmin.fetch(proposedAdminPda);
+          proposalAccount = await sdk.program.account.proposedAdmin.fetch(
+            proposedAdminPda
+          );
         } catch (error) {
           spinner.fail("No pending admin transfer proposal found.");
-          console.log(`\nNo admin transfer proposal exists for config ID ${configId}.`);
-          console.log(`Use "admin:propose-admin" command to create a proposal first.`);
+          console.log(
+            `\nNo admin transfer proposal exists for config ID ${configId}.`
+          );
+          console.log(
+            `Use "admin:propose-admin" command to create a proposal first.`
+          );
           return;
         }
 
@@ -46,8 +52,12 @@ export function acceptAdminCommand(program: Command): void {
         if (!proposalAccount.authority.equals(wallet.publicKey)) {
           spinner.fail("Access denied: You are not the proposed admin.");
           console.log(`\nProposal Details:`);
-          console.log(`- Current Authority: ${currentConfig?.authority.toString()}`);
-          console.log(`- Proposed Authority: ${proposalAccount.authority.toString()}`);
+          console.log(
+            `- Current Authority: ${currentConfig?.authority.toString()}`
+          );
+          console.log(
+            `- Proposed Authority: ${proposalAccount.authority.toString()}`
+          );
           console.log(`- Your Wallet: ${wallet.publicKey.toString()}`);
           console.log(`\nOnly the proposed admin can accept the transfer.`);
           return;
@@ -55,8 +65,12 @@ export function acceptAdminCommand(program: Command): void {
 
         // Display proposal details before accepting
         console.log(`\nProposal Details:`);
-        console.log(`- Current Authority: ${currentConfig?.authority.toString()}`);
-        console.log(`- Proposed Authority: ${proposalAccount.authority.toString()}`);
+        console.log(
+          `- Current Authority: ${currentConfig?.authority.toString()}`
+        );
+        console.log(
+          `- Proposed Authority: ${proposalAccount.authority.toString()}`
+        );
 
         // Get current config state
         const configBefore = await sdk.fetchConfigByAddress(configPda);
@@ -65,7 +79,7 @@ export function acceptAdminCommand(program: Command): void {
         const txid = await sdk.acceptAdminTransferRpc({
           authority: wallet.publicKey,
           oldAuthority: currentConfig!.authority,
-          configId,
+          configId
         });
 
         spinner.succeed(`Admin transfer accepted successfully. Tx: ${txid}`);
@@ -82,11 +96,12 @@ export function acceptAdminCommand(program: Command): void {
         // Verify the proposal account was closed
         try {
           await sdk.program.account.proposedAdmin.fetch(proposedAdminPda);
-          console.log(`\n⚠️  Warning: Proposal account still exists (may take time to reflect)`);
+          console.log(
+            `\n ⚠️  Warning: Proposal account still exists (may take time to reflect)`
+          );
         } catch (error) {
           console.log(`\n✅ Proposal account successfully closed`);
         }
-
       } catch (error) {
         ora().fail(`Failed to accept admin transfer: ${error}`);
         console.error(error);

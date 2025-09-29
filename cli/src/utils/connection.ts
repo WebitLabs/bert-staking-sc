@@ -1,31 +1,20 @@
-import 'dotenv/config';
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
-import { BertStakingSDK } from '@bert-staking/sdk';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { Command } from 'commander';
-
-// const DEVNET_RPC = process.env.ENDPOINT1 || 'https://api.devnet.solana.com';
+import "dotenv/config";
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { AnchorProvider, Wallet } from "@coral-xyz/anchor";
+import { BertStakingSDK } from "@bert-staking/sdk";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { Command } from "commander";
 
 // Default RPC endpoints
-const NETWORK = process.env.NETWORK || 'localhost';
+const NETWORK = process.env.NETWORK || "localhost";
 const ENDPOINTS = {
-  mainnet: process.env.ENDPOINT || 'https://api.devnet.solana.com',
-  devnet: process.env.ENDPOINT || 'https://api.devnet.solana.com',
-  testnet: 'https://api.testnet.solana.com',
-  localhost: 'http://localhost:8899'
+  mainnet: process.env.ENDPOINT || "https://api.devnet.solana.com",
+  devnet: process.env.ENDPOINT || "https://api.devnet.solana.com",
+  testnet: "https://api.testnet.solana.com",
+  localhost: "http://localhost:8899"
 };
-
-if (!NETWORK) {
-  throw new Error(
-    'NETWORK environment variable is not set. Please set it to mainnet, devnet, testnet, or localhost.'
-  );
-}
-
-// Default program ID
-const DEFAULT_PROGRAM_ID = '7k6CEUWrHBP5hefz1kpXUm5zjmLmfvThAbqJPdrRYrHk';
 
 // Global connection object
 let connection: Connection;
@@ -37,11 +26,11 @@ let sdk: BertStakingSDK;
  */
 export function loadKeypair(keypairPath: string): Keypair {
   // Expand ~ in path if it exists
-  if (keypairPath.startsWith('~')) {
+  if (keypairPath.startsWith("~")) {
     keypairPath = path.join(os.homedir(), keypairPath.slice(1));
   }
 
-  const keypairData = JSON.parse(fs.readFileSync(keypairPath, 'utf-8'));
+  const keypairData = JSON.parse(fs.readFileSync(keypairPath, "utf-8"));
   return Keypair.fromSecretKey(Uint8Array.from(keypairData));
 }
 
@@ -49,20 +38,37 @@ export function loadKeypair(keypairPath: string): Keypair {
  * Setup Solana connection and Anchor provider
  */
 export function setupConnection(command: Command): void {
-  const options = command.opts();
-
-  console.log('Setup Connection: options:', options);
+  if (!NETWORK) {
+    throw new Error(
+      "NETWORK environment variable is not set. Please set it to mainnet, devnet, testnet, or localhost."
+    );
+  }
 
   // Get network from options or default to localhost
   const url = ENDPOINTS[NETWORK as keyof typeof ENDPOINTS];
+  if (!url.includes(NETWORK)) {
+    throw new Error(
+      `Invalid NETWORK value: ${NETWORK}. The endpoint does not match the network`
+    );
+  }
+
+  // Default program ID
+  const DEFAULT_PROGRAM_ID = process.env.PROGRAM_ID;
+  if (!DEFAULT_PROGRAM_ID) {
+    throw new Error(
+      "PROGRAM_ID environment variable is not set. Please set it to the Bert Staking program ID."
+    );
+  }
+  const options = command.opts();
+  console.log("Setup Connection: options:", options);
 
   // Setup connection
-  connection = new Connection(url, 'confirmed');
+  connection = new Connection(url, "confirmed");
 
   // Load keypair from file
-  let keypairPath = path.join(process.cwd(), '../admin.json');
+  let keypairPath = path.join(process.cwd(), "../admin.json");
 
-  console.log('keypairPath1: ', fs.existsSync(keypairPath));
+  console.log("keypairPath1: ", fs.existsSync(keypairPath));
   try {
     const keypair = loadKeypair(keypairPath);
     wallet = new Wallet(keypair);
@@ -75,9 +81,7 @@ export function setupConnection(command: Command): void {
     );
 
     // Create SDK instance
-    const programId = options.programId
-      ? new PublicKey(options.programId)
-      : new PublicKey(DEFAULT_PROGRAM_ID);
+    const programId = new PublicKey(DEFAULT_PROGRAM_ID);
 
     sdk = BertStakingSDK.fromConnection(connection, wallet, programId);
 
@@ -95,7 +99,7 @@ export function setupConnection(command: Command): void {
  */
 export function getConnection(): Connection {
   if (!connection) {
-    throw new Error('Connection not initialized. Call setupConnection first.');
+    throw new Error("Connection not initialized. Call setupConnection first.");
   }
   return connection;
 }
@@ -105,7 +109,7 @@ export function getConnection(): Connection {
  */
 export function getWallet(): Wallet {
   if (!wallet) {
-    throw new Error('Wallet not initialized. Call setupConnection first.');
+    throw new Error("Wallet not initialized. Call setupConnection first.");
   }
   return wallet;
 }
@@ -115,7 +119,7 @@ export function getWallet(): Wallet {
  */
 export function getSDK(): BertStakingSDK {
   if (!sdk) {
-    throw new Error('SDK not initialized. Call setupConnection first.');
+    throw new Error("SDK not initialized. Call setupConnection first.");
   }
   return sdk;
 }
