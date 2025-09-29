@@ -181,7 +181,8 @@ impl<'info> StakeNFT<'info> {
 
         // Calculate unlock time (current time + lock_time in seconds)
         let lock_days = pool.lock_period_days;
-        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 86400);
+        // position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 86400);
+        position.unlock_time = Clock::get()?.unix_timestamp + (lock_days as i64 * 60);
         position.status = PositionStatus::Unclaimed;
 
         // Transfer The asset:

@@ -9,7 +9,9 @@ use admin::*;
 use context::*;
 use state::*;
 
-declare_id!("BcTJUjVtpYZ2mozwHxGZdJRfQbEfCoZyEqwus8W2cajq");
+// mainnet pubkey
+// declare_id!("BcTJUjVtpYZ2mozwHxGZdJRfQbEfCoZyEqwus8W2cajq");
+declare_id!("7k6CEUWrHBP5hefz1kpXUm5zjmLmfvThAbqJPdrRYrHk");
 
 // Re-export StakingError for use in the program
 pub use state::StakingError;

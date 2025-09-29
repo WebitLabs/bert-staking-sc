@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/bert_staking_sc.json`.
  */
 export type BertStakingSc = {
-  "address": "BcTJUjVtpYZ2mozwHxGZdJRfQbEfCoZyEqwus8W2cajq",
+  "address": "7k6CEUWrHBP5hefz1kpXUm5zjmLmfvThAbqJPdrRYrHk",
   "metadata": {
     "name": "bertStakingSc",
     "version": "0.1.0",
