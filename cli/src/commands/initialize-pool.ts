@@ -121,7 +121,7 @@ export function initializePoolCommand(program: Command): void {
             yieldRate,
             maxNftsCap,
             maxTokensCap,
-            maxValueCap,
+            maxValueCap
           });
 
           spinner.succeed(`Pool ${poolIndex} initialized successfully`);
@@ -142,7 +142,9 @@ export function initializePoolCommand(program: Command): void {
           console.log(`- Index: ${pool.index}`);
           console.log(`- Config: ${pool.config.toString()}`);
           console.log(`- Lock Period: ${pool.lockPeriodDays} days`);
-          console.log(`- Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
+          console.log(
+            `- Yield Rate: ${pool.yieldRate.toNumber() / 100000000}%`
+          );
           console.log(`- Max NFTs: ${pool.maxNftsCap}`);
           console.log(
             `- Max Tokens: ${
@@ -155,12 +157,6 @@ export function initializePoolCommand(program: Command): void {
             } tokens`
           );
           console.log(`- Paused: ${pool.isPaused ? "Yes" : "No"}`);
-          console.log(
-            `- Equivalent APY: ${(
-              (pool.yieldRate.toNumber() / 100) *
-              (365 / pool.lockPeriodDays)
-            ).toFixed(2)}%`
-          );
 
           // Calculate and display stats
           console.log("\nPool Statistics:");

@@ -106,7 +106,9 @@ export function fetchUserPoolStatsCommand(program: Command): void {
           if (pool) {
             console.log(`\nPool ${poolIndex} Information:`);
             console.log(`- Lock Period: ${pool.lockPeriodDays} days`);
-            console.log(`- Yield Rate: ${pool.yieldRate.toNumber() / 100}%`);
+            console.log(
+              `- Yield Rate: ${pool.yieldRate.toNumber() / 100000000}%`
+            );
             console.log(`- Status: ${pool.isPaused ? "Paused" : "Active"}`);
             console.log(
               `- Max NFTs: ${pool.maxNftsCap} (${userPoolStats.nftsStaked}/${pool.maxNftsCap} used)`
@@ -146,4 +148,3 @@ export function fetchUserPoolStatsCommand(program: Command): void {
       }
     });
 }
-

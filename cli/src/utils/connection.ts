@@ -7,18 +7,25 @@ import os from 'os';
 import path from 'path';
 import { Command } from 'commander';
 
-const DEVNET_RPC = process.env.ENDPOINT1 || 'https://api.devnet.solana.com';
+// const DEVNET_RPC = process.env.ENDPOINT1 || 'https://api.devnet.solana.com';
 
 // Default RPC endpoints
+const NETWORK = process.env.NETWORK || 'localhost';
 const ENDPOINTS = {
-  mainnet: process.env.ENDPOINT || 'https://api.mainnet-beta.solana.com',
-  devnet: DEVNET_RPC,
+  mainnet: process.env.ENDPOINT || 'https://api.devnet.solana.com',
+  devnet: process.env.ENDPOINT || 'https://api.devnet.solana.com',
   testnet: 'https://api.testnet.solana.com',
   localhost: 'http://localhost:8899'
 };
 
+if (!NETWORK) {
+  throw new Error(
+    'NETWORK environment variable is not set. Please set it to mainnet, devnet, testnet, or localhost.'
+  );
+}
+
 // Default program ID
-const DEFAULT_PROGRAM_ID = 'BcTJUjVtpYZ2mozwHxGZdJRfQbEfCoZyEqwus8W2cajq';
+const DEFAULT_PROGRAM_ID = '7k6CEUWrHBP5hefz1kpXUm5zjmLmfvThAbqJPdrRYrHk';
 
 // Global connection object
 let connection: Connection;
@@ -47,11 +54,7 @@ export function setupConnection(command: Command): void {
   console.log('Setup Connection: options:', options);
 
   // Get network from options or default to localhost
-  const network = options.network || 'mainnet';
-  const url =
-    options.url ||
-    ENDPOINTS[network as keyof typeof ENDPOINTS] ||
-    ENDPOINTS.localhost;
+  const url = ENDPOINTS[NETWORK as keyof typeof ENDPOINTS];
 
   // Setup connection
   connection = new Connection(url, 'confirmed');
@@ -78,7 +81,7 @@ export function setupConnection(command: Command): void {
 
     sdk = BertStakingSDK.fromConnection(connection, wallet, programId);
 
-    console.log(`Connected to ${network} (${url})`);
+    console.log(`Connected to ${NETWORK} (${url})`);
     console.log(`Using keypair: ${wallet.publicKey.toBase58()}`);
     console.log(`Program ID: ${programId.toBase58()}`);
   } catch (error) {
