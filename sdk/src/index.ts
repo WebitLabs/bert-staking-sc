@@ -69,7 +69,8 @@ export class BertStakingSDK {
     public provider: AnchorProvider | BankrunProvider,
     public programId: PublicKey = new PublicKey(IDL.address)
   ) {
-    this.program = new Program(IDL as any, provider);
+    const idlForProgram = { ...IDL, address: programId.toBase58() };
+    this.program = new Program(idlForProgram as any, provider);
     this.pda = new BertStakingPda(programId);
   }
 

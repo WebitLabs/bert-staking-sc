@@ -64,12 +64,14 @@ export function createTokenCommand(program: Command): void {
             description: "",
           };
 
+          const tokenOwner = options.owner ?? payer.publicKey.toBase58();
+
           await createAndMintToken(
             umi,
             mint,
             metadata,
             options.image,
-            options.owner,
+            tokenOwner,
             decimals,
             amount
           );

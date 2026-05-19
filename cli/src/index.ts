@@ -31,9 +31,14 @@ program
   .name("bert-staking")
   .description("CLI tool for managing the BERT Staking Protocol")
   .version("0.1.0")
-  .hook("preAction", (thisCommand) => {
-    // Setup connection before any command runs
-    setupConnection(thisCommand);
+  .requiredOption(
+    "-N, --network <name>",
+    "Network: mainnet | devnet | localhost (verified against RPC genesis hash)"
+  )
+  .option("--url <rpc>", "Override the RPC URL for the selected network")
+  .option("--program-id <id>", "Override the program ID")
+  .hook("preAction", async (thisCommand) => {
+    await setupConnection(thisCommand);
   });
 
 // Register commands

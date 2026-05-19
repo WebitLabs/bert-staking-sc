@@ -14,7 +14,8 @@ tsconfig.tsbuildinfo
 admin.json
 admin_old.json
 
-.env
+.env*
 k.txt
 prod_admin.json
 dev_admin.json
+__*
