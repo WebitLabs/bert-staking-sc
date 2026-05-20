@@ -40,7 +40,7 @@ export async function claimNftPositionInstruction({
   asset,
   tokenMint,
   tokenAccount,
-  collection = web3.PublicKey.default,
+  collection,
   updateAuthority,
   vault,
   configId = 0,
@@ -50,6 +50,20 @@ export async function claimNftPositionInstruction({
   // Get authority from config using the configId
   const [configPda] = sdk.pda.findConfigPda(authority, configId);
   const [userPda] = sdk.pda.findUserAccountPda(owner, configPda);
+
+  // The program enforces `has_one = collection` on the config account, so the
+  // collection passed to the instruction must match the one stored in config.
+  // If the caller didn't supply one, fetch it from the config.
+  let collectionKey = collection;
+  if (!collectionKey) {
+    const configAccount = await program.account.config.fetchNullable(configPda);
+    if (!configAccount) {
+      throw new Error(
+        `Config account not found at ${configPda.toString()} — cannot derive collection`
+      );
+    }
+    collectionKey = configAccount.collection;
+  }
 
   // Calculate position PDA if not provided
   const positionAddress =
@@ -100,7 +114,7 @@ export async function claimNftPositionInstruction({
       userAccount: userPda,
       userPoolStats: userPoolStatsPda,
       position: positionAddress,
-      collection,
+      collection: collectionKey,
       updateAuthority,
       asset,
       mint: tokenMint,

@@ -68,15 +68,14 @@ export function stakeNftCommand(program: Command): void {
         );
         spinner.text = `User Account PDA: ${userAccountPda.toString()}`;
 
-        try {
-          // Try to fetch the user account to see if it exists
-          const userAccount = await sdk.fetchUserAccountByAddress(
-            userAccountPda
-          );
+        const userAccount = await sdk.fetchUserAccountByAddress(
+          userAccountPda
+        );
+
+        if (userAccount) {
           spinner.text =
             "User account already exists, proceeding with staking...";
-        } catch (err) {
-          // User account doesn't exist, initialize it
+        } else {
           spinner.text = "User account not found, initializing...";
 
           try {
